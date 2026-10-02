@@ -1,0 +1,7 @@
+# The example projects inside the skills are for reading. Opening one in an IDE builds it:
+# its output is never part of the repository.
+bin/
+obj/
+.vs/
+.idea/
+node_modules/
