@@ -20,11 +20,11 @@ For scheduled/recurring jobs use `pragmatic-use-jobs` instead.
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Messaging" Version="1.0.0-alpha.*" />
-<PackageReference Include="Pragmatic.Messaging.EFCore" Version="1.0.0-alpha.*" />     <!-- transactional outbox -->
-<PackageReference Include="Pragmatic.Messaging.Channels" Version="1.0.0-alpha.*" />   <!-- in-process transport -->
-<PackageReference Include="Pragmatic.Messaging.RabbitMQ" Version="1.0.0-alpha.*" />   <!-- distributed transport -->
-<PackageReference Include="Pragmatic.Messaging.Saga" Version="1.0.0-alpha.*" />       <!-- workflow -->
+<PackageReference Include="Pragmatic.Messaging" Version="1.0.0-alpha.1" />
+<PackageReference Include="Pragmatic.Messaging.EFCore" Version="1.0.0-alpha.1" />     <!-- transactional outbox -->
+<PackageReference Include="Pragmatic.Messaging.Channels" Version="1.0.0-alpha.1" />   <!-- in-process transport -->
+<PackageReference Include="Pragmatic.Messaging.RabbitMQ" Version="1.0.0-alpha.1" />   <!-- distributed transport -->
+<PackageReference Include="Pragmatic.Messaging.Saga" Version="1.0.0-alpha.1" />       <!-- workflow -->
 ```
 
 Always add `Pragmatic.SourceGenerator` as an analyzer. Namespaces: `Pragmatic.Messaging`, `Pragmatic.Messaging.Attributes`, `Pragmatic.Messaging.Saga`, and `Pragmatic.Resilience.Attributes` for `[Retry]`, `[Timeout]` and `[CircuitBreaker]`.
@@ -205,7 +205,7 @@ redelivered copy deliberately keeps that id. `PublishMessageJob` releases that c
 republishing; a scheduler of your own has to. Without the release the message is neither retried nor
 dead-lettered.
 
-A publish right after startup is safe on every transport: Kafka and Service Bus connect before the host reports started, and RabbitMQ and SQL connect in the background while a publish issued meanwhile waits for them (`ConnectWaitTimeout`, default 30 s) — the application still starts with its broker down. Do not add a delay or a retry around the first publish.
+A publish right after startup is safe on every transport: Kafka and Service Bus connect before the host reports started, and RabbitMQ and SQL connect in the background while a publish issued meanwhile waits for them (`ConnectWaitTimeout`, default 30 s) — the application still starts with its broker down, and a connect that fails is retried in the background (RabbitMQ: `ReconnectBaseDelayMs`, `MaxReconnectAttempts`) while the host keeps running. Do not add a delay or a retry around the first publish.
 
 ### 6. Large payloads — claim check
 
