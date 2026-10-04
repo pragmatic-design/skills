@@ -1,4 +1,4 @@
-# Gotchas `.pdx` / Pragmatic.Design.UI
+# Gotchas `.pdx` / PDX UI
 
 Traps learned while building the golden app and the **profiler** admin (`Pragmatic.Design.Builder/profiler/app`).
 Read this BEFORE writing any `.pdx`: every entry cost real debugging.

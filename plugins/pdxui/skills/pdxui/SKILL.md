@@ -3,9 +3,9 @@ name: pdxui
 description: "Build web app UIs with PDX (@pdxui): the catalogue of its components by area, screen recipes and the measured .pdx gotchas. Use before building any UI piece, since the component usually exists. The language is pdxui-language; theming, pdxui-theme; composing a screen, pdxui-screens."
 ---
 
-# Pragmatic UI (build .pdx web apps)
+# PDX UI (build .pdx web apps)
 
-Knowledge + playbook for building UIs on **Pragmatic.Design.UI**: the `.pdx` language (SFC:
+Knowledge + playbook for building UIs on **PDX UI**: the `.pdx` language (SFC:
 `<template>`/`<script setup>`/`<style scoped>`, signal reactivity, compiled to Web Components) and its
 115 `pdx-*` components.
 
