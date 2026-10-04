@@ -62,6 +62,17 @@ Knowledge + playbook for building UIs on **Pragmatic.Design.UI**: the `.pdx` lan
    acceptance check. A short Playwright script beats a browser you drive by hand — that is what the first
    lab run's acceptance file became.
 
+## The rules most often broken
+
+One line each; `AGENTS.md`, which `pdx new project` writes, carries exactly these, and a test in
+`packages/cli` fails when the two differ — change them here, then in its template.
+
+- Bind with `:attr="expr"`, never `${expr}` inside an attribute: `pdx check` flags it as `PDX_RAW_INTERPOLATION` and offers the rewrite.
+- Do not import library components in a `.pdx`: the compiler imports each `<pdx-*>` the template uses, and `import '@pdxui/ui'` registers all 115 of them.
+- Search the catalog before building a component: one almost always exists (the area skills, or `components` in `pdx mcp`).
+- Style with the design tokens (`--pdx-color-*`, `--pdx-space-*`, `--pdx-radius-*`), never hard-coded colours; the scales are named (`--pdx-space-md`), and `--pdx-space-4` resolves to nothing, silently.
+- `onMount` runs once: anything that must follow a signal is a `$derived` or an `$effect`.
+
 ## The component areas (what lives where)
 
 - **layout** — `pdx-app-layout` (shell), navbar/sidebar, splitter, scroll-area, grid (row/col), aspect-ratio.

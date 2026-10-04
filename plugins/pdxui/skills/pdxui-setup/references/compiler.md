@@ -91,11 +91,13 @@ assertion per row against a real production build.
 | CSS | injected at runtime | extracted to a stylesheet | **yes** — a route carries its CSS in a `.css`, not in its JS chunk |
 | Unread signal | present | removed | **yes** — semantic dead-code elimination, measured on the bundle |
 | Template | runtime with placeholders | pre-compiled DOM factory | only for a template with **no interpolation at all** |
-| Validation | runtime checks + warnings | stripped | **not implemented.** The validator runs at build time; the runtime warnings ship. Worth 1.9 KB gzipped of 208 |
+| Validation | runtime checks + warnings | stripped | **yes** — the diagnostics that teach the author sit behind `DEV`, a constant the bundler folds, so each leaves with its message: 209.5 → 206.2 KB gzip on the showcase. The failures an app reports about itself stay. Measured by `packages/showcase/tests/diagnostics.spec.ts` on the bundle and `packages/core/tests/diagnostics-behind-dev.test.ts` on the sources |
 
-Route pre-linking and the flattening of single-use components were claimed here and are **not
-implemented**: the first is worth a round-trip on the first screen and is planned, the second was
-measured at ~1.2% of the bundle in exchange for the element leaving the DOM, and was withdrawn.
+Route pre-linking ships: the built `index.html` preloads the landing route's chunks — see *The first
+screen, in one round-trip less* below.
+
+The flattening of single-use components was claimed here and is **not implemented**: it was measured at ~1.2% of the bundle in exchange for the element leaving
+the DOM, and was withdrawn.
 
 ### Turning the inline path off
 
@@ -143,19 +145,9 @@ Compiler errors aren't text strings to interpret: they're `PDX_*` **codes** with
 and often a suggested *fix*. The same mechanism powers the command-line check, the editor LSP, and the
 quick-fixes.
 
-Examples you'll meet:
-
-- `PDX_RAW_INTERPOLATION` — you used `${...}` inside an attribute instead of `:attr=`. Fix: use the
-  binding (`:src="x"`).
-- `PDX_NON_REACTIVE` — a non-signal variable is used in the template and won't update. Fix: declare it
-  with `$signal`.
-- `PDX_PROP_INVALID_TYPE` — a `@prop`'s type isn't valid.
-- `PDX_LEGACY_IN_SETUP` — `<script setup>` carries a pre-rune marker (`defineProps`, `defineEmits`, a
-  top-level `return`), so what you wrote and what the file compiles to disagree. Fix: drop the marker,
-  or write a plain `<script>` if the file is deliberately legacy.
-- `PDX_UNKNOWN_DECLARATION` — a line opens with a declaration keyword (`@form`, `@page`, `@meta`…) in a
-  shape no rule accepts. It is dropped, so nothing is generated for it; the hint carries the shape
-  that is accepted.
+Every code, what it means and what to write instead, is on [Diagnostics](diagnostics.md) —
+generated from the compiler's catalog, so it lists exactly the codes that exist. From a terminal,
+`pdx explain PDX_RAW_INTERPOLATION` prints one entry, and `--json` prints it for an agent.
 
 The point: the compiler doesn't leave you with a cryptic error, it tells you *what* and *how* to fix.
 

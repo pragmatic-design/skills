@@ -6,7 +6,7 @@ plugins, installable one without the other:
 | Plugin | For |
 |---|---|
 | `pragmatic-design` | .NET applications with the [Pragmatic.Design](https://github.com/pragmatic-design/Pragmatic.Design) packages: which packages to reference, how to lay out the solution, the attributes of each module, the traps, and how to verify the result |
-| `pdxui` | Web UIs with [PDX](https://pdxui.com) (`@pdxui/*`): the `.pdx` language, its 113 components, screen composition and theming |
+| `pdxui` | Web UIs with [PDX](https://pdxui.com) (`@pdxui/*`): the `.pdx` language, its 117 components, screen composition and theming |
 
 They are written for a **consumer project** — an app that uses the packages — and need no access to
 the frameworks' source.

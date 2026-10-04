@@ -27,8 +27,6 @@ added. **Not when** you want keyed rows that survive a removal → `createFieldA
   `lines.${i}.activity`.
 - `form.fields.<name>` — the array itself — mirrors the rows only when the array was seeded EMPTY; a filled
   initial array has no such leaf, and the dotted fields are the only state (PDXUI-567).
-- The add button's default, "+ Add", is not a translatable string yet (PDXUI-770): on a translated screen pass
-  `add-label`.
 - Inside a `<pdx-field-group>` its rows are prefixed with the group's path.
 
 **Composes with** `pdx-form` (the form it writes into) · `pdx-field-group` (a nested path) · `pdx-wizard` (rows
@@ -43,7 +41,7 @@ inside a step) · `pdx-select` and other components in the `row` slot.
 | `itemDefault` | — | object | `null` | Default values for a new item. |
 | `minItems` | `minitems` | number | `0` | Minimum number of items (default: 0). |
 | `maxItems` | `maxitems` | number | `999` | Maximum number of items (default: 999). |
-| `addLabel` | `addlabel` | string | `'+ Add'` | Label for the add button. |
+| `addLabel` | `addlabel` | string | `''` | Label for the add button. Empty: the `field-list.add` component string ("+ Add" in English). |
 | `removable` | `removable` | boolean | `true` | Allow removing items (default: true). |
 | `display` | `display` | string | `'inline'` | Display mode: inline (default), dialog. |
 

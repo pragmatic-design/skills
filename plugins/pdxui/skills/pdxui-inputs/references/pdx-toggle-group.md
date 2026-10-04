@@ -40,7 +40,7 @@ are checked against the manifest above._
 
 ```html
 <div class="demo-row">
-  <pdx-toggle-group type="multiple" label="Formatting" :value="formatting" @pdx-change="e => formatting = e.detail.value">
+  <pdx-toggle-group type="multiple" label="Formatting" :value="formatting" @pdx-change="e => setFormatting(e.detail.value)">
     <pdx-toggle value="bold" aria-label="Bold"><strong>B</strong></pdx-toggle>
     <pdx-toggle value="italic" aria-label="Italic"><em>I</em></pdx-toggle>
     <pdx-toggle value="underline" aria-label="Underline"><u>U</u></pdx-toggle>
@@ -122,13 +122,13 @@ are checked against the manifest above._
 ```html
 <div class="comp-card">
   <div class="toolbar" role="toolbar" aria-label="Text formatting">
-    <pdx-toggle-group type="multiple" label="Style" size="sm" :value="formatting" @pdx-change="e => formatting = e.detail.value">
+    <pdx-toggle-group type="multiple" label="Style" size="sm" :value="formatting" @pdx-change="e => setFormatting(e.detail.value)">
       <pdx-toggle value="bold" aria-label="Bold"><strong>B</strong></pdx-toggle>
       <pdx-toggle value="italic" aria-label="Italic"><em>I</em></pdx-toggle>
       <pdx-toggle value="underline" aria-label="Underline"><u>U</u></pdx-toggle>
     </pdx-toggle-group>
     <span class="toolbar-sep" aria-hidden="true"></span>
-    <pdx-toggle-group type="single" label="Alignment" size="sm" :value="align" @pdx-change="e => align = e.detail.value">
+    <pdx-toggle-group type="single" label="Alignment" size="sm" :value="align" @pdx-change="e => setAlign(e.detail.value)">
       <pdx-toggle value="left">Left</pdx-toggle>
       <pdx-toggle value="center">Center</pdx-toggle>
       <pdx-toggle value="right">Right</pdx-toggle>

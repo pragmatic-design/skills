@@ -52,7 +52,7 @@ on blur.
 | `close()` | Closes it. |
 | `clear()` | Clears the value. |
 
-**Events:** `pdx-change` → `detail: { value, label, item }` — Fired when the value changes.; `pdx-clear` — Fired when the value is cleared.; `pdx-input` → `detail: { value }` — Fired on each input as the user types.
+**Events:** `pdx-change` → `detail: { value, label, item }` — When the value is committed: a suggestion picked (`value` is its value field, `item` the suggestion), the field cleared, or free text confirmed by leaving the field or pressing Enter with no option chosen (`value` and `label` the text, `item` null). Once per edit, like a native `change`.; `pdx-clear` — Fired when the value is cleared.; `pdx-input` → `detail: { value }` — Fired on each input as the user types.
 
 **Renders:** roles `combobox` · `listbox` · `option` · `status`
 

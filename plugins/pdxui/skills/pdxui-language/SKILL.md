@@ -294,8 +294,9 @@ the panel says «Debug hook not found», core is not running as a dev build (the
 build, or `process.env.NODE_ENV` is `production`); before PDXUI-223 that was every browser, and the
 panel blamed the page instead.
 
-⚠️ `pdx new project` scaffolds a shape that does not install today (`^0.1.0` against published
-`1.0.0-alpha.*`, and no CSS import). Use it to see the layout, not to start. (findings/framework 2.)
+`npx @pdxui/cli new project <name>` scaffolds a project to start from: `@pdxui/framework`, and
+`@pdxui/cli` and `@pdxui/compiler` as dev dependencies, at the CLI's own version; the design system
+imported once in `index.html`; an `AGENTS.md`. Then `npm install` and `npm run dev` (PDXUI-835).
 
 ## Things that will cost you an hour otherwise
 

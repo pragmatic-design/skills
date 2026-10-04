@@ -16,7 +16,7 @@ to make visible.
 
 ## @pdxui/core
 
-431 value exports.
+434 value exports.
 
 ### `__adoptStyles`
 
@@ -45,7 +45,8 @@ import { __pdx_debug } from '@pdxui/core';
 const __pdx_debug
 ```
 
-The __pdx_debug namespace — available globally for DevTools and console debugging.
+The debug namespace: an export of `@pdxui/core`, and in development the same object as
+`window.__PDX_DEVTOOLS__.debug`, which the devtools overlay and the console read.
 
 ### `__pdx_hmr_rerender`
 
@@ -1712,7 +1713,7 @@ Any function of the same shape works — this is a convenience set, not a closed
 ```ts
 import { effect } from '@pdxui/core';
 
-function effect(fn: () => void | (() => void)): Dispose
+function effect(fn: () => void | (() => void), options?: EffectOptions): Dispose
 ```
 
 Run a function now, and again whenever a signal it read has changed.
@@ -2775,6 +2776,21 @@ Rejects a number with a fractional part.
 A non-number passes, so an input that has not been coerced yet is not reported here — the field's
 own type conversion runs first.
 
+### `interpolationText`
+
+```ts
+import { interpolationText } from '@pdxui/core';
+
+function interpolationText(value: unknown): string
+```
+
+The text a value renders as when it is interpolated: `null`, `undefined` and `false` are empty text,
+so `{{ user?.name }}` and `{{ busy && 'Saving…' }}` print nothing rather than a word; anything else
+is `String(value)`, `0` included.
+
+The inline build writes its text nodes through this too, so a page reads the same in dev and in a
+production build. It wrote `String(value)` and showed `null` and `false` (PDXUI-843).
+
 ### `invalidate`
 
 ```ts
@@ -3385,7 +3401,7 @@ Listen for longpress (hold) gestures on an element.
 ```ts
 import { onMount } from '@pdxui/core';
 
-function onMount(fn: () => void | (() => void)): void
+function onMount(fn: () => void | (() => void) | Promise<unknown>): void
 ```
 
 Register a callback to run after the component mounts (first render complete).
@@ -3393,6 +3409,11 @@ Can be called from setup() or any composable function during setup.
 
 Inside the mount callback, onDestroy() is available — the component scope
 is temporarily restored so lifecycle hooks can be registered from mount callbacks.
+
+The callback may be async — `onMount(async () => { data = await load(); })`. Its promise is not
+awaited and is not a cleanup: return a function from a synchronous callback for that, and register
+an `onDestroy()` before the first `await`, since the scope is restored only while the callback runs
+synchronously (PDXUI-832).
 
 ### `onPinch`
 
@@ -3583,7 +3604,7 @@ import { PdxElement } from '@pdxui/core';
 class PdxElement
 ```
 
-Base class for Pragmatic Design Web Components.
+Base class for PDX UI Web Components.
 
 ### `pipe`
 
@@ -3741,6 +3762,16 @@ function queryByText(container: HTMLElement, text: string | RegExp): HTMLElement
 ```
 
 Find element by text content. Returns null if not found.
+
+### `recordDevtoolsNavigation`
+
+```ts
+import { recordDevtoolsNavigation } from '@pdxui/core';
+
+function recordDevtoolsNavigation(entry: Omit<DevtoolsNavigation, 'time'>): void
+```
+
+The router records a navigation that finished — matched, refused, or not found.
 
 ### `recordPositions`
 
@@ -4405,6 +4436,16 @@ function setDefaultIconSet(name: string): void
 ```
 
 Set the default icon set by name.
+
+### `setDevtoolsRouteSource`
+
+```ts
+import { setDevtoolsRouteSource } from '@pdxui/core';
+
+function setDevtoolsRouteSource(source: () => DevtoolsRoute | null): void
+```
+
+The router says where to read the current route from. One router at a time: the last one wins.
 
 ### `setDirection`
 

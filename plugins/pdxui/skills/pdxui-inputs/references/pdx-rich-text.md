@@ -2,6 +2,8 @@
 
 A WYSIWYG editor.
 
+**Takes a DataSource:** bind one to `:source`.
+
 **The value follows `output`.** `value` goes in and comes out in the same format:
 
 | `output` | `value` accepts | `value` after an edit, and `pdx-change.detail` |
@@ -70,8 +72,9 @@ read-only in the same styling. **Not when** it is plain multi-line text → `pdx
 | `height` | `height` | string | `'auto'` | Fixed editor height. |
 | `minHeight` | `minheight` | string | `'120px'` | Minimum editor height. |
 | `maxHeight` | `maxheight` | string | `'none'` | Maximum editor height before scrolling. |
-| `source` | — | object | `null` | The data source to render from. |
-| `field` | `field` | string | `''` | Form field name bound to the editor content. |
+| `source` | — | object | `null` | A DataSource whose record `record-id` names: the editor edits that record's `field`, follows it when the source changes it, and writes each edit back through the source (PDXUI-767). With all three given, the record is the document and `value` only reflects it. |
+| `field` | `field` | string | `''` | The field of the `source` record that holds the document. |
+| `recordId` | `recordid` | string | `''` | The id of the `source` record to edit, as pdx-form's `record-id`: `"1"` finds `{ id: 1 }`. |
 | `label` | `label` | string | `''` | Accessible name of the editing area. Empty → the `rich-text.label` component string. |
 
 **API (via `:ref`)**

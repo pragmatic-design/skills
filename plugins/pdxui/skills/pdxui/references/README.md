@@ -1,6 +1,6 @@
 # Component catalogue — index by area
 
-> 115 components across 8 areas. Each area is a **skill of its own**, `pdxui-<area>`
+> 117 components across 8 areas. Each area is a **skill of its own**, `pdxui-<area>`
 > (with its props/events catalogue). **Look here before building: the component almost always exists already.**
 
 ## Layout & shell — skill `pdxui-layout`
@@ -31,10 +31,12 @@ Navigation, menus, entries, pagination.
 - `<pdx-context-menu>` — A right-click menu.
 - `<pdx-dropdown-menu>` — A button that opens an action menu.
 - `<pdx-fab>` — A floating action button.
+- `<pdx-link>` — A link that navigates without a reload and marks itself active.
 - `<pdx-menu>` — A list of actions.
 - `<pdx-menubar>` — A desktop-style menu bar.
 - `<pdx-nav-menu>` — A multi-level navigation menu.
 - `<pdx-pagination>` — Page through long results.
+- `<pdx-router-outlet>` — Where the page the current route matches is rendered.
 - `<pdx-split-button>` — A primary action plus a menu.
 - `<pdx-tabs>` — Switch between panels.
 

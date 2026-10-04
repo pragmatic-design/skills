@@ -15,10 +15,15 @@ How a project is installed, run and built. How its files are written is `pdxui-l
 | the CLI | `npm i -D @pdxui/cli`, then `npx pdx …` | [cli](references/cli.md) § The commands |
 | the daily loop | `npx pdx dev`: interpreted, HMR, no build | [cli](references/cli.md) § pdx dev |
 | the production build | `npx pdx build` | [cli](references/cli.md) § pdx build · [compiler](references/compiler.md) § Dual mode |
-| a CI gate | `npx pdx check`: the compiler's diagnostics, no build | [cli](references/cli.md) § pdx check |
+| a CI gate | `npx pdx check`: the defects, no build | [cli](references/cli.md) § pdx check |
+| a design review | `npx pdx check --design`: adds the heuristics and cross-file rules (`category: "design"`) | [cli](references/cli.md) § pdx check |
+| what a `PDX_*` code means | `npx pdx explain <CODE>` (`--json` for an agent) | [diagnostics](references/diagnostics.md) |
+| the fixes applied, then what is left | `npx pdx check --json --fix` | [cli](references/cli.md) § pdx check |
+| a finding that is intended where it is | `pdx-ignore <CODE>: <reason>` in a comment on the line before; never without the reason | [cli](references/cli.md) § When a finding is intended |
 | the landing route's JavaScript in one wave | `pdx({ preloadRoutes: ['/dashboard'] })` (`['/']` by default) | [compiler](references/compiler.md) § The first screen |
 | PDX without a build, or inside React/Vue/Angular | a script tag, prebuilt components | [integration](references/integration.md) |
-| to see the component tree and signals | the devtools overlay, `__pdx_debug` | [devtools](references/devtools.md) |
+| to see the component tree and signals | the devtools overlay, `__PDX_DEVTOOLS__.debug` | [devtools](references/devtools.md) |
+| an AI agent working in the project | the skills plugin, `AGENTS.md` from `pdx new project`, `npx pdx mcp` | [agents](references/agents.md) |
 
 ## Traps
 
@@ -33,5 +38,5 @@ How a project is installed, run and built. How its files are written is `pdxui-l
 ## References
 
 Copies of the site's docs pages, regenerated with them: [getting-started](references/getting-started.md) ·
-[cli](references/cli.md) · [compiler](references/compiler.md) · [integration](references/integration.md) ·
-[devtools](references/devtools.md).
+[cli](references/cli.md) · [agents](references/agents.md) · [compiler](references/compiler.md) · [diagnostics](references/diagnostics.md) ·
+[integration](references/integration.md) · [devtools](references/devtools.md).
