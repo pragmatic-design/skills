@@ -18,7 +18,7 @@ is one `<pdx-form name>` each under `createFormCoordinator()` (recipes: *A long 
 - Inside a group the DOM carries the full path: select `[name="customer.email"]`, not `[name="email"]`.
 - With `warnUnsaved`, a save from `@pdx-submit` does not tell the form it succeeded: call `form.reset(saved)`
   before navigating away, or the page asks about work it just saved (recipes: *Do not leave with unsaved work*).
-- `:source` + `record-id` does not find a record whose id is a number yet (PDXUI-768): pass the id the rows carry.
+- `:source` + `record-id` does not find a record whose id is a number: pass the id the rows carry.
 
 **Composes with** `pdx-form-field` (error, touched, warning) · `pdx-field-group` (nested `a.b` paths) ·
 `pdx-field-list` (repeating rows) · `pdx-form-actions` (the submit bar) · `pdx-wizard` (steps grouped by form).

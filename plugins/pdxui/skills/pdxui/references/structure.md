@@ -1,11 +1,10 @@
 # Breaking a screen into pieces
 
-The first blind lab run delivered three routes of 186, 212 and 284 lines, no `src/components/` at all,
-and a header assembled by hand while `pdx-page-header` sat unread in a skill called "other".
+Asked for behaviour, an agent delivers behaviour: routes of 200 lines and more, no `src/components/`
+at all, and a header assembled by hand while `pdx-page-header` exists.
 
-It was not a mistake by the agent: the commission asked for behaviour and got behaviour, and the one
-recipe that says "do not hand-write screens" opens with *"an app with DOZENS of entities"* — so it
-excluded itself. Nothing covered the ordinary case. This is that page. (PDXUI-117.)
+The one recipe that says "do not hand-write screens" opens with *"an app with DOZENS of entities"*, so
+it does not cover the ordinary case. This page does.
 
 ## When to extract, and when not to
 
@@ -72,8 +71,8 @@ those classes in `styles/app.css`, imported once.
 
 ## What already exists, so you do not build it
 
-Before writing a piece, check whether the library has it. The first run hand-built a page heading; the
-same run's findings list `pdx-page-header` as something it never saw.
+Before writing a piece, check whether the library has it. A hand-built page heading is the usual
+miss: `pdx-page-header` is one.
 
 | you were about to build | it exists |
 |---|---|

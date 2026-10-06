@@ -3,7 +3,7 @@
 Select from a tree of options.
 
 **Use it when** a form field's value is chosen from a hierarchy: an input that opens, is bound to `value`,
-and closes on the pick (PDXUI-499). **Not when** the tree stays on the page → `pdx-tree`; the options are flat
+and closes on the pick. **Not when** the tree stays on the page → `pdx-tree`; the options are flat
 → `pdx-select`; checking a branch should check its subtree → `pdx-tree` with `checkable` (here `multiple`
 toggles only the node clicked).
 

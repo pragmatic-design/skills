@@ -160,7 +160,7 @@ function windowRule(v) {
 ```
 
 The braces of an inline `@form` are its fields, so its options go in a **second block** after
-them. An external form already had one: `@form order: OrderSchema { validate: rule }`.
+them. An external form has one too: `@form order: OrderSchema { validate: rule }`.
 
 What it buys, and each half matters:
 

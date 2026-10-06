@@ -7,9 +7,9 @@ A list of actions.
 | `items` | — | array | `[]` | Menu items (data-driven) |
 | `open` | `open` | boolean | `false` | Open state |
 | `minWidth` | `minwidth` | number | `180` | Minimum width |
-| `menuId` | `menuid` | string | `''` | The id of the element that is `role="menu"`, for a trigger's `aria-controls` (PDXUI-620). |
-| `menuClass` | `menuclass` | string | `''` | Classes added to the element that is `role="menu"`: the dropdown's panel is that element, and `.pdx-dropdown-menu-panel` is what apps and the certification select it by (PDXUI-620). |
-| `renderItem` | — | function | `null` | Draws one entry, as the `item` slot does: `({ item, key, type }) => Node`. For a menu built from script — `pdx-dropdown-menu` hands its own `item` slot on through it (PDXUI-620). |
+| `menuId` | `menuid` | string | `''` | The id of the element that is `role="menu"`, for a trigger's `aria-controls`. |
+| `menuClass` | `menuclass` | string | `''` | Classes added to the element that is `role="menu"`: the dropdown's panel is that element, and `.pdx-dropdown-menu-panel` is what apps and the certification select it by. |
+| `renderItem` | — | function | `null` | Draws one entry, as the `item` slot does: `({ item, key, type }) => Node`. For a menu built from script — `pdx-dropdown-menu` hands its own `item` slot on through it. |
 
 **API (via `:ref`)**
 

@@ -144,16 +144,15 @@ catch-up, so for that app the interval keeps running hidden.
 
 **A tick that arrives while the last refetch is still in flight is skipped.** Polling every second
 means asking every second, not starting a request every second regardless of the one before: at a
-1s interval against a 3s endpoint, the old behaviour started a request per second and none of them
-was ever the one whose result got used.
+1s interval against a 3s endpoint, starting a request per second regardless would mean none of them
+is ever the one whose result gets used.
 
 **`dispose()` is for a query you created outside a component.** Inside one, the query is torn down
 with the component — the interval and both listeners — because it registers with the same ownership
 scope that disposes the component's effects. A query created at module level has no scope to belong
 to, and there `dispose()` is the only thing that stops it.
 
-Both behaviours above were unmeasured until `refetchInterval` got a clock on it, and both were
-wrong: `packages/core/tests/use-query-interval.test.ts` is where they are now pinned.
+Both behaviours above are pinned in `packages/core/tests/use-query-interval.test.ts`.
 
 **A push from the server** is the right answer for most of what polling gets used for — see
 [Live data](#live-data-a-push-from-the-server) above. Polling is what you use when the source

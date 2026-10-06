@@ -23,8 +23,8 @@ type lives in core rather than next to the component, so it is written out here:
 
 ⚠️ **`cell:` takes a `CellSpec`, the object a builder returns, never a function.**
 `cell: (row) => '…'` is ignored: the grid looks for the spec's `kind`, finds none, and shows the raw
-value (the column's default rendering). The console says so, once per column. Lab round 5 wrote
-exactly that and got `false` where it wanted "Sì". The builders, all exported from `@pdxui/core`,
+value (the column's default rendering). The console says so, once per column. A boolean column
+written that way shows `false` where "Sì" was wanted. The builders, all exported from `@pdxui/core`,
 build the DOM with `textContent`, never `innerHTML`:
 
 | builder | renders |
@@ -97,11 +97,11 @@ nothing on a narrow viewport.
 | `data` | — | array | `null` | The row data to display. |
 | `striped` | `striped` | boolean | `false` | Alternates row background colours. |
 | `hover` | `hover` | boolean | `true` | Highlights the row under the pointer. |
-| `rowClickable` | `rowclickable` | boolean | `false` | The rows open something: a click on a row is handled (`pdx-row-click`), so the row takes a pointer. It was each page's own `.pdx-dg-row { cursor: pointer }`, reaching into this component's internal class (PDXUI-716). Enter on a row is unchanged: it edits a cell in an editable grid and does nothing otherwise, so give a keyboard reader a way in of its own (an `actions()` column). |
+| `rowClickable` | `rowclickable` | boolean | `false` | The rows open something: a click on a row is handled (`pdx-row-click`), so the row takes a pointer, so a page does not write its own `.pdx-dg-row { cursor: pointer }`, reaching into this component's internal class. Enter on a row is unchanged: it edits a cell in an editable grid and does nothing otherwise, so give a keyboard reader a way in of its own (an `actions()` column). |
 | `compact` | `compact` | boolean | `false` | Tighter row height for dense tables. |
 | `stickyHeader` | `stickyheader` | boolean | `true` | Keeps the header visible while the body scrolls. |
 | `selection` | `selection` | string | `'none'` | Row selection mode: 'none', 'single' or 'multiple'. |
-| `rowClass` | `rowclass` | string | `''` | A class for the whole row: a string, or `(row, index) => string`. Marks a row invalid, new, stale — what `cellClass` could only do one column at a time (PDXUI-587).  Declared `String` because an ATTRIBUTE is one (`row-class="compact"`), and `PropType` is a single constructor. A function assigned as a JS property arrives untouched: `coerce` returns a non-string value as it is (`component.ts:448`). |
+| `rowClass` | `rowclass` | string | `''` | A class for the whole row: a string, or `(row, index) => string`. Marks a row invalid, new, stale — what `cellClass` could only do one column at a time.  Declared `String` because an ATTRIBUTE is one (`row-class="compact"`), and `PropType` is a single constructor. A function assigned as a JS property arrives untouched: `coerce` returns a non-string value as it is (`component.ts:448`). |
 | `idField` | `idfield` | string | `'id'` | The row field used as a unique key. |
 | `stateKey` | `statekey` | string | `''` | Persists sort/filter/column state under this key. |
 | `emptyTitle` | `emptytitle` | string | `''` | The empty state's text. Unset, it is the grid string `empty.title`. |
@@ -110,15 +110,15 @@ nothing on a narrow viewport.
 | `filterable` | `filterable` | boolean | `false` | Enables per-column filtering. |
 | `filterMode` | `filtermode` | string | `'none'` | How filters apply: e.g. 'menu' or 'row'. |
 | `showToolbar` | `showtoolbar` | boolean | `false` | Shows the toolbar (search, column chooser, export). |
-| `search` | `search` | boolean | `false` | A search field at the toolbar's right: the term is looked for in the columns marked `searchable` (PDXUI-671). |
+| `search` | `search` | boolean | `false` | A search field at the toolbar's right: the term is looked for in the columns marked `searchable`. |
 | `showGroupBar` | `showgroupbar` | boolean | `false` | Shows the drag-to-group bar. |
 | `paginationPosition` | `paginationposition` | string | `'bottom'` | Where the pager sits: 'top', 'bottom' or 'both'. |
-| `pageSizes` | — | array | `[]` | The rows-per-page choices the footer's pager offers; empty, it offers none (PDXUI-675). |
+| `pageSizes` | — | array | `[]` | The rows-per-page choices the footer's pager offers; empty, it offers none. |
 | `expandable` | `expandable` | boolean | `false` | Allows rows to expand into a detail panel. |
 | `rowReorder` | `rowreorder` | boolean | `false` |  |
 | `groupBy` | — | array | `null` | Fields to group rows by. |
 | `virtualScroll` | `virtualscroll` | boolean | `false` | Renders only visible rows for large datasets. |
-| `rowHeight` | `rowheight` | number | `0` | Row height in px for virtual scrolling (42 when unset); ignored otherwise (PDXUI-207). |
+| `rowHeight` | `rowheight` | number | `0` | Row height in px for virtual scrolling (42 when unset); ignored otherwise. |
 | `maxHeight` | `maxheight` | number | `0` | Caps the grid height in px; the body scrolls beyond it. 0 = no cap (a virtual grid uses 400). |
 | `fillHeight` | `fillheight` | boolean | `false` | Fill the parent's height (flex) instead of growing with content. The page no longer scrolls — only the grid body scrolls (virtualized). Pair with virtual-scroll for large sets. |
 | `editable` | `editable` | boolean | `false` | Enables inline cell editing. |
@@ -130,7 +130,7 @@ nothing on a narrow viewport.
 | Call | Notes |
 |---|---|
 | `grid` _(read-only)_ | Read-only, via a ref: `el.grid`. |
-| `whenReady()` | Resolves once the grid is built and `grid`, `applyState` and the rest can be used. The build is a frame after the element connects; until then `applyState` does nothing. A caller that asks later is answered at once (PDXUI-677). |
+| `whenReady()` | Resolves once the grid is built and `grid`, `applyState` and the rest can be used. The build is a frame after the element connects; until then `applyState` does nothing. A caller that asks later is answered at once. |
 | `openColumnMenu(anchorEl)` | Open the column menu anchored to this element. |
 | `closeColumnMenu()` | Close the column menu, if one is open. |
 | `openFilterPopover(field, anchorEl)` | Open the filter popover of a column, by field, anchored to this element. An unknown field opens nothing. |
@@ -144,8 +144,8 @@ nothing on a narrow viewport.
 | `deleteRow(rowId)` | Delete a row by id and emit `pdx-row-delete`. It asks nothing first, and in batch mode does not sync. |
 | `clearSelection()` | Uncheck every selected row. |
 | `getSelectedIds()` | The ids currently checked, as an array. |
-| `setSelectedIds(ids)` | Check exactly these rows and uncheck the rest — what a partly refused bulk action leaves behind (PDXUI-585). |
-| `applyState(state)` | Put an arrangement back — filter, sort, column order, widths, visibility, page size — and show it.  `grid.loadState()` is the same thing without the repaint, and an application that reached for it got a grid whose model had moved and whose header had not. It raises no column event either, and that is deliberate: restoring a saved view is not a reader rearranging anything (PDXUI-592). |
+| `setSelectedIds(ids)` | Check exactly these rows and uncheck the rest — what a partly refused bulk action leaves behind. |
+| `applyState(state)` | Put an arrangement back — filter, sort, column order, widths, visibility, page size — and show it.  `grid.loadState()` is the same thing without the repaint: an application that reaches for it gets a grid whose model has moved and whose header has not. It raises no column event either, and that is deliberate: restoring a saved view is not a reader rearranging anything. |
 | `commitBatch()` | Send every change a batch edit is holding, then sync the source. |
 | `revertBatch()` | Throw away every change a batch edit is holding. |
 

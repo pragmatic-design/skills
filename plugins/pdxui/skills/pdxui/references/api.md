@@ -30,8 +30,8 @@ Put a component's CSS inside a shadow root.
 
 Emitted by the compiler for a `<template shadow>` component, and the reason it has to exist: the
 light-DOM path appends a `<style>` to `document.head`, and a document stylesheet does not cross a
-shadow boundary. A shadow component whose styles went to the head rendered unstyled, with every
-piece individually correct (PDXUI-472).
+shadow boundary. A shadow component whose styles went to the head would render unstyled, with
+every piece individually correct.
 
 One constructed stylesheet per component, adopted by every instance — so a hundred rows share one
 sheet, and an HMR update to it reaches all of them at once. Where constructable stylesheets are
@@ -374,10 +374,10 @@ Assign a bound value to a property.
 A component installs its prop accessors when it connects, and a template binds while it builds the
 fragment, before that. Most names are then simply absent, and assigning leaves an own data
 property that the component takes over as a pre-upgrade value. A name the DOM also has as a bare
-getter — `offsetTop` on pdx-affix, `prefix` on pdx-input — is not absent: assigning reached the
-native getter and threw "which has only a getter". On a custom element that value is defined as
+getter — `offsetTop` on pdx-affix, `prefix` on pdx-input — is not absent: assigning reaches the
+native getter and throws "which has only a getter". On a custom element that value is defined as
 the element's own data property instead, the same thing the plain assignment leaves for any other
-name. (PDXUI-362)
+name.
 
 The prototype walk runs only while the element has no own property of that name, which after the
 component's setup it always has. The inline build calls this too, for a component's props.
@@ -422,11 +422,11 @@ function awaitReady(value: unknown): boolean
 
 The condition `@await` switches on — for a promise, whether it has settled.
 
-`@await (x)` used to compile to `when(() => x, …)`, a truthiness switch, and a Promise object is
-always truthy: the body rendered at once and forever, pending or rejected (PDXUI-151). Now:
+A plain truthiness switch (`when(() => x, …)`) cannot serve `@await (x)`: a Promise object is
+always truthy, and the body would render at once and forever, pending or rejected. So:
   - a thenable → `false` while pending, `true` once fulfilled, and when it REJECTS this throws the
     reason (as an Error) — which the error boundary the compiler emits for `@error` catches;
-  - anything else → its truthiness, exactly as before, so `@await (appReady)` does not change.
+  - anything else → its truthiness, so `@await (appReady)` is a plain condition.
 
 ⚠️ The expression must yield the SAME promise each time it is evaluated. A call that makes a new
 promise per evaluation (`@await (fetchUser())`) starts over on every re-run and never settles —
@@ -562,12 +562,12 @@ What "no value" means follows the type the property holds, as Vue's `patchDOMPro
 
 - boolean (`checked`, `disabled`) → false;
 - string (`value`, `textContent`, `title`) → '' and the attribute goes. Removing the attribute
-  alone left live state on screen: a field's `value` and a node's text are not their attribute;
+  alone leaves live state on screen: a field's `value` and a node's text are not their attribute;
 - anything else — a number (`maxLength`, `tabIndex`), an object (`style`) → the attribute goes, and
   nothing is assigned: `maxLength = null` coerces to 0, a field that takes no characters, and
   `style = null` does not clear the inline style everywhere (happy-dom keeps it).
 
-The inline build calls this too, so both builds clear a property the same way. (PDXUI-278)
+The inline build calls this too, so both builds clear a property the same way.
 
 ### `clearComponentStrings`
 
@@ -781,7 +781,7 @@ import { componentStringsChanged } from '@pdxui/core';
 const componentStringsChanged: ReadonlySignal<unknown>
 ```
 
-A dependency that changes whenever ANY registered string changes. (PDXUI-559)
+A dependency that changes whenever ANY registered string changes.
 
 `getComponentString()` is reactive per key, which serves a template that reads it. What it does
 not serve is a component that writes a string into an ATTRIBUTE — `aria-label`, where a library
@@ -944,7 +944,7 @@ Create a typed bidirectional channel.
 Messages are validated by TypeScript at compile time.
 At runtime, listeners are stored per-event, frozen for security.
 
-CONSTRAINT (review F13): send (down) and emit (up) share one listener map, keyed by event
+CONSTRAINT: send (down) and emit (up) share one listener map, keyed by event
 NAME — give `down` and `up` distinct names in the contract ('refresh' vs 'refreshed', say), or
 the listeners receive the messages of both directions.
 
@@ -1689,7 +1689,7 @@ Keyed list whose rows see their CURRENT item — what `@for` compiles to.
 Like {@link each}, but `renderFn` receives getters: `item()` and `index()`. A row reused for the
 same key keeps its DOM node, and its getters move to the new object and position, so an immutable
 update (`rows.map(r => r.id === id ? { ...r, done: true } : r)`) reaches the row's bindings. With
-`each()` the row's closures kept the object it was created with (PDXUI-156). Read the getters
+`each()` the row's closures keep the object it was created with. Read the getters
 inside a binding (`${() => item().name}`) — a read while the row is built is a snapshot.
 
 ### `easings`
@@ -2012,7 +2012,7 @@ function formatMessage(message: string, params: Record<string, unknown>): string
 
 Format a message already in hand with the rules of `$t()`: ICU plural blocks for the current locale,
 then `{name}` interpolation; a placeholder with no value stays as written. The component strings of
-@pdxui/ui go through here, so a locale can pluralise "{count} selected" (PDXUI-301).
+@pdxui/ui go through here, so a locale can pluralise "{count} selected".
 
 ### `formatWithCalendar`
 
@@ -2317,7 +2317,7 @@ function getDialogQueue(): DialogQueue
 
 The page's one dialog queue: the one `<pdx-overlay-outlet>` draws, `dialog.confirm()` pushes to,
 and a form's leave guard asks through. It lives here, not in @pdxui/ui, because core has to
-ask a question too (PDXUI-233) and cannot import the package that draws it.
+ask a question too and cannot import the package that draws it.
 
 ### `getFieldsByPrefix`
 
@@ -2789,7 +2789,7 @@ so `{{ user?.name }}` and `{{ busy && 'Saving…' }}` print nothing rather than 
 is `String(value)`, `0` included.
 
 The inline build writes its text nodes through this too, so a page reads the same in dev and in a
-production build. It wrote `String(value)` and showed `null` and `false` (PDXUI-843).
+production build: a plain `String(value)` would show `null` and `false`.
 
 ### `invalidate`
 
@@ -3211,9 +3211,9 @@ components in it.
 
 A move is a disconnect and a connect, and a PdxElement treats a disconnect as its end: it disposes
 its effects and its state, and the connect sets it up again from its light-DOM children. A plain
-move renders once (PDXUI-251); this is the cheap path that skips the teardown and the second
+move renders once; this is the cheap path that skips the teardown and the second
 setup, so what the user typed, scrolled or opened stays. The components under `root` ignore the
-disconnect for the length of `move`, and stay as they were (PDXUI-208). `move` must put the
+disconnect for the length of `move`, and stay as they were. `move` must put the
 subtree back in the document before it returns.
 
 ### `mutation`
@@ -3286,7 +3286,7 @@ function onBeforeLeave(fn: () => boolean | 'destroy' | Promise<boolean>): void
 ```
 
 Register a navigation guard. Called before the router navigates away from the page this
-component is on — the routed page itself or any component inside it (PDXUI-243).
+component is on — the routed page itself or any component inside it.
 Return false to block navigation, 'destroy' to force destroy even if keepAlive,
 or a Promise<boolean> for async confirmation (e.g. "unsaved changes" dialog).
 
@@ -3413,7 +3413,7 @@ is temporarily restored so lifecycle hooks can be registered from mount callback
 The callback may be async — `onMount(async () => { data = await load(); })`. Its promise is not
 awaited and is not a cleanup: return a function from a synchronous callback for that, and register
 an `onDestroy()` before the first `await`, since the scope is restored only while the callback runs
-synchronously (PDXUI-832).
+synchronously.
 
 ### `onPinch`
 
@@ -4263,7 +4263,7 @@ Usage:
 
 The source is read through {@link untracked}, and that is the operator: read tracked, it becomes a
 second dependency and the sampled signal follows the source, which is a mirror and not a sample.
-The usage above is the case it breaks — form data changes on every keystroke. (PDXUI-476)
+The usage above is the case it breaks — form data changes on every keystroke.
 
 ### `sanitizeBoundUrl`
 
@@ -4276,8 +4276,8 @@ function sanitizeBoundUrl(el: Element, attr: string, raw: unknown): string | nul
 Sanitise a URL bound to `attr` on `el` with the policy of what the URL is used for: media for
 `poster`, and for `src` on img/source/video/audio or on a custom element; the link policy for
 everything else, a custom element's `href` included. In dev a dropped value is reported once per
-element and attribute, with its scheme: an empty `src` and nothing in the console was how PDXUI-204
-went unnoticed.
+element and attribute, with its scheme: an empty `src` and nothing in the console would leave a
+dropped URL unnoticed.
 
 ### `sanitizeMediaUrl`
 
@@ -4290,7 +4290,7 @@ function sanitizeMediaUrl(raw: unknown): string | null
 The policy for a URL an element LOADS as media (`<img src>`, `<video poster>`), not one it
 navigates to. It accepts what {@link sanitizeUrl} accepts, plus a local object URL (`blob:`,
 from `URL.createObjectURL(file)`: the preview of a file the user just picked) and a raster
-`data:image/*`. Links keep `sanitizeUrl`, which still rejects both. (PDXUI-204)
+`data:image/*`. Links keep `sanitizeUrl`, which still rejects both.
 
 ### `sanitizeUrl`
 
@@ -4672,7 +4672,7 @@ compiles to the `.set`.
 it decides the WRITE, not just the notification: a value it calls equal is never stored, so a
 reader holding the old one by identity keeps pointing at it. For a value rebuilt on every write
 (a parsed query, a DTO, an array mapped from a store) `Object.is` says «changed» every time, and
-on a page where such a value round-trips that is a loop with nothing to stop it (PDXUI-591).
+on a page where such a value round-trips that is a loop with nothing to stop it.
 
 ### `sizeMiddleware`
 
@@ -5357,10 +5357,9 @@ function useDrag(el: () => HTMLElement | null, options?: DragOptions): DragRetur
 
 Make an element draggable: it FOLLOWS the pointer, and the gesture is reported as signals.
 
-The movement is the default (`move: false` opts out, and a `ghost` opts out for you). It used to
-report only — `isDragging()`, `position()`, the drop-zone hit testing — while this sentence said
-it made an element draggable, so every caller wrote the same four lines to paint it and one of
-them shipped without them: a board whose cards did not move under the pointer (PDXUI-534).
+The movement is the default (`move: false` opts out, and a `ghost` opts out for you). Reporting
+only — `isDragging()`, `position()`, the drop-zone hit testing — would leave every caller writing
+the same four lines to paint it, and a board whose cards do not move under the pointer.
 
 Uses PointerEvent for unified touch/mouse/pen support.
 Features: axis constraint, bounds, ghost, auto-scroll, velocity,
@@ -5576,8 +5575,8 @@ function useQuery(queryFn: () => Promise<T>, options?: UseQueryOptions<T>): Quer
 Declarative data fetching with caching, retry, and auto-refetch.
 
 The query function comes FIRST, as an argument of its own — the options object does not carry it.
-(This doc block used to show a single object with `queryFn` inside it, which is not the signature
-and cannot work: the object would be called as the fetcher. PDXUI-465.)
+(A single object with `queryFn` inside it is not the signature and cannot work: the object would
+be called as the fetcher.)
 
 Usage:
   const users = useQuery(
@@ -5649,13 +5648,13 @@ state. Pass an element to watch that element instead, and the state is one per e
 
 Which you need is decided by the layout, not by preference: in an app built on `pdx-app-layout` the
 window never scrolls (the shell is `overflow: hidden` and `main.pdx-app-main` is `overflow-y: auto`),
-so `useScroll()` there returns a `y` that never moves. (PDXUI-457)
+so `useScroll()` there returns a `y` that never moves.
 
 Pass a **getter** — `useScroll(() => box())` — and it attaches itself when the element arrives,
 which is what a `:ref` signal does at mount, and follows the getter if it later yields a different
 element. That is the shape the rest of the element-watching composables take (`useDrag`,
 `useSortable`, `useContainerSize`…), and the reason to prefer it: nothing has to be called from a
-place where the element already exists (PDXUI-474). The getter form owns its listener, so it is
+place where the element already exists. The getter form owns its listener, so it is
 the one whose `dispose()` does something.
 
 `direction` returns to `'idle'` 150 ms after the last event, not when the direction changes.
@@ -5704,9 +5703,7 @@ to a drag handle, which is what makes a list whose items also contain buttons us
 
 `group` makes two lists one destination: an item dragged out of a list and into a sibling with
 the same group name opens the space THERE, and on release the source is told `onRemove` and the
-receiver `onReceive`. It was accepted and warned until PDXUI-550 — the registry was filled on
-every mount and nothing read it — which is why the showcase's kanban board reaches for
-`useDrag` + `useDropZone` and has no gap.
+receiver `onReceive`.
 
 ### `useStorage`
 

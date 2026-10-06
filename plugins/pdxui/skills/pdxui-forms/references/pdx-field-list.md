@@ -9,7 +9,7 @@ are `{ __id, value }` wrappers keyed by an id that survives a removal — and wh
 
 ⚠️ **Never both on one name**: `form.getValues()` merges the field arrays back last, so one call to
 `form.array('rooms')` on a name this component manages discards everything it has written. The full
-comparison, and which to choose, is in the recipe "Rows that repeat". [PDXUI-454]
+comparison, and which to choose, is in the recipe "Rows that repeat".
 
 `itemFields` builds **plain controls only** — text, email, number, textarea, checkbox, switch. A
 `select` gets no options, and anything else becomes a text input: a row that needs a picker, a select
@@ -26,7 +26,7 @@ added. **Not when** you want keyed rows that survive a removal → `createFieldA
 - A row's fields are not in `form.fields` until the row exists; a per-step check reads them by dotted path,
   `lines.${i}.activity`.
 - `form.fields.<name>` — the array itself — mirrors the rows only when the array was seeded EMPTY; a filled
-  initial array has no such leaf, and the dotted fields are the only state (PDXUI-567).
+  initial array has no such leaf, and the dotted fields are the only state.
 - Inside a `<pdx-field-group>` its rows are prefixed with the group's path.
 
 **Composes with** `pdx-form` (the form it writes into) · `pdx-field-group` (a nested path) · `pdx-wizard` (rows

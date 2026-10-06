@@ -52,7 +52,7 @@ read-only in the same styling. **Not when** it is plain multi-line text → `pdx
 - An HTML string as `value` with the default `output="json"` is not HTML to it: the editor starts EMPTY, and
   only a dev build warns. Set `output="html"`.
 - The compiler does not wire it inside `<pdx-form>` by `name`: bind `:value` and `@pdx-change` yourself.
-- `source` and `field` are declared and read by nothing: setting them does nothing (PDXUI-767).
+- `source` and `field` are declared and read by nothing: setting them does nothing.
 - Only the setters wait for the editor. Before `pdx-ready`, `getJSON()` is `null`, `getHTML()` and `getText()`
   are `''`, and `execCommand()` does nothing.
 
@@ -72,7 +72,7 @@ read-only in the same styling. **Not when** it is plain multi-line text → `pdx
 | `height` | `height` | string | `'auto'` | Fixed editor height. |
 | `minHeight` | `minheight` | string | `'120px'` | Minimum editor height. |
 | `maxHeight` | `maxheight` | string | `'none'` | Maximum editor height before scrolling. |
-| `source` | — | object | `null` | A DataSource whose record `record-id` names: the editor edits that record's `field`, follows it when the source changes it, and writes each edit back through the source (PDXUI-767). With all three given, the record is the document and `value` only reflects it. |
+| `source` | — | object | `null` | A DataSource whose record `record-id` names: the editor edits that record's `field`, follows it when the source changes it, and writes each edit back through the source. With all three given, the record is the document and `value` only reflects it. |
 | `field` | `field` | string | `''` | The field of the `source` record that holds the document. |
 | `recordId` | `recordid` | string | `''` | The id of the `source` record to edit, as pdx-form's `record-id`: `"1"` finds `{ id: 1 }`. |
 | `label` | `label` | string | `''` | Accessible name of the editing area. Empty → the `rich-text.label` component string. |

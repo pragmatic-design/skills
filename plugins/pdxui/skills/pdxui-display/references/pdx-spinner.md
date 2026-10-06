@@ -6,7 +6,7 @@ A lightweight loading indicator.
 |---|---|---|---|---|
 | `variant` | `variant` | string | `'spinner'` | Visual variant. |
 | `size` | `size` | string | `'md'` | Size of the control (e.g. sm, md, lg). |
-| `label` | `label` | string | `''` | The accessible name. Empty means "use the translated default" — a prop default cannot be a literal here, because the spinners the LIBRARY builds have no author to pass one: a pdx-list puts a pdx-block-ui over itself while its source loads, and nothing on that path reaches the spinner inside it. An app in Italian was left with an English "Loading" it could not override. (PDXUI-139) |
+| `label` | `label` | string | `''` | The accessible name. Empty means "use the translated default" — a prop default cannot be a literal here, because the spinners the LIBRARY builds have no author to pass one: a pdx-list puts a pdx-block-ui over itself while its source loads, and nothing on that path reaches the spinner inside it. An app in Italian would be left with an English "Loading" it could not override. |
 | `showLabel` | `showlabel` | boolean | `false` | Shows a text label beside the spinner. |
 
 **Renders:** roles `status`

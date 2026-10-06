@@ -10,7 +10,7 @@ into section components → `<pdx-form :form>`; editing a grid row in a side pan
 
 **Pitfalls**
 - `schema` names a field `name`; `FieldDefinition`, `ColumnDef` and `FilterField` name it `field`. A filter
-  field written with `name` is dropped without a word (PDXUI-525).
+  field written with `name` is dropped without a word.
 - The form is built a frame after it connects: `getValues()` and `validate()` answer `undefined` until then.
 - A change to `fields`, `schema`, `source`, `record-id`, `layout`, `columns` or `show-actions` rebuilds the form
   from scratch: what the user typed is gone.

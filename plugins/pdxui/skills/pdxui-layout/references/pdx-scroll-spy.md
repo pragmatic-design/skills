@@ -14,7 +14,7 @@ section is ever marked active.
 A link's `href="#id"` works as the target selector as well as `data-spy-target`, which the prop
 table does not say: `updateLinks()` reads `href` first and falls back to `data-spy-target`.
 
-Measured in `skill-claims.spec.ts` (case `who-scrolls`). [PDXUI-450]
+Measured in `skill-claims.spec.ts` (case `who-scrolls`).
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|

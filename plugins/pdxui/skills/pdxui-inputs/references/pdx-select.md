@@ -60,7 +60,7 @@ paged table → `pdx-relation-picker`.
 | `selectedTemplate` | — | object | `null` | Custom render for selected value in trigger: (item: {label, value, _raw}) => string\|Node |
 | `searchPosition` | `searchposition` | string | `'trigger'` | Where to show search input: 'trigger' (default) or 'dropdown' |
 | `creatable` | `creatable` | boolean | `false` | Allow creating new options when search has no match. Emits pdx-create. |
-| `createLabel` | `createlabel` | string | `''` | Label template for the create option. Use {query} as placeholder. Empty: the select.create component string, «Create "{query}"» in English (PDXUI-257). |
+| `createLabel` | `createlabel` | string | `''` | Label template for the create option. Use {query} as placeholder. Empty: the select.create component string, «Create "{query}"» in English. |
 | `remote` | `remote` | boolean | `false` | Enable debounced server-side filtering for remote DataSource. |
 | `debounce` | `debounce` | number | `200` | Debounce delay in ms for remote search. |
 

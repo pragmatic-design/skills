@@ -39,7 +39,7 @@ let pinError = $signal(''); // set when the server refuses the PIN: pinError = '
 | `showError` | `showerror` | boolean | `false` | Force error display even if not touched |
 | `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `horizontal` | `horizontal` | boolean | `false` | Horizontal layout: label left, input right |
-| `a11yLabel` | `a11ylabel` | string | `''` | The control's name when the field shows no `label`: set as its aria-label. A visible label wins, and a control that names itself keeps its own name (PDXUI-387). |
+| `a11yLabel` | `a11ylabel` | string | `''` | The control's name when the field shows no `label`: set as its aria-label. A visible label wins, and a control that names itself keeps its own name. |
 
 **Renders:** roles `alert`
 

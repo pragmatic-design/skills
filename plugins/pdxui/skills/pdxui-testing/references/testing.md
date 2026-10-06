@@ -38,9 +38,9 @@ below takes a container as its first argument.
 
 ## Finding things: the queries
 
-The page used to stop here, and a reader fell back to `el.querySelector('.pdx-input')` — a class
-selector against the design system's internals, which breaks on any refactor and asserts nothing about
-whether the control is usable.
+Without them a test falls back to `el.querySelector('.pdx-input')` — a class selector against the
+design system's internals, which breaks on any refactor and asserts nothing about whether the control
+is usable.
 
 ```ts
 import { getByRole, getByText, getByTestId, queryByRole, findByText } from '@pdxui/core/testing';

@@ -32,7 +32,7 @@ Test for empty with `el.value === null`, never with a falsy check: `0` is a valu
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
 | `ariaLabel` | `arialabel` | string | `''` | Accessible name when there is no visible label. |
 | `controls` | `controls` | 'both' \| 'right' \| 'none' | `'both'` | 'both'=−left +right, 'right'=stacked on right, 'none'=hidden |
-| `stepMode` | `stepmode` | 'auto' \| 'fixed' \| 'caret' | `'auto'` | What the arrow keys and the wheel step (PDXUI-701). `fixed`: one `step`. `caret`: the digit before the caret — `12\|3` ↑ is 133, `1.2\|5` ↑ is 1.35 — and the caret stays on that digit. `auto`, the default: `caret` with `controls="none"`, `fixed` with steppers shown. |
+| `stepMode` | `stepmode` | 'auto' \| 'fixed' \| 'caret' | `'auto'` | What the arrow keys and the wheel step. `fixed`: one `step`. `caret`: the digit before the caret — `12\|3` ↑ is 133, `1.2\|5` ↑ is 1.35 — and the caret stays on that digit. `auto`, the default: `caret` with `controls="none"`, `fixed` with steppers shown. |
 | `allowWheel` | `allowwheel` | boolean | `false` | Allow the mouse wheel to change the value when focused. |
 | `allowNegative` | `allownegative` | boolean | `false` | Allow negative values (adds a sign toggle). |
 | `locale` | `locale` | string | `''` | Locale for formatting and for reading a typed value. Empty: the page's language (`lang`), then the browser's. |
