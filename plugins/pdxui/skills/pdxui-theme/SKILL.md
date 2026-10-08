@@ -103,10 +103,9 @@ reader of that app will see it. What each language sets (`--pdx-input-min-height
 (`calc(2rem / 0.9)`), so the factor scales the SPACING and leaves the controls where the language
 puts them — the shipped `corporate` renders 36px, `fluent` 32, `cupertino` the HIG's 44.
 
-That was not always true, and the correction is the reason it is stated so plainly: they used to
-render `figure × factor`, so fluent came out at 28.8px and cupertino at 48.4 — overshooting a
-44px accessibility target (PDXUI-416, 437, 440). A theme that genuinely wants different controls
-DECLARES them; it does not get them from a multiplication.
+Rendering `figure × factor` would put fluent at 28.8px and cupertino at 48.4 — overshooting a
+44px accessibility target. A theme that genuinely wants different controls DECLARES them; it does
+not get them from a multiplication.
 
 `pdx-density="compact|comfort"` on an element scales the result again, and that one is meant to.
 
@@ -226,8 +225,7 @@ not just token math.
 1. **Theme doesn't apply** → the theme CSS isn't imported, or `pdx-theme` doesn't match the block name
    exactly. The name in `[pdx-theme="x"]` **is** the contract.
 2. **Everything looks light-mode-ish in dark** → `pdx-scheme` missing on `<html>` (see §6).
-3. **`neutral` is the canvas theme name** (it was renamed from `default`; `default` no longer matches
-   anything). `'default'` is still a valid *button size* / slot name — don't confuse them.
+3. **`neutral` is the canvas theme name** (`pdx-theme="default"` matches nothing). `'default'` is still a valid *button size* / slot name — don't confuse them.
 4. **Styling a component "just for this page"** → use tokens + a scoped class; never hardcode colors,
    and check the component's own theme override before fighting it.
 5. **Where the theme file goes.** Keep the generated CSS in your app and import it after

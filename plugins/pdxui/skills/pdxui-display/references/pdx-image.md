@@ -13,8 +13,6 @@ Two asymmetries the policy's name does not give away:
   sanitiser runs on bound attributes only;
 - **`blob:` passes** — `URL.createObjectURL(file)`, the preview of a file the user just picked.
 
-[PDXUI-450]
-
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
 | `src` | `src` | string | `''` | Image URL |

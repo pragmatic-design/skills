@@ -10,8 +10,7 @@ The component: **`pdx-app-layout`** (its regions come from `data-region="header|
 - Toggling the mobile drawer: the imperative API, `document.querySelector('pdx-app-layout').__appLayout.toggleNavbar()`.
 - The nav: **`pdx-nav-menu`** (`:items` is `{key,label,icon,href,disabled,badge,children}`, plus `active-key` and `@pdx-select`).
 - Keep the developer tools (the theme and scheme switchers) OUTSIDE the layout: a `position:fixed` gear opening a `pdx-drawer`.
-- `:class` on a `data-region` is fine — it merges with the class the layout adds (this used to say the opposite;
-  measured 2026-09-08). ⚠️ But the region NAMES are a closed set of four: anything else drops out of the layout in
+- `:class` on a `data-region` is fine — it merges with the class the layout adds (measured). ⚠️ But the region NAMES are a closed set of four: anything else drops out of the layout in
   silence. The canonical example: `Pragmatic.Design.Builder/golden/app/src/app.pdx`.
 
 ## A list or grid (no page scroll, virtualised)
@@ -22,33 +21,31 @@ The component: **`pdx-data-grid`**, with either `:data` (an array, auto-wrapped 
   **`cell:`**, not `format:` — the type marks `format` `@deprecated` («a function that returns HTML is sanitized but
   fragile and not generator-friendly»). The typed renderers, all exported from `@pdxui/core`:
   **`badge()` `status()` `currency()` `dateCell()` `link()` `booleanIcon()` `actions()` `rowMenu()`** — the grid builds
-  the DOM with `textContent`, no `innerHTML`. A plain string formatter is still fine for simple text. (PDXUI-109
-  findings/skill 4.)
+  the DOM with `textContent`, no `innerHTML`. A plain string formatter is still fine for simple text.
 - **A row's OWN actions**: `actions()` draws a button per entry — right for one or two, wrong for four, because at
   390px a row of four icon buttons is the whole width of the phone. Past two, `rowMenu({ items })` draws ONE trigger
   that opens the grid's menu (arrows, type-ahead, Escape back to the trigger). Its items carry what a row of buttons
   cannot say: `href: (row) => '…'` makes the entry a real `<a>` (middle-clickable, copyable, announced as a link
   — `window.open` in a handler is none of those), and `disabled: (row) => …` + `disabledReason` leaves a refused
-  action on screen, `aria-disabled`, with its reason reachable, instead of making it vanish. (PDXUI-584.)
+  action on screen, `aria-disabled`, with its reason reachable, instead of making it vanish.
 - Filters: `filter-mode="row"` (a dedicated row) | `filter-mode="header"` (a funnel in the header, no row) |
   a **`pdx-filter-builder`** above it (chip-based, with `:fields` and `:source`). Paging: `:source=createDataSource({pageSize})`
   (without virtualisation) → and a `pdx-pagination` footer.
 - Multiple selection: `selection="multiple"` → the `pdx-selection-change {selected:ids,count}` event. Give the
   source `selection: {mode:'multiple'}` and `ds.selectedCount()` / `ds.selectedItems()` follow the ticks too, with
-  cross-page select-all and optional persistence (PDXUI-114); without it the source stays empty by design. The bulk-action bar:
+  cross-page select-all and optional persistence; without it the source stays empty by design. The bulk-action bar:
   build it yourself (sticky at the bottom), driven imperatively from the handler (see the reactivity gotchas). The API:
-  `el.clearSelection()` and `el.getSelectedIds()` — FLAT on the element (there is no `__dataGrid`; measured 2026-09-08).
+  `el.clearSelection()` and `el.getSelectedIds()` — FLAT on the element (there is no `__dataGrid`; measured).
 - The canonical examples: `Pragmatic.Design.Builder/golden/app/src/routes/patients.pdx` (plus `patients-paged/header/builder.pdx`).
 - **A reusable structure (DRY, the shape the generator emits)**: THIN screens that wire up a
   **descriptor plus services**, rather than copied logic:
   - `data/<entity>.entity.ts` is the descriptor (`title`, `idField`, `crumbs`, `newDefaults`, `data()`, `columns()`, `formSchema`, `filterFields`).
   - `src/lib/` holds the services, wired automatically in `onMount`: `entity-source`, `edit-flyout` (the edit overlay), `bulk-bar`,
-    and `auto-page-size` (density-aware paging). They drive the DOM imperatively because that is how the golden app was
-    written, NOT because a custom-event handler cannot set a signal — it can (measured 2026-09-08). New code does not
-    need the imperative shape.
+    and `auto-page-size` (density-aware paging). They drive the DOM imperatively, but NOT because a custom-event handler
+    cannot set a signal — it can (measured). New code does not need the imperative shape.
   - `src/components/` holds the `.pdx` partials, **pure markup** with `data-*` hooks (`list-header`, `entity-edit-flyout`,
     `bulk-bar`), wired by the services. The shared CSS lives in `styles/app.css` (global, so it reaches the partials).
-  - A new `.pdx` component is picked up by the dev server on its own since PDXUI-112 (it rescans and reloads, and
+  - A new `.pdx` component is picked up by the dev server on its own (it rescans and reloads, and
     says so). No restart.
 
 ## Dashboard
@@ -61,26 +58,26 @@ The activity table: a `pdx-data-grid` using `format` for the status badges. The 
 An uncontrolled form (no `:value`), with submit-on-Enter through `@keydown`. A per-route guard (`requireAuth()`), and the chrome conditioned on the
 route rather than on the authentication. The credential fields: `autocomplete="username"` and `current-password`. The canonical example: `routes/login.pdx`.
 
-## CRUD and forms (proved in the golden app — phase 2)
+## CRUD and forms (proved in the golden app)
 - A data-driven form from `FieldDefinition[]` → `toFormFields(fields)` → a `FormSchema` (the same definition that drives
   the grid columns and the filter builder: "one piece of JSON for the grid, the form and the filters"). enum→a select (with `options`), number→a
-  number-input, date→an input[type=date]. Sections: **`pdx-fieldset`** when you want a visible heading (`legend` + `description`) — `pdx-form-section` renders NO title, its props are `name/label/fields/validate/active` and it is for wizard-style grouping (findings/framework 12). Multi-step: `pdx-wizard`.
+  number-input, date→an input[type=date]. Sections: **`pdx-fieldset`** when you want a visible heading (`legend` + `description`) — `pdx-form-section` renders NO title, its props are `name/label/fields/validate/active` and it is for wizard-style grouping. Multi-step: `pdx-wizard`.
 - **An edit fly-out from the list** (canonically `Pragmatic.Design.Builder/golden/app/src/routes/patients.pdx`): an **overlay** — `.patients-page`
   is `position:relative; overflow:hidden` and contains `.main-col` (the page head plus the grid, full width), an `.edit-backdrop`
   (`position:absolute; inset:0`) and the `.edit-panel` (`position:absolute; top:0; right:0; bottom:0; width:420px;
   transform:translateX(100%)`). The grid **stays full width** behind it; the panel slides over it from the right
   (anchored to the topbar, which is the top of the content) with a backdrop. An `.editing` class on the page opens the panel and the backdrop
   together (`.patients-page.editing .edit-panel{transform:translateX(0)}` and `.edit-backdrop{opacity:1;pointer-events:auto}`).
-  Open it on `@pdx-row-click` (whose detail is `{row,index,id}`); close it on the backdrop's `@click`. (The *push* variant — a flex row
-  with a panel that steals space — was rejected on UX grounds: with a wide table the grid gets squashed.) ⚠️ Drive the opening and the populating through the **DOM imperatively**
-  (the golden app does; a signal set from a custom event does update the template — measured 2026-09-08). The form is **rebuilt on every
+  Open it on `@pdx-row-click` (whose detail is `{row,index,id}`); close it on the backdrop's `@click`. (Not the *push* variant — a flex row
+  with a panel that steals space: with a wide table the grid gets squashed.) ⚠️ Drive the opening and the populating through the **DOM imperatively**
+  (the golden app does; a signal set from a custom event does update the template — measured). The form is **rebuilt on every
   opening** (`createFormFromSchema` → `form.reset(row)` → a `pdx-form-template` around that form): form-template's value
   binding happens at build time and is not reactive (see the gotchas). To save: `form.getValues()` → `ds.update` plus `ds.sync`.
 - The other edit modes (planned): a modal (`pdx-dialog`, or the grid's `edit-mode="dialog"`), and a dedicated page.
 
 ## A long form filled in more than one sitting: `<pdx-form :form>`
 
-For a form you write by hand, this is the best path and the one nothing showed: a form from
+For a form you write by hand, this is the best path: a form from
 `createForm`, a `<pdx-form :form>` around the fields, and in each `<pdx-form-field name="x">` a
 control carrying **the same** `name="x"`. The compiler wires the rest (`codegen-form-binding.ts`):
 every named control gets its change and blur events routed into `form.fields.x`, and every named
@@ -106,20 +103,19 @@ const form = tryUseForm();   // the declaration; the bindings find the form them
 ```
 
 You write no `:value`, no `@pdx-input`, no prop to pass the form down: `<pdx-form>` provides it,
-and the section's bindings look it up. The probe that measured the old boundary — two named
-controls, one beside `<pdx-form>` and one in a child, typed into both — now reads
-`{ "here": "A", "deep": "A" }` (PDXUI-717; before, `"deep": ""`).
+and the section's bindings look it up. Measured: two named controls, one beside `<pdx-form>` and
+one in a child, typed into both, read `{ "here": "A", "deep": "A" }`.
 
 **`tryUseForm()`, not `useForm()`, for the declaration.** ⚠️ A child can set up BEFORE its
 `<pdx-form>` — happy-dom connects children before parents, and a browser does too when the form's
-module loads after the fields' (PDXUI-180). `useForm()` then throws; `tryUseForm()` answers
+module loads after the fields'. `useForm()` then throws; `tryUseForm()` answers
 `undefined`, and the section still works, because the generated bindings do not use your variable:
 each one calls `tryUseForm(ctx.el)`, which re-runs the moment a form is provided. The same holds for a
 section rendered with no form above it at all — its controls are simply unbound. Your own `form`
 variable is what the lookup found at setup, so it can be `undefined`: guard it (`form?.…`) where your
 code reads it.
 
-Still true: a control is wired only in a file that is inside a form or declares itself a section.
+A control is wired only in a file that is inside a form or declares itself a section.
 A plain child component that does neither is compiled from another file and is never seen. And
 the boundary is the **component**, not the depth — any nesting of ordinary markup
 (`<div><fieldset><pdx-input name="x">`) is still that template and is wired.
@@ -129,12 +125,12 @@ split up, give each `<pdx-form>` a `name` and put a **coordinator** above them
 (`createFormCoordinator()`): each registers itself, and the coordinator validates and submits
 them together.
 
-An earlier version of this entry said to pass `form` down as a prop. That works, and it is not
-what the framework offers: `provideForm` / `useForm` is the designed path and was already what
-`pdx-form` does internally. A lab run left a 492-line file whole for want of this paragraph.
+Passing `form` down as a prop works, and it is not what the framework offers: `provideForm` /
+`useForm` is the designed path, and what `pdx-form` does internally. Without it a long form tends to
+stay one file of several hundred lines.
 Pinned by `compiler/tests/form-binding-boundary.test.ts` (the form's own file) and
 `compiler/tests/form-binding-injected.test.ts` with `ui/tests/unit/form-section-runtime.test.ts` (a
-section). [PDXUI-450, PDXUI-717]
+section).
 
 ### Rows that repeat: `<pdx-field-list>` or `createFieldArray`
 
@@ -150,7 +146,7 @@ Two mechanisms, no shared implementation, and **they do not compose**. Pick one 
 
 **Choose the component** when the rows are plain fields and you want the table, the dialog mode and the buttons for free. **Choose the primitive** when a row needs a picker, a select with options or a component of its own — then draw it yourself, or keep `pdx-field-list` and put the row in its `row` slot, which receives `{ item, index, fields, remove }`.
 
-⚠️ **Never both on one name.** They are two storages, and `form.getValues()` merges the field arrays back **last**: one call to `form.array('rooms')` on a name a `<pdx-field-list name="rooms">` is managing replaces everything the list has written, with the array's own contents — which it seeded from `initialValues`, not from what you typed. Measured: a field edited through the list reads back as its initial value the moment `form.array()` is called on that name, with nothing in the console. [PDXUI-454]
+⚠️ **Never both on one name.** They are two storages, and `form.getValues()` merges the field arrays back **last**: one call to `form.array('rooms')` on a name a `<pdx-field-list name="rooms">` is managing replaces everything the list has written, with the array's own contents — which it seeded from `initialValues`, not from what you typed. Measured: a field edited through the list reads back as its initial value the moment `form.array()` is called on that name, with nothing in the console.
 
 The comparison is pinned by `packages/ui/tests/unit/repeating-rows-mechanisms.test.ts`, which measures both mechanisms side by side, so this table cannot drift from the code.
 
@@ -220,9 +216,7 @@ function send(e) { localStorage.removeItem(DRAFT_KEY); console.log('sent', e.det
 </script>
 ```
 
-A `<script setup>` needs no rune to work: one with none is compiled like any other since PDXUI-181.
-Before that it fell into the legacy mode, returned nothing to the template, and this form threw at
-mount — an older install still does.
+A `<script setup>` needs no rune to work: one with none is compiled like any other.
 
 What that gives you (`packages/ui/tests/unit/recipe-long-form.test.ts` runs this block):
 - **`form.setValues(draft)` reaches controls already on screen**, the `pdx-select` included — `pdx-form`
@@ -314,13 +308,13 @@ With a declared form it is one word: `@form owner: OwnerSchema { warnUnsaved }`.
   state by itself. Saving from `<pdx-form @pdx-submit>` does not know when your request succeeded:
   call `form.reset(saved)` before navigating away, or the page asks about work it has just saved.
 - **It guards wherever the form is created in a component on the page** — the page itself, a creation
-  dialog, an editor panel. The router asks every component inside the page it leaves (PDXUI-243).
+  dialog, an editor panel. The router asks every component inside the page it leaves.
 - **The words are yours.** The dialog reads `form.unsavedTitle`, `form.unsavedMessage`,
   `form.unsavedLeave` and `form.unsavedStay`; override them with `setComponentStrings('form', { … })`
   or `setLocaleStrings`.
 - **The address while it asks.** The page is asked where `onBeforeNavigate` is: a link waits for the
   answer with the address unchanged, Back has already moved it and "Stay" puts it back, and neither
-  adds a history entry (PDXUI-263). It asks when the path changes, a parameter of the same route
+  adds a history entry. It asks when the path changes, a parameter of the same route
   included (`/owners/1` → `/owners/2`); a change of the query alone does not ask.
 
 **A guard that is not about a form** — an upload still running, a call in progress — is
@@ -338,7 +332,7 @@ onDestroy(stop);
 
 It is asked for every navigation, Back included. A link waits for the answer with the address
 unchanged; Back and Forward have already moved it when the hook is asked, and "Stay" puts it back,
-with no new entry (PDXUI-154, PDXUI-205). `beforeunload`, for the tab being closed, is yours to add
+with no new entry. `beforeunload`, for the tab being closed, is yours to add
 there.
 
 ## Day agenda per resource (vets, rooms, technicians)
@@ -349,8 +343,8 @@ column, and each appointment placed by `grid-row: start / span n`.
 
 **Short appointments stay readable.** A 15-minute slot is three rows, so it holds one line at the body
 font. Under 30 minutes a block shows **one line**, `time · name`; the rest (animal, reason) is in its
-accessible name and in a tooltip on hover or keyboard focus, and the tap opens the appointment. Lab
-round 6 stacked three lines in a 32px block under `overflow: hidden`, and the name was cut.
+accessible name and in a tooltip on hover or keyboard focus, and the tap opens the appointment. Three
+lines stacked in a 32px block under `overflow: hidden` cut the name.
 
 ```html
 <template>
@@ -437,7 +431,7 @@ function open(a) { console.log('open appointment', a.id); }
   in Chromium: in a 15-minute block the line is as tall as its `line-height` and its text is not cut
   (`scrollHeight <= clientHeight` on the line's own box), and the block stays inside its slot. Measure
   the text's box, not the block's: when a slot is too short the block keeps its height and the
-  `overflow: hidden` line shrinks and cuts its own text. The round-6 CSS fails the measure.
+  `overflow: hidden` line shrinks and cuts its own text. CSS that stacks three lines in a short block fails the measure.
 
 ## A generic LOB admin: a descriptor → `createCrud` and `createDetail` (canonically `Pragmatic.Design.Builder/profiler/app`)
 An app with dozens of entities: **no hand-written per-entity `.pdx` at all**. Two runtimes and two generators.
@@ -535,7 +529,7 @@ tried.
 
 **A composed key is not a key.** `$t('nav.' + key)` and `` $t(`nav.${key}`) `` are read as the PREFIX
 `nav.`: it is never reported as missing, and every dictionary entry under it counts as used — so
-`--strictOrphans` is usable in an app that translates an enum, which it was not until PDXUI-449. If no
+`--strictOrphans` is usable in an app that translates an enum. If no
 entry at all starts with that prefix you get a warning, because at runtime it resolves to the raw key.
 
 **`$t` and the component registry are two different registries**, and this is the mistake the tooling
@@ -576,16 +570,13 @@ that imports the components, the body runs after them — and a component alread
 rendered by then. So put `setLocaleStrings` in a module of its own and import it **first**.
 
 The English defaults each component registers when it loads do not overwrite what you installed:
-defaults and overrides are kept apart, and an override wins whatever the order. (Until PDXUI-153 they
-were one map, and a component imported after your locale put its English back — the order this page
-told you to use.)
+defaults and overrides are kept apart, and an override wins whatever the order.
 
 ### Do both, even for one language
 
-Not ceremony: it is what makes the second language a file instead of a hunt. Four lab rounds shipped
-Italian apps with `Close dialog`, `Previous page` and `Page not found` in the accessibility tree, and
-the fourth hard-coded its own strings into the markup — because these pages named the registry and
-never named `$t`. (PDXUI-123, PDXUI-139.)
+Not ceremony: it is what makes the second language a file instead of a hunt. Without the registry
+an Italian app ships `Close dialog`, `Previous page` and `Page not found` in its accessibility tree;
+without `$t` its own strings end up hard-coded into the markup.
 
 ## A panel that can fail without taking the screen with it
 
@@ -628,13 +619,12 @@ boundary wins, and an error thrown by the fallback itself goes to the next bound
 can read the error state through the context it provides.
 
 Both also catch a child component whose own `setup` or `render` throws while it mounts: the fallback
-renders, not the child's inline error (PDXUI-177, PDXUI-184).
+renders, not the child's inline error.
 
-⚠️ A lab round was given this in the commission — *"the wire-service panel must fail without taking
-the page down, and offer a retry"* — passed both acceptance items, and reached neither of these. It
-wrote a 172-line component with a `state` signal and a `try/catch`. `pdx-error-boundary` and `@try`
-were in the catalogue and in no recipe, and the catalogue is where you look when you already know the
-name. (PDXUI-139.)
+⚠️ A requirement such as *"the wire-service panel must fail without taking the page down, and offer a
+retry"* can pass its acceptance with a hand-written component, a `state` signal and a `try/catch` —
+which misses a failure in a signal chain. It is what `pdx-error-boundary` and `@try` are for; the
+catalogue finds them only when you already know the name, so look here.
 
 ## A mock backend, before there is a backend
 

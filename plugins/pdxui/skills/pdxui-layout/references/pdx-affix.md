@@ -11,7 +11,7 @@ scroll that does not happen and never sticks — with no error and nothing in th
 <pdx-affix target=".pdx-app-main" :offset="16">…</pdx-affix>
 ```
 
-Measured in `skill-claims.spec.ts` (case `who-scrolls`). [PDXUI-450]
+Measured in `skill-claims.spec.ts` (case `who-scrolls`).
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|

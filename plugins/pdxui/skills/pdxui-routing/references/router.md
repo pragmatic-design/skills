@@ -156,10 +156,6 @@ One layout per page, not a chain. A frame *inside* a frame is a **nested route**
 `<pdx-router-outlet>` in the parent page and the routes below its path render inside it. That is
 the next section, and it is what the showcase's ticket screen uses.
 
-> Until **PDXUI-562** the declaration parsed, type-checked and was emitted into the route, and
-> nothing read it — a page that declared one rendered exactly as it would without. The name used
-> to travel to the runtime; what travels now is the tag.
-
 ## Nested routes: a page inside a page
 
 Master-detail is the shape of most business screens: a list or a header that **stays**, a detail that
@@ -250,9 +246,9 @@ route's.
 
 ## The breadcrumb nobody writes
 
-`<pdx-breadcrumb>` takes an `items` array, and for a while every page in every application restated
-by hand a path the router already held — a copy that went stale the day a route was renamed,
-silently, because nothing connected the two.
+`<pdx-breadcrumb>` takes an `items` array, and a page that fills it by hand restates a path the
+router already holds — a copy that goes stale the day a route is renamed, silently, because nothing
+connects the two.
 
 Say what each route is called, on the route:
 
@@ -279,8 +275,7 @@ last is a link to that level with the params filled in; the last is not a link a
   a trail of URL segments is what the address bar already shows.
 - **An ancestor counts by path, not by nesting.** `/tickets` is above `/tickets/:id` whether or not
   the detail renders inside it — a breadcrumb is navigation, and nesting is rendering.
-- **`items` still wins.** Pass it and the component shows exactly that, so nothing written against
-  the old shape changes.
+- **`items` still wins.** Pass it and the component shows exactly that.
 
 Behind it: the router publishes the trail into core and the component reads it from there, which is
 also how `@pdxui/ui` gets this without depending on the router.
@@ -307,15 +302,14 @@ imports the one it is about to render.
 What that costs you is one line in your entry, and it is a line to **delete**:
 
 ```ts
-// index.html — what a PDX app used to need, and no longer does
+// index.html — not needed by a PDX app: delete it
 import.meta.glob('./src/pages/**/*.pdx', { eager: true });
 ```
 
-That glob existed because a page registered its own route when it was imported: the router could not
-know a route existed until its page had been downloaded. It also put **every page in the first
-download** — the dynamic import the outlet performs resolved to a module already in the entry, and
-the bundler had nothing to split. Measured on the showcase: one chunk, 28.5 KB, the whole
-application on `/`. Without it: **20.7 KB in the entry and a chunk per route.**
+The router does not need a page imported to know its route exists, and the glob puts **every page
+in the first download** — the dynamic import the outlet performs resolves to a module already in the
+entry, and the bundler has nothing to split. Measured on the showcase: with the glob, one chunk,
+28.5 KB, the whole application on `/`. Without it: **20.7 KB in the entry and a chunk per route.**
 
 Two things worth knowing:
 
@@ -471,7 +465,7 @@ One thing about the shape, because it is deliberate and visible in what you retu
 not awaited, a promise is.** Answering `true`/`false` synchronously keeps the whole navigation
 synchronous; returning a promise makes that one navigation asynchronous. Awaiting unconditionally
 would have made *every* navigation async — including the pages with nothing to ask — merely because
-one hook exists somewhere (PDXUI-263).
+one hook exists somewhere.
 
 The hooks run **before** the guard and the loader — and **once per hop**, not once per gesture. A
 redirect asks again with the new destination: a redirect table entry, a route's own `@redirect`, a
@@ -487,11 +481,6 @@ onBeforeNavigate((from, to, hop) => {
 });
 ```
 
-⚠️ This paragraph used to say the hooks run *after* redirects are resolved, and they do not. The
-outlet's own unsaved-changes dialog worked around it by reading `location.pathname`, which held
-only while one of the two routers left the address on the source path — so a production build
-asked the user twice for one click and `pdx dev` asked once (PDXUI-563).
-
 `destroyRouter()` removes the router's own listeners. An application never calls it; a test does, and
 so does an HMR pass that re-creates the router. It is idempotent.
 
@@ -501,14 +490,14 @@ so does an HMR pass that re-creates the router. It is idempotent.
 @redirect '/old' -> '/new';      <!-- redirect -->
 @alias '/people';                <!-- alternative path for the same page -->
 @outlet 'sidebar' -> 'pdx-nav';  <!-- named outlet -->
-@params { id: number };          <!-- param types: parsed, not implemented (PDXUI-562) -->
+@params { id: number };          <!-- param types: parsed, not implemented -->
 @prefetch 'hover';               <!-- 'hover' (the default), 'eager', or 'never' -->
 ```
 
 `@prefetch` is the policy for fetching the page's chunk before the click — see
 [Before the click](#before-the-click-prefetching) above, which is where it is explained.
 
-> Two things this line used to claim and does not do: **`'viewport'`** is not a policy the router
+> Two things `@prefetch` does not do: **`'viewport'`** is not a policy the router
 > knows (it is accepted by the parser and then behaves as `hover`), and nothing emits the browser's
 > **Speculation Rules** — `GeneratedRouter.speculationRules` is a type with no producer. Prefetching
 > is done by `<pdx-link>` calling the route's own `import()`, which is a different mechanism and

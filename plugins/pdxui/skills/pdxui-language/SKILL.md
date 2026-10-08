@@ -3,10 +3,9 @@ name: pdxui-language
 description: "The .pdx language: the file format (template, script setup, style scoped), the runes ($signal, $derived, $effect), the declarations (@prop, @page, @event and more), the template syntax and how a project is wired. Use before writing or editing any .pdx file, or when starting a PDX app."
 ---
 
-The page that was missing. The first blind lab run wrote its `.pdx` files from memory — the SFC shape,
-`:prop`, `@event`, `{{ }}`, `@if` — **before verifying anything**, because no skill described the
-language. It worked, which is why it was invisible in the findings: anyone without Vue's SFC shape
-already in their head could not have started. (PDXUI-109 findings/skill 17, 1, 2.)
+Read this before writing a `.pdx` file. Without it an agent writes `.pdx` from memory — the SFC shape,
+`:prop`, `@event`, `{{ }}`, `@if` — **before verifying anything**, and anyone without Vue's SFC shape
+already in their head cannot start at all.
 
 Everything here is read off the compiler, not remembered: the runes from `compiler/src/runes.d.ts`,
 the declarations and directives from the analyzer and the template parser.
@@ -34,8 +33,7 @@ legacy mode and should not be used for new files. `<style scoped>` is scoped by 
 **The tag comes from the filename**: `src/job-list.pdx` → `<pdx-job-list>`. Override with `@tag`.
 A `<script setup>` compiles the same way whatever it holds: one with no rune — only imports, consts,
 functions and an `onMount` — still returns what it declares to the template, and an empty one still
-registers the component. (Until PDXUI-181 the mode was guessed from the content, and a setup block
-with no rune fell silently into the legacy mode: every binding `undefined`, `onMount is not defined`.)
+registers the component.
 
 ### When the file gets long: split it
 
@@ -54,8 +52,7 @@ unchanged.
 **When to reach for it**: past roughly 200 lines, when both the markup and the logic are substantial.
 Below that a single file is easier to read, and splitting a small component costs you a jump.
 
-⚠️ Nothing said this before, and a lab round shipped routes of 365 and 389 lines because the author
-had no reason to think there was another way. If a `.pdx` is getting hard to scroll, the answer is
+⚠️ If a `.pdx` is getting hard to scroll, the answer is
 usually [`references/structure.md`](../pdxui/references/structure.md) — extract a component —
 and this is the other half: sometimes the screen genuinely is one component and just needs three
 files.
@@ -78,7 +75,7 @@ it doing five things.
 
 ⚠️ **A trailing comma inside `$derived(…)` silently kills the reactivity.** `$derived(\n  expr,\n)` is
 legal JavaScript and the rewriter bails out with `PDX_REWRITE_FALLBACK`, leaving a value that never
-updates. Keep the expression on one line, with no trailing comma. (findings/framework 11.)
+updates. Keep the expression on one line, with no trailing comma.
 
 ⚠️ **`error` is a forbidden name for a signal** — the compiler does not rewrite it. Use `errMsg`.
 
@@ -199,7 +196,7 @@ function reload() { job = load(); }
 
 ## Putting a project together
 
-The two questions that sent the first run into `node_modules` before anything else.
+The layout of a project and its wiring: without them an agent goes reading `node_modules` first.
 
 ```
 my-app/
@@ -239,8 +236,8 @@ import './routes/job-list.pdx';   // importing a route registers its @page
 
 **No `import '@pdxui/ui'`.** The compiler imports every `pdx-*` tag it finds in a `.pdx` template,
 one `@pdxui/ui/<name>` each, so the app bundles the components it uses and nothing else. The
-barrel registers **all** of them. Measured on a lab app with it removed: 908 → 504 KiB of JavaScript,
-the same 36 components defined on its four routes, the same text on every screen (PDXUI-146).
+barrel registers **all** of them. Removing it from an app of four routes takes its JavaScript from
+908 to 504 KiB, with the same 36 components defined and the same text on every screen.
 
 Import a component by hand only when no template names it — when your JavaScript creates it:
 
@@ -251,10 +248,9 @@ import { toast } from '@pdxui/ui/toast';   // a toast is created by the call, no
 The same goes for a `document.createElement('pdx-…')` in a plain `.js` file. A route split into
 `.html` + `.js` (`<template src>`) needs nothing: the compiler reads the external template.
 
-Two things the measurement also showed. That app was still one 504 KiB chunk, over Vite's 500 kB
-warning, because it imports all its routes up front; the rest is the app and what it uses.
-And component-string overrides (`setLocaleStrings`) set **before** a component's module loads survive
-it since PDXUI-153; on an older install they were wiped, and the screens came back in English.
+That app is still one 504 KiB chunk, over Vite's 500 kB warning, because it imports all its routes
+up front; the rest is the app and what it uses. Component-string overrides (`setLocaleStrings`) set
+**before** a component's module loads survive it.
 
 **Nobody registers the router by hand.** A component carrying `@page` adds itself to the route table
 when its module is imported; `<pdx-router-outlet>` renders the match. Importing the route files is
@@ -284,31 +280,29 @@ click, asks `onBeforeNavigate` first, and renders the match. `target="_blank"` s
 that navigation belongs to the other tab. Without the Navigation API a plain `<a>` reloads the page;
 `<pdx-link to="…">` and `navigate()` are router navigations in every browser. `download` is an exit
 too: a same-origin `<a href="/exports/visits.csv" download>`, with or without a file name, is left to
-the browser, which saves the file and keeps the page (PDXUI-261).
+the browser, which saves the file and keeps the page.
 
 **The «PDX» badge in the corner is the dev devtools**, injected by `pdx()` on the dev server and never
 in a build. It opens a panel with the component tree, the signals and a trace; **Ctrl+Shift+D** toggles
 it from anywhere. The badge is not shown on a touch device or below 768px, where it would cover a
 bottom navigation — the shortcut still works there. Turn it off with `pdx({ devtools: false })`. If
 the panel says «Debug hook not found», core is not running as a dev build (the page is a production
-build, or `process.env.NODE_ENV` is `production`); before PDXUI-223 that was every browser, and the
-panel blamed the page instead.
+build, or `process.env.NODE_ENV` is `production`).
 
 `npx @pdxui/cli new project <name>` scaffolds a project to start from: `@pdxui/framework`, and
 `@pdxui/cli` and `@pdxui/compiler` as dev dependencies, at the CLI's own version; the design system
-imported once in `index.html`; an `AGENTS.md`. Then `npm install` and `npm run dev` (PDXUI-835).
+imported once in `index.html`; an `AGENTS.md`. Then `npm install` and `npm run dev`.
 
 ## Things that will cost you an hour otherwise
 
 - **Design tokens have a NAMED scale, not a numeric one.** `--pdx-space-4` is not a token: `var()`
   resolves to nothing, **the whole app loses its padding, and nothing errors**. The scales are
   `2xs xs sm md lg xl 2xl 3xl` for `--pdx-space-*` and `--pdx-text-*` (plus `--pdx-text-base` and
-  `--pdx-text-display`), and `sm md lg xl full` for `--pdx-radius-*`. This was the most expensive
-  finding of the first run. (findings/skill 3.)
+  `--pdx-text-display`), and `sm md lg xl full` for `--pdx-radius-*`.
 - **`:disabled` sets the PROPERTY, not the attribute.** `el.hasAttribute('disabled')` is false while
-  `el.disabled` is true — a check written against the attribute passes always. (findings/framework 8.)
-- **A new `.pdx` is picked up without restarting the dev server** since PDXUI-112; the server says so
+  `el.disabled` is true — a check written against the attribute passes always.
+- **A new `.pdx` is picked up without restarting the dev server**; the server says so
   on the console when it happens.
 - **`onMount` is one-shot.** For anything reactive use `$effect`, and for a route whose params change
   without remounting use `onRouteChange` — two URLs on the same route do **not** re-create the
-  component. (findings/skill 10.)
+  component.

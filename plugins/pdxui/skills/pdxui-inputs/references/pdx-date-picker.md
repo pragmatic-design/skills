@@ -3,14 +3,14 @@
 Pick a date from a calendar.
 
 **Use it when** a form asks for a date, a date-time, a range, a week, a month, a quarter or a year — and,
-with `editable`, lets it be typed (PDXUI-635 moved every date of the showcase to `<pdx-date-picker editable>`).
+with `editable`, lets it be typed.
 **Not when** only a time is wanted → `pdx-time-picker`; a calendar always on screen, with no field →
 `pdx-calendar`.
 
 **Pitfalls**
 - Without `editable` the date cannot be typed at all, and `editable` covers the modes `date` and `datetime` only.
 - An editable value commits on Enter or blur — AFTER the native `change` of its text box. Listen to
-  `pdx-change`, not `change` (PDXUI-635: a resumed draft came back without its end date).
+  `pdx-change`, not `change`, or a resumed draft comes back without its end date.
 - A typed date that does not exist, or falls outside `min`/`max`, marks the field invalid and keeps the last
   good value.
 - `pdx-change.detail` has a different shape per mode: `{ value }`, `{ rangeStart, rangeEnd }`, `{ value, time }`,
@@ -54,7 +54,7 @@ leaves both the field and its panel).
 | `fixedWeeks` | `fixedweeks` | boolean | `true` | Fixed weeks in calendar. |
 | `firstDay` | `firstday` | number | `-1` | First day of week (-1 = auto). |
 | `ariaLabel` | `arialabel` | string | `''` | Aria label. |
-| `editable` | `editable` | boolean | `false` | The date can be typed: the trigger's text is an input (still the combobox), read in the locale's numeric pattern or as ISO, committed on Enter and blur. The calendar icon opens the popup, as does Alt+ArrowDown. Modes `date` and `datetime` (its date part); the others keep the plain trigger (PDXUI-382). |
+| `editable` | `editable` | boolean | `false` | The date can be typed: the trigger's text is an input (still the combobox), read in the locale's numeric pattern or as ISO, committed on Enter and blur. The calendar icon opens the popup, as does Alt+ArrowDown. Modes `date` and `datetime` (its date part); the others keep the plain trigger. |
 
 **API (via `:ref`)**
 

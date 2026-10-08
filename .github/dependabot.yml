@@ -1,0 +1,12 @@
+version: 2
+
+# The repository has no package dependencies: only the workflows' `uses:` lines are watched, grouped
+# into one pull request a week.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

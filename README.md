@@ -1,18 +1,56 @@
-# Pragmatic.Design — agent skills
+# Pragmatic.Design agent skills
 
-Skills that teach a coding agent to build line-of-business applications with Pragmatic.Design. Two
-plugins, installable one without the other:
+Skills that teach a coding agent to build line-of-business applications with
+[Pragmatic.Design](https://github.com/pragmatic-design/Pragmatic.Design) on .NET and
+[PDX UI](https://pdxui.com) on the web: which packages to reference, how to lay out the solution, what
+each attribute generates, which component already exists, the traps, and how to verify the result.
 
-| Plugin | For |
-|---|---|
-| `pragmatic-design` | .NET applications with the [Pragmatic.Design](https://github.com/pragmatic-design/Pragmatic.Design) packages: which packages to reference, how to lay out the solution, the attributes of each module, the traps, and how to verify the result |
-| `pdxui` | Web UIs with [PDX](https://pdxui.com) (`@pdxui/*`): the `.pdx` language, its 117 components, screen composition and theming |
+They are written for a **consumer project**, an app that uses the packages, and need no access to the
+frameworks' source. Each skill is a folder with a `SKILL.md` in the
+[Agent Skills](https://agentskills.io/specification) format, so the same folders work in Claude Code,
+in Codex and in any agent that reads that format.
 
-They are written for a **consumer project** — an app that uses the packages — and need no access to
-the frameworks' source.
+| Plugin | Skills | For |
+|---|---|---|
+| `pragmatic-design` | 35 | .NET 10 applications on the `Pragmatic.*` NuGet packages |
+| `pdxui` | 18 | Web UIs in the `.pdx` language with the `@pdxui/*` packages, a page for each of its 117 components |
 
-Each skill is a folder with a `SKILL.md` in the [Agent Skills](https://agentskills.io/specification)
-format, so the same folders work in Claude Code, in Codex and in any agent that reads that format.
+The two plugins install independently.
+
+## What it looks like
+
+Once installed there is nothing to call: the agent loads a skill when the task matches its
+description. Prompts like these are what the skills are for:
+
+- *"Scaffold an invoicing app with customers and invoices, PostgreSQL, and a REST API."*
+  `pragmatic-new-app`, then `pragmatic-architecture` and `pragmatic-use-persistence`.
+- *"Only the invoice's owner and HR admins may approve it."*
+  `pragmatic-use-authorization`.
+- *"Send an overdue reminder every morning at 8 with the invoice PDF attached."*
+  `pragmatic-use-jobs`, `pragmatic-use-documents`, `pragmatic-use-email`.
+- *"The build fails with PRAG1700."* The diagnostic tables in the module skills name the fix.
+- *"Build the invoice list screen with filters, bulk actions and an edit drawer."*
+  `pdxui`, `pdxui-screens`, `pdxui-data`, `pdxui-overlay`.
+- *"Brand the app from our colour #0B5FFF, with dark mode."* `pdxui-theme`.
+
+## How the skills are built
+
+**Layered, so the agent reads only what the task needs.** An entry skill routes; a module or area
+skill carries the patterns, the traps and the diagnostics; the dense material sits in `references/`
+and is opened on demand. `pragmatic-ecosystem` is the router and reference hub for .NET, `pdxui` for
+the web.
+
+**Examples that compile.** The files under each `pragmatic-use-*/examples/` are copied from example
+applications in the Pragmatic.Design repository that build and run their tests, and a gate there
+keeps the copies identical to the originals. Where no tested application uses a feature yet, the
+skill says so instead of inventing an example.
+
+**Generated from the library.** The `pdxui` component pages (props, events, API, slots where the
+component has them, demo examples) are generated from the library's custom-elements manifest, next to the code they describe.
+
+**Written around what goes wrong.** Beyond the happy path, the skills spend their length on the traps
+that cost a build cycle or leak data. Where the source generator emits diagnostics, the module skill
+has a table of them with the fix, and `pragmatic-ecosystem` maps the `PRAG` diagnostic ranges to their modules.
 
 ## Install
 
@@ -24,8 +62,7 @@ claude plugin install pragmatic-design@pragmatic-design   # .NET
 claude plugin install pdxui@pragmatic-design              # PDX web UI
 ```
 
-Skills are then called by the agent when a task needs them, or by name:
-`/pragmatic-design:pragmatic-new-app`, `/pdxui:pdxui`.
+A skill can also be called by name: `/pragmatic-design:pragmatic-new-app`, `/pdxui:pdxui`.
 
 ### Codex
 
@@ -39,61 +76,179 @@ Start a new session after installing. `$` followed by a skill name calls one exp
 
 ### Any other agent
 
-Copy the folders under `plugins/<plugin>/skills/` to where your agent loads skills from — for
-example `.agents/skills/` (Codex, per project), `~/.agents/skills/` (Codex, every project) or
-`.claude/skills/` (Claude Code, per project). The folders need no change, but copy a plugin's folders
-all together: in `pragmatic-design` the module skills link to references kept in
-`pragmatic-ecosystem`, and in `pdxui` the area skills send the reader back to `pdxui`.
+Copy the folders under `plugins/<plugin>/skills/` to where your agent loads skills from, for example
+`.agents/skills/` (Codex, per project), `~/.agents/skills/` (Codex, every project) or `.claude/skills/`
+(Claude Code, per project). The folders need no change, but copy a plugin's folders all together: in
+`pragmatic-design` the module skills link to references kept in `pragmatic-ecosystem`, and in `pdxui`
+the area skills send the reader back to `pdxui`.
 
-## Where to start — .NET (`pragmatic-design`)
+### Requirements
 
-| Skill | For |
+- **.NET:** the .NET 10 SDK. The `Pragmatic.*` packages are prereleases on nuget.org
+  (`dotnet add package … --prerelease`); builds not published yet come from a local feed in Docker, covered
+  by `pragmatic-nuget-feed`.
+- **Web:** Node.js and the `@pdxui/*` packages from npm; `pdxui-setup` covers the install.
+
+## Skills
+
+### .NET: `pragmatic-design`
+
+<!-- catalog:pragmatic-design:start -->
+<!-- generated by scripts/check.mjs --write from each SKILL.md; do not edit by hand -->
+
+**Start here**
+
+| Skill | Use it when |
 |---|---|
-| `pragmatic-new-app` | Scaffolding a new application |
-| `pragmatic-architecture` | Splitting an application into libraries, modules and databases |
-| `pragmatic-choose-modules` | Choosing the packages for a feature |
-| `pragmatic-ecosystem` | The reference behind the others: packages, patterns, diagnostics, recipes |
-| `pragmatic-nuget-feed` | The local NuGet feed the alpha packages come from |
+| [`pragmatic-new-app`](plugins/pragmatic-design/skills/pragmatic-new-app/SKILL.md) | Use when the user asks to create or scaffold a new app from the Pragmatic.Design packages (nuget.org, or a local BaGetter feed for unreleased builds), with Composition host, source generators, persistence, actions, endpoints, validation, verification. |
+| [`pragmatic-architecture`](plugins/pragmatic-design/skills/pragmatic-architecture/SKILL.md) | Use when setting up a new Pragmatic.Design project, splitting it into libraries, modules and databases, or weighing a monolith against services (boundary libraries and host, sub-boundaries, multi-tenancy, what to enable). |
+| [`pragmatic-choose-modules`](plugins/pragmatic-design/skills/pragmatic-choose-modules/SKILL.md) | Use when the user describes a feature to build and needs the Pragmatic.Design NuGet packages and public patterns chosen before implementation, even without the framework's source. |
+| [`pragmatic-ecosystem`](plugins/pragmatic-design/skills/pragmatic-ecosystem/SKILL.md) | Use when working on an app that consumes Pragmatic.Design without its source; the reference hub for NuGet packages from nuget.org (or a local feed for unreleased builds), source generator setup, patterns, diagnostics and verification. |
+| [`pragmatic-nuget-feed`](plugins/pragmatic-design/skills/pragmatic-nuget-feed/SKILL.md) | Use when a restore or build fails with NU#### or feed and source errors, or when consuming Pragmatic.Design builds that are not on nuget.org yet through a dockerized local NuGet feed (BaGetter). |
 
-Then one skill per module, `pragmatic-use-*`, loaded when a task reaches it: actions and endpoints,
-persistence, composition, identity, authorization, delegation, multi-tenancy, events, messaging, jobs,
-caching, configuration, feature flags, resilience, logging, temporal, i18n, storage, documents, email,
-notifications, imaging, audit, privacy, migrations, testing, client, traits, distributed, and the
-foundation libraries. The folder list under `plugins/pragmatic-design/skills/` is the complete set.
+**Domain and API**
 
-## Where to start — PDX web UI (`pdxui`)
-
-| Skill | For |
+| Skill | Use it when |
 |---|---|
-| `pdxui-language` | The `.pdx` language and how a project is wired: read it before writing any `.pdx` |
-| `pdxui` | The component catalogue by area, screen recipes and the gotchas: open it before building any UI piece |
-| `pdxui-screens` | Composing a screen that reads as a product: grid or cards, the shell, empty and error states |
-| `pdxui-theme` | Branding: a WCAG-AA theme from one brand colour, the shipped themes, the tokens |
+| [`pragmatic-use-persistence`](plugins/pragmatic-design/skills/pragmatic-use-persistence/SKILL.md) | Use when modeling entities, repositories, queries and filters, projections, patches, identifiers or the DbContext (Pragmatic.Persistence and its EF Core provider, attribute-first). Schema changes are pragmatic-use-migrations. |
+| [`pragmatic-use-actions-endpoints`](plugins/pragmatic-design/skills/pragmatic-use-actions-endpoints/SKILL.md) | Use when implementing a CRUD or business operation or exposing it over HTTP (Mutation, DomainAction, [Endpoint], validation and authorization on an action, with Pragmatic.Actions and Pragmatic.Endpoints). |
+| [`pragmatic-use-foundation`](plugins/pragmatic-design/skills/pragmatic-use-foundation/SKILL.md) | Use when working with Result and error handling, Ensure guards, validation attributes, object mapping, dates and the clock, specifications or partial-update Patch; the Pragmatic.Design foundation libraries. |
+| [`pragmatic-use-composition`](plugins/pragmatic-design/skills/pragmatic-use-composition/SKILL.md) | Use when wiring the host, DI, modules, startup steps or the module-to-database topology (Pragmatic.Composition, PragmaticApp, IPragmaticBuilder, [Service], [Decorator], [Module], [Include], [StartupStep]). |
+| [`pragmatic-use-migrations`](plugins/pragmatic-design/skills/pragmatic-use-migrations/SKILL.md) | Use when the schema must follow the entities, a change is breaking, or data needs a backfill (Pragmatic.Migrations, no migration files, data migrations, snapshots, DB-per-tenant, the pragmatic-migrate CLI). |
+| [`pragmatic-use-traits`](plugins/pragmatic-design/skills/pragmatic-use-traits/SKILL.md) | Use when an entity needs comments, tags, attachments or notes; [HasComments], [HasTags], [HasAttachments], [HasNotes] generate the child entity, actions, endpoints and permissions instead of hand-writing them. |
+| [`pragmatic-use-client`](plugins/pragmatic-design/skills/pragmatic-use-client/SKILL.md) | Use when a front end or another service calls a Pragmatic API, hand-written HttpClient code appears, or PRAG2300-2304 fire (the typed client Pragmatic.Client generates, or a TypeScript one). Same host is pragmatic-use-actions-endpoints. |
 
-Then one skill per group of components, `pdxui-<area>` — layout, navigation, data, forms, inputs,
-overlay, display, infra — with a page per component: its props, events, slots and API, the examples of
-its demo, and for the complex ones when to use it and where it goes wrong.
+**Identity and access**
 
-And one skill per topic that no single component covers, with the site's docs pages as references:
-
-| Skill | For |
+| Skill | Use it when |
 |---|---|
-| `pdxui-data-layer` | Loading, writing and sharing data: `@fetch`, mutations, `@store`, provide/inject |
-| `pdxui-validation` | Forms and their rules: schemas, cross-field rules, field arrays, several forms under one save |
-| `pdxui-routing` | Pages, guards, loaders, layouts, keep-alive, the tab title and scroll |
-| `pdxui-i18n` | Translations and locale formatting, and translating the components' own strings |
-| `pdxui-setup` | Installing, the `pdx` CLI, the production build, devtools |
-| `pdxui-testing` | Component tests, the signed-in user and permissions |
+| [`pragmatic-use-identity`](plugins/pragmatic-design/skills/pragmatic-use-identity/SKILL.md) | Use when choosing authentication, adding sign-in, issuing or validating JWTs, connecting OIDC or Keycloak, or when every request is 401 (Pragmatic.Identity, local accounts, [PragmaticUser]). Permissions are pragmatic-use-authorization. |
+| [`pragmatic-use-authorization`](plugins/pragmatic-design/skills/pragmatic-use-authorization/SKILL.md) | Use when adding authentication, permissions, roles, JWT, ICurrentUser or per-record access (OwnedEntity, ScopedEntity, DataScopeRule), with Pragmatic.Authorization and Pragmatic.Identity, [RequirePermission], IResourceAuthorizer. |
+| [`pragmatic-use-delegation`](plugins/pragmatic-design/skills/pragmatic-use-delegation/SKILL.md) | Use when a session acts for someone else (an agent for its user, support for a customer, a job for a row's owner) or a permission check differs under impersonation; ICurrentUser.Delegation, delegation policies, RFC 8693. |
+| [`pragmatic-use-multitenancy`](plugins/pragmatic-design/skills/pragmatic-use-multitenancy/SKILL.md) | Use when the app is multi-tenant (isolating data per tenant, resolving the tenant from the request, DB-per-tenant, or scoping caches and jobs by tenant); Pragmatic.MultiTenancy, ITenantEntity. |
 
-The `pdxui` skills are generated and tested in the PDX repository, next to the library they describe,
-and copied here with its `scripts/sync-skills.mjs`. Change them there, not here.
+**Events, messaging and background work**
+
+| Skill | Use it when |
+|---|---|
+| [`pragmatic-use-events`](plugins/pragmatic-design/skills/pragmatic-use-events/SKILL.md) | Use when an entity raises a domain event and a handler in the same process reacts after commit (Pragmatic.Events, [EventHandler], ordering, lifecycle [Raises&lt;T&gt;], event outbox). Cross-boundary work is pragmatic-use-messaging. |
+| [`pragmatic-use-messaging`](plugins/pragmatic-design/skills/pragmatic-use-messaging/SKILL.md) | Use when adding async cross-boundary events, message handlers, a transactional outbox, sagas, a transport (in-memory, channels, RabbitMQ) or an in-process event reaction; Pragmatic.Messaging. |
+| [`pragmatic-use-jobs`](plugins/pragmatic-design/skills/pragmatic-use-jobs/SKILL.md) | Use when adding background or scheduled work ([Job], [RecurringJob] cron, retries, timeouts, continuations, distributed lock) with Pragmatic.Jobs. |
+| [`pragmatic-use-distributed`](plugins/pragmatic-design/skills/pragmatic-use-distributed/SKILL.md) | Use when splitting out a service, scaling a host out, adding a gateway, or when instances disagree (stale cache, a job run twice); [RemoteBoundary], broker, sagas, Agent, YARP gateway. Decide first with pragmatic-architecture. |
+
+**Runtime concerns**
+
+| Skill | Use it when |
+|---|---|
+| [`pragmatic-use-caching`](plugins/pragmatic-design/skills/pragmatic-use-caching/SKILL.md) | Use when adding caching or invalidation to a query or mutation, or the user mentions cache keys, stampede, tags or a distributed cache (Pragmatic.Caching, [Cacheable], [InvalidatesCache], [CacheKey]). |
+| [`pragmatic-use-configuration`](plugins/pragmatic-design/skills/pragmatic-use-configuration/SKILL.md) | Use when defining typed settings, when a rule spans two settings, or when values must change at runtime per tenant or user (Pragmatic.Configuration, [Configuration], [ConfigInvariant], cascading stores, secrets, backends). |
+| [`pragmatic-use-feature-flags`](plugins/pragmatic-design/skills/pragmatic-use-feature-flags/SKILL.md) | Use when the app needs runtime feature toggles (gradual rollout, A/B tests, beta programs, kill switches, per-tenant or per-user targeting) with Pragmatic.FeatureFlags. |
+| [`pragmatic-use-resilience`](plugins/pragmatic-design/skills/pragmatic-use-resilience/SKILL.md) | Use when calls to external systems (HTTP, databases, queues) need retries, timeouts, circuit breaking or rate limiting (Pragmatic.Resilience, [ResiliencePolicy] on actions and handlers, named pipelines, no Polly). |
+| [`pragmatic-use-logging`](plugins/pragmatic-design/skills/pragmatic-use-logging/SKILL.md) | Use when configuring logging providers (app.UseLogging), adding structured high-performance logging with [LoggerMessage], or naming Activity traces; Pragmatic.Logging. |
+| [`pragmatic-use-temporal`](plugins/pragmatic-design/skills/pragmatic-use-temporal/SKILL.md) | Use when code reads the current time, stores or converts dates, counts working days, schedules with cron, or when PRAG0900-0904 or PRAG0690 fire (Pragmatic.Temporal, IClock, [FromClock], time zones, TestClock). |
+| [`pragmatic-use-i18n`](plugins/pragmatic-design/skills/pragmatic-use-i18n/SKILL.md) | Use when the app needs several languages or cultures, localized error messages, money and currencies, or culture-aware formatting (Pragmatic.Internationalization, the generated T class, Money, the culture middleware). |
+
+**Files, documents and communication**
+
+| Skill | Use it when |
+|---|---|
+| [`pragmatic-use-storage`](plugins/pragmatic-design/skills/pragmatic-use-storage/SKILL.md) | Use when the app stores or serves files (uploads, avatars, generated PDFs, imports, exports); Pragmatic.Storage, one IFileStorage over local disk, Azure Blob or S3/R2, chosen in the host. |
+| [`pragmatic-use-documents`](plugins/pragmatic-design/skills/pragmatic-use-documents/SKILL.md) | Use when generating a PDF, DOCX, mail body, XLSX or CSV (invoice, letter, report, export) or editing a .pdxdoc/.pdxemail (Pragmatic.Documents, PDX templates, IPdxTemplates, fluent builder). Sending is pragmatic-use-email. |
+| [`pragmatic-use-imaging`](plugins/pragmatic-design/skills/pragmatic-use-imaging/SKILL.md) | Use when the app makes thumbnails, converts or resizes uploads, strips metadata, applies filters or renders QR codes (Pragmatic.Imaging, a native AOT-friendly binding, no ImageSharp or SkiaSharp). |
+| [`pragmatic-use-email`](plugins/pragmatic-design/skills/pragmatic-use-email/SKILL.md) | Use when the app sends mail directly, configures SMTP, signs with DKIM or S/MIME, or asserts on sent mail (Pragmatic.Email). Bodies are pragmatic-use-documents; routing across channels is pragmatic-use-notifications. |
+| [`pragmatic-use-notifications`](plugins/pragmatic-design/skills/pragmatic-use-notifications/SKILL.md) | Use when the app sends email, webhook, Slack or SMS notifications through one API with routing, user preferences and delivery tracking (Pragmatic.Notifications). A single mail is pragmatic-use-email. |
+
+**Compliance and quality**
+
+| Skill | Use it when |
+|---|---|
+| [`pragmatic-use-audit`](plugins/pragmatic-design/skills/pragmatic-use-audit/SKILL.md) | Use when the app must prove who changed or accessed something, answer an auditor, verify the trail or choose [Auditable] vs [Audited] (Pragmatic.Audit, sealing, retention, NIS2 incidents). Erasure is pragmatic-use-privacy. |
+| [`pragmatic-use-privacy`](plugins/pragmatic-design/skills/pragmatic-use-privacy/SKILL.md) | Use when the app stores data about a person and must answer a deletion or export request or keep a processing register, or when PRAG2900-2913 fire (Pragmatic.Privacy, [PersonalData], erasure plan, crypto-shredding). |
+| [`pragmatic-use-testing`](plugins/pragmatic-design/skills/pragmatic-use-testing/SKILL.md) | Use when writing or wiring tests for a Pragmatic app, mocking a boundary or IClock, or when a generated contract test fails or is missing (Pragmatic.Testing, contract tests, WebApplicationFactory, Testcontainers). |
+
+<!-- catalog:pragmatic-design:end -->
+
+### Web UI: `pdxui`
+
+<!-- catalog:pdxui:start -->
+<!-- generated by scripts/check.mjs --write from each SKILL.md; do not edit by hand -->
+
+**Start here**
+
+| Skill | Use it when |
+|---|---|
+| [`pdxui-language`](plugins/pdxui/skills/pdxui-language/SKILL.md) | The .pdx language: the file format (template, script setup, style scoped), the runes ($signal, $derived, $effect), the declarations (@prop, @page, @event and more), the template syntax and how a project is wired. Use before writing or editing any .pdx file, or when starting a PDX app. |
+| [`pdxui`](plugins/pdxui/skills/pdxui/SKILL.md) | Build web app UIs with PDX (@pdxui): the catalogue of its components by area, screen recipes and the measured .pdx gotchas. Use before building any UI piece, since the component usually exists. The language is pdxui-language; theming, pdxui-theme; composing a screen, pdxui-screens. |
+| [`pdxui-screens`](plugins/pdxui/skills/pdxui-screens/SKILL.md) | Compose a screen that reads as a product, not a demo: grid or cards, what the header and sidebar carry, empty, loading and error states, what never to rebuild by hand. Use when laying out a screen or an app in .pdx, after picking components (pdxui) and the brand (pdxui-theme). |
+| [`pdxui-theme`](plugins/pdxui/skills/pdxui-theme/SKILL.md) | Theme and brand a PDX app: generate a WCAG-AA theme from one brand color with `npx pdx theme`, pick one of the 13 shipped themes, use the semantic tokens, dark mode and density. Use when branding an app, editing a theme, choosing a token, or when a theme does not apply. |
+
+**Components, one page per component**
+
+| Skill | Use it when |
+|---|---|
+| [`pdxui-layout`](plugins/pdxui/skills/pdxui-layout/SKILL.md) | PDX (@pdxui/ui) layout and shell components — pdx-app-layout, pdx-page-header, navbar, sidebar, splitter, scroll-area, row/col grid, aspect-ratio, masonry, toolbar, affix, scroll-spy — with props and events. Use when building the page structure or app shell of a .pdx app. |
+| [`pdxui-navigation`](plugins/pdxui/skills/pdxui-navigation/SKILL.md) | PDX navigation components — router-outlet, link, nav-menu, bottom-nav, breadcrumb, menu, menubar, dropdown and context menus, command palette, tabs, pagination, fab, split-button — with props and events. Use when adding links, navigation, menus, tabs or a command palette to a .pdx app. |
+| [`pdxui-data`](plugins/pdxui/skills/pdxui-data/SKILL.md) | PDX (@pdxui/ui) data components — data-grid, entity-grid (CRUD-wired), bulk-actions, data-source, filter-builder, chart, sparkline, list, sortable-list, tree, statistic, timeline, calendar, empty-state — with props and events. Use when showing records, a grid, a chart or a tree in a .pdx app. |
+| [`pdxui-forms`](plugins/pdxui/skills/pdxui-forms/SKILL.md) | PDX (@pdxui/ui) form-building components — pdx-form, auto-form, form-template, json-editor, form-field/section/actions, fieldset, field-group/list, input-group, inline-edit, wizard — with props and events. Use when building a form, an edit screen or a wizard in a .pdx app. |
+| [`pdxui-inputs`](plugins/pdxui/skills/pdxui-inputs/SKILL.md) | PDX (@pdxui/ui) input controls — text, number, masked, password, search and rich-text inputs, checkbox, radio, switch, toggle, segmented, select, autocomplete, tree-select, cascader, date/time/color pickers, slider, rating, tags, file upload. Use when adding a form control to a .pdx app. |
+| [`pdxui-overlay`](plugins/pdxui/skills/pdxui-overlay/SKILL.md) | PDX (@pdxui/ui) overlay and feedback components — dialog, alert-dialog, drawer, edit-drawer, relation-picker, bottom-sheet, popover, tooltip, toast, banner, block-ui — with props and events. Use when showing a dialog, drawer, popover, toast or loading overlay in a .pdx app. |
+| [`pdxui-display`](plugins/pdxui/skills/pdxui-display/SKILL.md) | PDX (@pdxui/ui) display atoms — button, button-group, icon, badge, chip, avatar, divider, kbd, label, progress, spinner, image, card, accordion, carousel — with props and events. Use when placing a basic visual element in a .pdx app. |
+| [`pdxui-infra`](plugins/pdxui/skills/pdxui-infra/SKILL.md) | PDX (@pdxui/ui) infrastructure components — pdx-provide (a DI/context provider) and pdx-error-boundary — with props and events. Use when wiring the plumbing of a .pdx app. |
+
+**Topics no single component covers**
+
+| Skill | Use it when |
+|---|---|
+| [`pdxui-data-layer`](plugins/pdxui/skills/pdxui-data-layer/SKILL.md) | PDX (@pdxui) data and state: @fetch with cache and invalidation, mutations and optimistic writes, HttpClient middleware, offline, files, export, server pushes, long lists, @store, and provide/inject between components. Use when a .pdx app loads, writes or shares data. |
+| [`pdxui-validation`](plugins/pdxui/skills/pdxui-validation/SKILL.md) | PDX (@pdxui) forms and validation: @form schemas, field binding, field arrays, a rule across two fields, when to save, one form split across components, several forms under one save. Use when a .pdx form must validate, save, or span several components. |
+| [`pdxui-routing`](plugins/pdxui/skills/pdxui-routing/SKILL.md) | PDX (@pdxui/router) routing: @page, params, @guard and where a denial goes, @loader, layouts and nested routes, one chunk per page and prefetching, keep-alive, the query string, navigation hooks, @title/@meta and scroll restoration. Use when a .pdx app has more than one page. |
+| [`pdxui-i18n`](plugins/pdxui/skills/pdxui-i18n/SKILL.md) | PDX (@pdxui) internationalization: $t, $n, $d and $r, setting up and switching locales, translating the strings the built-in components render, reacting to a locale change, right-to-left. Use when a .pdx app is not English-only. |
+| [`pdxui-setup`](plugins/pdxui/skills/pdxui-setup/SKILL.md) | PDX (@pdxui) project setup and build: installing, the Vite plugin, the pdx CLI (dev, build, check, new, analyze, theme, i18n), dev interpreted vs production compiled, first-screen preloading, CDN and framework interop, devtools. Use when starting, building or shipping a .pdx app. |
+| [`pdxui-testing`](plugins/pdxui/skills/pdxui-testing/SKILL.md) | PDX (@pdxui) testing and permissions: mount, queries, tick and events from @pdxui/core/testing, contract tests; who the user is (createAuthStore), setPermissions, gating UI and routes, what survives a reload. Use when testing .pdx components or gating a .pdx app by permission. |
+
+<!-- catalog:pdxui:end -->
+
+## When something goes wrong
+
+**The agent does not pick up a skill.** With many skills installed, an agent may shorten or drop some
+descriptions from the list it chooses from, so a skill it cannot see is never loaded. Name the skill in
+the prompt (*"use pragmatic-use-jobs"*), call it with its slash command, or install only the plugin the
+project needs.
+
+**The advice does not match the package.** The installed copy may be older than the packages: update
+it (see [Updates](#updates)). If it still disagrees, the package wins; please open an issue where the
+skill is maintained (see [Contributing](#contributing)).
+
+**A skill mentions `examples/showcase/` or `Pragmatic.Design.Builder/golden`.** Those are paths in the
+upstream repositories, given as provenance. Everything a skill needs is inline or in its own folder.
 
 ## Updates
 
-Each plugin's `version` is in `plugins/<plugin>/.claude-plugin/plugin.json` and in its marketplace
-entry, and changes with every release of its skills: an installed copy updates only when it does. In
-Claude Code run `claude plugin update <plugin>@pragmatic-design`, or turn on auto-update for the
-marketplace in `/plugin`.
+Each plugin's `version` is in `plugins/<plugin>/.claude-plugin/plugin.json` and in its entry in
+`.claude-plugin/marketplace.json`, and changes with every release of its skills: an installed copy
+updates only when it does. In Claude Code run `claude plugin update <plugin>@pragmatic-design`, or turn
+on auto-update for the marketplace in `/plugin`.
+
+## Contributing
+
+This repository publishes the skills; it is not where they are written. Each plugin is maintained next
+to the code it describes, and copied here:
+
+| Plugin | Source | Copied with |
+|---|---|---|
+| `pragmatic-design` | [`marketplace/`](https://github.com/pragmatic-design/Pragmatic.Design/tree/main/marketplace) in Pragmatic.Design | a copy of that folder |
+| `pdxui` | [pragmatic-design/pdxui](https://github.com/pragmatic-design/pdxui) | its `scripts/sync-skills.mjs` |
+
+Fixes to a skill's content go to its source repository: a change made here is overwritten by the next
+copy. Changes to this repository's own files (this README, the marketplace, `scripts/`) are welcome
+here. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Before a pull request, run the check (Node.js, no install):
+
+```bash
+node scripts/check.mjs           # spec, links, versions, README catalog
+node scripts/check.mjs --write   # rewrite the catalog above from each SKILL.md
+```
 
 ## Local development
 
@@ -104,8 +259,8 @@ claude --plugin-dir ./plugins/pragmatic-design
 claude --plugin-dir ./plugins/pdxui
 ```
 
-Or register the checkout as a marketplace — `claude plugin marketplace add .` or
-`codex plugin marketplace add .` from this directory — and install as above.
+Or register the checkout as a marketplace (`claude plugin marketplace add .` or
+`codex plugin marketplace add .` from this directory) and install as above.
 
 ## License
 

@@ -10,7 +10,7 @@ on blur.
 
 **Pitfalls**
 - After a pick, `el.value` is the LABEL the input shows; the code from `value-field` is only in
-  `pdx-change.detail.value` (PDXUI-295).
+  `pdx-change.detail.value`.
 - Typing emits `pdx-input`, not `pdx-change`: `pdx-change` fires on a pick, a clear, or a `force-selection` wipe.
 - `force-selection` compares the typed text with the labels, case-insensitively, 150 ms after blur.
 - Suggestions appear from `min-length` characters (default 1), at most `max-items` (default 10).

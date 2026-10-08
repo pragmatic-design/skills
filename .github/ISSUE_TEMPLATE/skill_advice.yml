@@ -1,0 +1,51 @@
+name: A skill gives wrong or missing advice
+description: An agent following a skill wrote code that does not build, does the wrong thing, or missed a feature the package has
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A skill's content is maintained next to the code it describes, and copied here. A report
+        here is fine; it is moved to [Pragmatic.Design](https://github.com/pragmatic-design/Pragmatic.Design)
+        or [PDX UI](https://github.com/pragmatic-design/pdxui) if it needs a change there.
+
+  - type: input
+    id: skill
+    attributes:
+      label: Skill and plugin version
+      description: The skill's name and the plugin's version (`claude plugin list`, or `plugin.json`).
+      placeholder: "pragmatic-use-caching, pragmatic-design 0.11.29"
+    validations:
+      required: true
+
+  - type: input
+    id: packages
+    attributes:
+      label: Packages and version
+      description: The packages the generated code uses, with their version.
+      placeholder: "Pragmatic.Caching 1.0.0-alpha.1"
+    validations:
+      required: true
+
+  - type: textarea
+    id: advice
+    attributes:
+      label: What the skill says
+      description: The passage, quoted, or the advice the agent followed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What the package actually does
+      description: The build error with its `PRAG` or `PDX_` code, the wrong behaviour, or the feature the skill did not mention.
+    validations:
+      required: true
+
+  - type: input
+    id: agent
+    attributes:
+      label: Agent
+      description: The agent and model, if it matters.
+      placeholder: "Claude Code, Codex"

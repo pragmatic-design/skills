@@ -8,11 +8,11 @@ description: "Compose a screen that reads as a product, not a demo: grid or card
 `pdxui` answers *which component*. `pdxui-theme` answers *which colour*. Neither answers
 **what the screen is**, and that is where a working app stops looking like a product.
 
-Measured, twice. A lab app passed 20 of 20 acceptance items — on two viewports, in both schemes, with
-a clean console — and its owner found ten defects in five minutes. Not one was a component misused.
-They were all composition: a history of thousands of jobs rendered as cards, a header holding one
-control, a menu entry that 404s, cards of different heights in one row, and a vehicle card written by
-hand while `pdx-card`, `pdx-badge` and `pdx-chip` sat unused.
+An app can pass every acceptance item — on two viewports, in both schemes, with a clean console —
+and still show ten defects in five minutes, none of them a component misused. They are composition:
+a history of thousands of jobs rendered as cards, a header holding one control, a menu entry that
+404s, cards of different heights in one row, and a vehicle card written by hand while `pdx-card`,
+`pdx-badge` and `pdx-chip` sit unused.
 
 **Every rule below has a check.** A rule you cannot check is an opinion, and opinions do not belong
 in a skill.
@@ -37,10 +37,10 @@ screen instead of forty.
 > a table — `document.querySelectorAll('[role="row"]').length > 0`. Zero rows with a paginator above
 > a wall of cards is the defect.
 
-⚠️ **A "one definition, three screens" requirement does not mean cards.** In the second lab run the
-acceptance asked for one vehicle card reused in three places, and the agent honoured it by putting
-cards in the history too. A grid column renderer (`cell:`) reuses the same definition; extraction and
-the right control are independent decisions.
+⚠️ **A "one definition, three screens" requirement does not mean cards.** An acceptance that asks
+for one vehicle card reused in three places is not a reason to put cards in the history too. A grid
+column renderer (`cell:`) reuses the same definition; extraction and the right control are
+independent decisions.
 
 ---
 
@@ -91,7 +91,7 @@ A route that needs a parameter (`/order/:id`) is **not** a menu entry: there is 
 the user gets a 404 from a link you put there yourself.
 
 > **Check:** click every entry in the nav; none reaches an error page or an empty screen. This is four
-> lines of Playwright and it caught a 404 that 20 acceptance items missed.
+> lines of Playwright, and it catches a 404 that a long acceptance list misses.
 
 If a section has no meaningful landing page, either give it one (a list, a search, a dashboard) or do
 not put it in the menu.
@@ -126,11 +126,10 @@ per-component values. Column widths repeat across screens showing the same entit
 > **Check:** the content does not touch the chrome — measure the gap between the navbar's right edge
 > and the first text in the main area, and between that text and the viewport edge. Zero on either
 > side is the defect: `pdx-app-layout` gives its regions no padding, deliberately, so the app has to.
-> Three rounds in a row shipped content flush against the sidebar.
+> Content flush against the sidebar is the most common way this goes wrong.
 
 > **Check:** measure every repeated item in a row — `getBoundingClientRect().height` is one distinct
-> value. In the second lab run it was 168px four times and 200px once, and that is exactly the
-> "arranged a bit anywhere" look.
+> value. 168px four times and 200px once is exactly the "arranged a bit anywhere" look.
 
 ---
 
@@ -166,10 +165,10 @@ when the parts are forms, so each panel sits in a visible container. `pdx-segmen
 ```
 
 The catalogue already tells them apart ("Switch between panels" / "A compact set of exclusive
-options"), and lab round 5 still put the five blocks of a declaration behind a segmented control. That
-gave three problems: the wrong role for assistive technology, five long labels that overflowed at 1440px
-into a scrollbar, and an owner who asked for tabs "with a visible container". `pdx-tabs` defaults to
-`line`; write `variant="card"` yourself.
+options"), and still the five blocks of a declaration end up behind a segmented control. That gives
+three problems: the wrong role for assistive technology, five long labels that overflow at 1440px
+into a scrollbar, and no visible container around the panels. `pdx-tabs` defaults to `line`; write
+`variant="card"` yourself.
 
 > **Check:** no `[role="radiogroup"]` whose options each reveal a different panel. Select each option
 > in turn: if a different region of the page appears for each one, it is tabs in disguise.
@@ -184,9 +183,8 @@ that follows it ("my cases"), a command that becomes enabled or disabled, or a l
 changed. If on some screen the only thing that changes is the control's own label, then on that screen
 it reads as broken, however correct it is.
 
-Lab round 5, measured: the operator switcher worked, and on the declaration the transmit explanation
-changed with it. On the list nothing depended on who you were, and the owner reported "changing user
-does nothing".
+An operator switcher that changes the transmit explanation on the declaration, while on the list
+nothing depends on who you are, reads on the list as "changing user does nothing".
 
 > **Check:** on every screen the control is reachable from, change it and compare the DOM outside the
 > control before and after: `main.innerHTML`, or the region the control governs, must differ. Equal is
@@ -206,8 +204,8 @@ form, a page of text — is capped *inside* the route, and centred, with the lay
 
 `max` takes `xs sm md lg xl 2xl full`; `pdx-container` centres itself and adds the side padding.
 
-Lab round 6 gave every route `max-width: 1400px`, aligned left: at 1920px, 288px of the main area
-stayed empty on the right, and the owner said the pages looked "limited in width".
+A `max-width: 1400px` on every route, aligned left, leaves 288px of the main area empty on the right
+at 1920px, and the pages look limited in width.
 
 > **Check:** at 1920px, on a list screen, the widest data block (the grid, the agenda) spans at least
 > 90% of the main area: `grid.getBoundingClientRect().width / main.clientWidth >= 0.9`. And no rule in
@@ -221,7 +219,7 @@ In a line-of-business app, identity closes the header's end region: the user's n
 the name as its accessible name, and a menu holding the account actions (switch user, sign out).
 Utility icons (search, notifications, theme) come **before** it. A switcher placed before the icons,
 showing a role or a verb instead of a person, leaves the user unsure who is signed in and what the
-control changes — lab round 6, flagged by the owner.
+control changes.
 
 > **Check:** in the header, the last interactive element in DOM order is the user control, and it is
 > also the one furthest along the inline axis (`getBoundingClientRect().right` is the largest in a
@@ -233,8 +231,8 @@ control changes — lab round 6, flagged by the owner.
 
 The form declares `warnUnsaved` — `@form f: S { warnUnsaved }`, or `createForm({ …, warnUnsaved: true })`
 — on the **create** screens as well as the edit screens. Leaving with typed, unsaved data then asks,
-in-app. A guard written by hand goes on the forms its author thinks of: lab round 6 guarded the visit
-editor only, and the owner found the creation forms that dropped their input without a word. The
+in-app. A guard written by hand goes on the forms its author thinks of — the edit screen — and the
+creation forms drop their input without a word. The
 recipe is «Do not leave with unsaved work» in `pdxui/references/recipes.md`.
 
 > **Check:** on every create and edit screen, type into one field and click a sidebar link: the

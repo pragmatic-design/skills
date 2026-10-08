@@ -6,9 +6,8 @@ loading and effects go, and where styles go. Every rule names the PDX construct 
 how you recognise the rule being broken.
 
 These rules are `docs/PDX-COMPONENT-DESIGN.md` of the framework repository, written for the author at
-the keyboard. The rule ids are the same, so a review comment can name one. The "before" excerpts come
-from this repository's showcase application, which broke these rules and is being brought back to them
-(PDXUI-705).
+the keyboard. The rule ids are the same, so a review comment can name one. The "before" excerpts are
+real code that broke these rules, from this repository's showcase application.
 
 ⚠️ **Lines are a symptom, not the rule.** A 150-line route or a 200-line file is a reason to *look*
 (`structure.md`, and "When the file gets long" in `pdxui-language`). What you are looking for is
@@ -47,7 +46,7 @@ autosave queue and the leave guard.
 **A form's field groups are sections.** Move a group into its own `.pdx` and call `tryUseForm()` in
 its script: that declares it a section of the `<pdx-form>` above it, and the compiler wires its named
 controls and `<pdx-form-field name>`s to that form, as it does in the form's own file — no `:value`, no
-`@pdx-input` (`recipes.md`, "A long form filled in more than one sitting"; PDXUI-717). The route keeps
+`@pdx-input` (`recipes.md`, "A long form filled in more than one sitting"). The route keeps
 the form, the loading and what the sections share; each section is a component.
 
 ### CD-B3 — Do not extract what has no life of its own

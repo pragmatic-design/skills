@@ -114,7 +114,7 @@ write:
 
 *error* — A second `<script>` block in a `.pdx`.
 
-A `.pdx` has one `<script>`. The parser reads the first, and a second was dropped without a word: its declarations surfaced only as undeclared names in the template, and its statements — an `onMount(…)` — simply never ran. The compile now stops at it, naming its line.
+A `.pdx` has one `<script>`. The parser reads the first; a second would be dropped without a word — its declarations surfacing only as undeclared names in the template, its statements (an `onMount(…)`) never running. So the compile stops at it, naming its line.
 
 **Fix.** Move its code into the first `<script setup>`.
 
@@ -122,7 +122,7 @@ A `.pdx` has one `<script>`. The parser reads the first, and a second was droppe
 
 *error* — A second `<template>` block in a `.pdx`.
 
-A `.pdx` has one `<template>`; the parser reads the first, and the markup of a second never rendered. The compile now stops at it, naming its line.
+A `.pdx` has one `<template>`; the parser reads the first, and the markup of a second would never render. So the compile stops at it, naming its line.
 
 **Fix.** Move its markup into the first `<template>`.
 

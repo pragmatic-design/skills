@@ -5,7 +5,7 @@ A CRUD grid: create, edit, delete, bulk.
 **Use it when** a screen needs a grid with New, an edit drawer, delete and bulk actions over an ARRAY you
 hold. **Not when** the list reads a server-paged `DataSource`, creates in a modal, opens a record from its
 row, must ask before discarding, or offers undo, partial bulk results or live updates → `pdx-data-grid` with
-`:source`, plus `pdx-edit-drawer` and `pdx-dialog` (PDXUI-710 measured it against those lists).
+`:source`, plus `pdx-edit-drawer` and `pdx-dialog`.
 
 **Pitfalls**
 - It persists nothing: it edits a local optimistic copy and emits `pdx-create` / `pdx-update` / `pdx-delete`

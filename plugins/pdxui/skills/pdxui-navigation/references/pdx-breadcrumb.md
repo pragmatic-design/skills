@@ -20,13 +20,6 @@ copy-the-address all work, and the browser navigates without you. Without one it
 focusable and announced correctly, but only your handler moves the app. Prefer `href` for anything
 that is a real URL; use the event for a crumb that changes state without a route.
 
-⚠️ Until PDXUI-129 an href-less crumb was an `<a>` with no `href`: not focusable, not announced as a
-link, and with the pointer cursor missing. This note recommended that route while it was broken.
-
-This cost the second lab run a decorative breadcrumb on every screen — the catalogue said
-`items · array · The data items to render`, so the app passed `[{ label }]` and never learned there
-was anything else. (PDXUI-124)
-
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
 | `items` | — | array | `[]` | The data items to render. |

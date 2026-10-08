@@ -3,14 +3,13 @@
 A drawer holding a schema-driven form.
 
 **Use it when** one existing record is edited from a `FormSchema`, in a side panel its row opens.
-**Not when** the record is new → `pdx-dialog` around `pdx-auto-form` (create in a modal, edit in the page:
-PDXUI-574); the fields are hand-written — the drawer builds them only from `schema`.
+**Not when** the record is new → `pdx-dialog` around `pdx-auto-form` (create in a modal, edit in the page); the fields are hand-written — the drawer builds them only from `schema`.
 
 **Pitfalls**
 - It is controlled and never closes itself: Escape, ✕ and the backdrop become `pdx-cancel`, Save validates and
   emits `pdx-save`. You close it by setting `open` to false, in both.
 - Ask before discarding with `el.isDirty()`. The panel is re-parented to `<body>`, so a query under the host
-  finds no form, and comparing `getValues()` with the record races the last keystroke (PDXUI-581).
+  finds no form, and comparing `getValues()` with the record races the last keystroke.
 - A new `value` or `schema` while it is open rebuilds the form: hand it a stable object, not a fresh one per
   render, or typed edits vanish.
 - `getValues()` is `{}` until the form is built, a frame after opening.
@@ -37,7 +36,7 @@ PDXUI-574); the fields are hand-written — the drawer builds them only from `sc
 |---|---|
 | `getValues()` | The form values now, `{}` while the form is not built. |
 | `validate()` | Runs validation and returns the result. |
-| `isDirty()` | Whether anything in the form was changed since it opened.  A drawer is not a modal — Escape and the ✕ close it, and both are easy to hit by accident — so a host has to ask before discarding, and only when there is something to discard. The host cannot work this out for itself: the panel is re-parented to <body>, so a query under the host finds no form, and comparing `getValues()` with the record races the keystroke that has not reached the form model yet. The form has carried this since it existed. (PDXUI-581) |
+| `isDirty()` | Whether anything in the form was changed since it opened.  A drawer is not a modal — Escape and the ✕ close it, and both are easy to hit by accident — so a host has to ask before discarding, and only when there is something to discard. The host cannot work this out for itself: the panel is re-parented to <body>, so a query under the host finds no form, and comparing `getValues()` with the record races the keystroke that has not reached the form model yet. The form carries this itself. |
 
 **Events:** `pdx-cancel` → `detail: {}` — Fired when cancelled.; `pdx-save` → `detail: { values, mode }` — Fired on `pdx-save`.
 

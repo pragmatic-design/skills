@@ -1,0 +1,23 @@
+name: Install, README or this repository
+description: Installing the plugins, the README, the marketplace, or scripts/check.mjs
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What does not work, or what is missing.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The commands you ran and what they printed.
+      render: shell
+
+  - type: input
+    id: environment
+    attributes:
+      label: Agent and version
+      placeholder: "Claude Code 2.x on Windows, Codex CLI"

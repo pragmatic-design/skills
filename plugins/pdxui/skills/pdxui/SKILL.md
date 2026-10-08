@@ -10,7 +10,7 @@ Knowledge + playbook for building UIs on **PDX UI**: the `.pdx` language (SFC:
 115 `pdx-*` components.
 
 > **Golden rule: search the catalog BEFORE building anything.** The library is large; a component
-> almost always exists already (we once rebuilt `pdx-filter-builder` by hand — it was already there).
+> almost always exists already (`pdx-filter-builder`, for one, is easy to rebuild by hand without noticing it is there).
 > This is the GENERAL skill; the components live in **per-area skills** (`pdxui-<area>`), one page each, like the
 > .NET `pragmatic-use-*` model. Quick index: [`references/README.md`](references/README.md).
 
@@ -18,12 +18,11 @@ Knowledge + playbook for building UIs on **PDX UI**: the `.pdx` language (SFC:
 
 0. **Before the first line of code**, two things that are cheap now and expensive later:
    - the language — skill **`pdxui-language`**: the file format, the runes, the declarations, and how a
-     project is wired (index.html, vite.config, main.js, who registers the router). The first lab run
-     wrote all of it from memory because no page described it, and got away with it; the next reader
-     may not.
+     project is wired (index.html, vite.config, main.js, who registers the router). Writing that wiring
+     from memory works until it does not.
    - the brand — skill **`pdxui-theme`**: `pdx theme --brand=#hex` generates a WCAG-AA theme. Deciding
-     this first costs ten minutes; retrofitting it costs a pass over every screen. That skill went
-     unopened for an entire run, so it is named here rather than left as an optional extra.
+     this first costs ten minutes; retrofitting it costs a pass over every screen. It is easy to skip,
+     so it is named here rather than left as an optional extra.
 1. **Find the component** — open the **area skill** for props/attributes/events (each is a standalone skill):
    - `pdxui-layout` · `pdxui-navigation` · `pdxui-data` · `pdxui-forms` ·
      `pdxui-inputs` · `pdxui-overlay` · `pdxui-display` · `pdxui-infra`.
@@ -34,8 +33,8 @@ Knowledge + playbook for building UIs on **PDX UI**: the `.pdx` language (SFC:
      `pdxui-setup` (install, CLI, build, devtools) · `pdxui-testing` (tests, identity, permissions).
 2. **Decide what the screen IS** — skill **`pdxui-screens`**, before any markup: grid or cards,
    what the header carries, the four states every screen has, and what you never re-build by hand.
-   Every rule there has a check, and they came from two lab runs that passed their acceptance and
-   still did not look like a product. Then [`references/structure.md`](references/structure.md) for
+   Every rule there has a check: a screen can pass its acceptance and still not look like a
+   product. Then [`references/structure.md`](references/structure.md) for
    where the pieces live, and [`references/component-design.md`](references/component-design.md) for
    how to cut them: where a component's edge goes, who owns each piece of state, how logic is shared,
    what its API and its styles look like, and the anti-patterns with how to recognise each.
@@ -44,23 +43,20 @@ Knowledge + playbook for building UIs on **PDX UI**: the `.pdx` language (SFC:
    `createCrud`/`createDetail`, master-detail + relation tabs, JSON-editor, idiomatic grid transport).
    ⚠️ Recipes that point at `Pragmatic.Design.Builder/golden` or `/profiler` are pointing at a repository
    **you do not have** if you installed from npm: treat those as provenance, not as something to open.
-   Anything you actually need is inline in the recipe. (PDXUI-109 findings/skill 14.)
+   Anything you actually need is inline in the recipe.
    ⚠️ **Building a LOB admin with many entities? Don't hand-write screens** — use the descriptor →
    `createCrud`/`createDetail` recipe (the UI analogue of the backend's generate-then-implement loop).
 4. **Heed the traps** — read [`references/gotchas.md`](references/gotchas.md) before writing `.pdx`. The ones
-   that are still live and cost the most: **an open drawer's identity transform used to throw fixed
-   overlays off screen** (fixed, but do not set a transform on the panel yourself); **the grid's selection
+   that cost the most: **a transform on an open drawer's panel throws fixed overlays off screen**
+   (do not set one yourself); **the grid's selection
    reaches the DataSource only if the source opted into `selection`**; **`data-region` accepts exactly four
    names and an unknown one drops out**; **a trailing comma in `$derived(...)` kills the reactivity**; and the
    token scale is named (`2xs…3xl`), never numeric — `--pdx-space-4` silently removes your padding.
-   ⚠️ The summary here used to list five traps that had been FIXED months earlier (select `.value`, the
-   drawer's `.open`, static `createDataSource`, custom-event re-render, dev-server restarts). A summary
-   ages faster than the page it summarises: if this paragraph and `gotchas.md` ever disagree, the page
-   wins and this one is stale. (PDXUI-117)
+   ⚠️ A summary ages faster than the page it summarises: if this paragraph and `gotchas.md` ever
+   disagree, the page wins and this one is stale.
 5. **Verify in the browser** — run the dev server and MEASURE: element geometry, text, attributes, state
    after an interaction, and zero console errors. A screenshot is evidence for a human, never an
-   acceptance check. A short Playwright script beats a browser you drive by hand — that is what the first
-   lab run's acceptance file became.
+   acceptance check. A short Playwright script beats a browser you drive by hand.
 
 ## The rules most often broken
 

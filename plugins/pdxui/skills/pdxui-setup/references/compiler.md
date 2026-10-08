@@ -86,7 +86,7 @@ assertion per row against a real production build.
 
 | Aspect | Dev (interpreted) | Prod (compiled) | |
 | --- | --- | --- | --- |
-| Binding | `setProp()` with dispatch | direct inline assignment | **yes** — the default since 1.0.0-alpha; 19 ms → 5.5 ms on a 1500-row mount |
+| Binding | `setProp()` with dispatch | direct inline assignment | **yes** — the default; 19 ms → 5.5 ms on a 1500-row mount |
 | Router | regex matching | generated switch | **yes**, while no route declares a constraint |
 | CSS | injected at runtime | extracted to a stylesheet | **yes** — a route carries its CSS in a `.css`, not in its JS chunk |
 | Unread signal | present | removed | **yes** — semantic dead-code elimination, measured on the bundle |
@@ -96,8 +96,8 @@ assertion per row against a real production build.
 Route pre-linking ships: the built `index.html` preloads the landing route's chunks — see *The first
 screen, in one round-trip less* below.
 
-The flattening of single-use components was claimed here and is **not implemented**: it was measured at ~1.2% of the bundle in exchange for the element leaving
-the DOM, and was withdrawn.
+The flattening of single-use components is **not implemented**: it measures at ~1.2% of the bundle in exchange for the element leaving
+the DOM, which is not worth it.
 
 ### Turning the inline path off
 
@@ -125,9 +125,9 @@ Vite emits those for what it can SEE — and a route is a dynamic import the gen
 resolves, so it sees none of them. The compiler does: the route table is built at compile time,
 which is the same table the production router compiles in.
 
-Measured on the showcase: a cold first screen fetched its JavaScript in **three waves** — the entry,
-then the route's chunk once the browser had run the entry and learnt of it, then what that chunk
-imports. **Two** now, and the round-trip that goes is paid by every first-time visitor.
+Measured on the showcase: without the preload, a cold first screen fetches its JavaScript in **three
+waves** — the entry, then the route's chunk once the browser has run the entry and learnt of it, then
+what that chunk imports. With it, **two**, and the round-trip saved is paid by every first-time visitor.
 
 `/` by default, because that is the URL an app is usually entered at. For an app that lands
 somewhere else, or to turn it off:
