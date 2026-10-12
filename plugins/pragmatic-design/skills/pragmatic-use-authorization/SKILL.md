@@ -21,12 +21,12 @@ For the `[HasOwner]`/`[HasAccessScopes]` attributes on entities: also see `pragm
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Authorization" Version="1.0.0-alpha.1" />
-<PackageReference Include="Pragmatic.Identity" Version="1.0.0-alpha.1" />
-<PackageReference Include="Pragmatic.Identity.AspNetCore" Version="1.0.0-alpha.1" />     <!-- HTTP bridge -->
-<PackageReference Include="Pragmatic.Identity.Local.Jwt" Version="1.0.0-alpha.1" />      <!-- local JWT auth -->
-<PackageReference Include="Pragmatic.Identity.Oidc" Version="1.0.0-alpha.1" />           <!-- external IdP (OIDC) -->
-<PackageReference Include="Pragmatic.Identity.Persistence" Version="1.0.0-alpha.1" />    <!-- DB-backed users -->
+<PackageReference Include="Pragmatic.Authorization" Version="1.0.0-alpha.2" />
+<PackageReference Include="Pragmatic.Identity" Version="1.0.0-alpha.2" />
+<PackageReference Include="Pragmatic.Identity.AspNetCore" Version="1.0.0-alpha.2" />     <!-- HTTP bridge -->
+<PackageReference Include="Pragmatic.Identity.Local.Jwt" Version="1.0.0-alpha.2" />      <!-- local JWT auth -->
+<PackageReference Include="Pragmatic.Identity.Oidc" Version="1.0.0-alpha.2" />           <!-- external IdP (OIDC) -->
+<PackageReference Include="Pragmatic.Identity.Persistence" Version="1.0.0-alpha.2" />    <!-- DB-backed users -->
 ```
 
 `ICurrentUser`, `[RequirePermission]`, `[PragmaticUser]` are in `Pragmatic.Abstractions`. Always add `Pragmatic.SourceGenerator` as an analyzer.
@@ -341,8 +341,8 @@ the caller's entity after validation and the permission check, and writes that m
 property (`{ get; private set; }`), which is never a request parameter. `[FromCurrentUser]` without a
 member binds `ICurrentUser.Id` to a `string`. That is how a "my …" read is written: not a
 `DomainAction` looking the caller up by hand, and not `ICurrentUser` injected into the query, which the
-cache key cannot see. **PRAG0730** / **PRAG0731** hold the form; see `pragmatic-use-persistence` →
-*Reading by the caller*.
+cache key cannot see. **PRAG0730** / **PRAG0731** hold the form; see
+`../pragmatic-use-persistence/references/queries.md` → *Reading by the caller*.
 
 An operation that needs the caller's entity to **decide** something (a mutation checking who approves,
 an action exporting the caller's data) injects the resolver: it is registered like a `[Service]` of the
