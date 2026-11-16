@@ -42,11 +42,17 @@ services.AddAuditTrail();                   // store + the sealing worker
 ⚠️ `[Audited]` entities in more than one database: the generated host cannot choose where the trail
 lives and says so; register `AuditDbContext` yourself.
 
+On a boundary of the Sql or documents engine, reference `Pragmatic.Audit.Engines`. The boundary's saves
+write the entries, and the host registers
+`AddSqlAuditTrail<TBoundary>()` / `AddDocAuditTrail<TBoundary>()` by the same one-place rule, counting
+EF Core's databases and the engines' boundaries together. On the documents engine, entries of the same
+instant are ordered by id, not by write.
+
 What else writes to it, once it exists:
 
 | Source | How |
 |---|---|
-| `[Audited]` entities | Created/Updated/Deleted, with the user and correlation id, in the save's transaction |
+| `[Audited]` entities | Created/Updated/Deleted, with the user and correlation id, in the save's transaction; `BusinessOperation` the innermost operation, `OriginOperation` the outermost it was nested in |
 | Sign-in failures, lockouts | `AddIdentitySecurityAuditing<TLocator>()`, see `pragmatic-use-identity` |
 | Message handling outcomes | `msg.EnableAuditing()` in `UseMessaging` (`Pragmatic.Messaging.Auditing`) |
 | Reads of personal data | `[RecordAccess]` on the operation, see `pragmatic-use-privacy` |

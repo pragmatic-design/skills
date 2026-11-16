@@ -22,16 +22,20 @@ For HTTP APIs exposed from these mutations/queries: see `pragmatic-use-actions-e
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Persistence" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Persistence.EFCore" Version="1.0.0-alpha.2" />        <!-- EF runtime -->
-<PackageReference Include="Pragmatic.Migrations" Version="1.0.0-alpha.2" />                <!-- schema diff -->
-<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.2">
+<PackageReference Include="Pragmatic.Persistence" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Persistence.EFCore" Version="1.0.0-alpha.4" />        <!-- EF runtime -->
+<PackageReference Include="Pragmatic.Migrations" Version="1.0.0-alpha.4" />                <!-- schema diff -->
+<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.4">
   <IncludeAssets>analyzers; build; buildtransitive</IncludeAssets>
   <PrivateAssets>all</PrivateAssets>
 </PackageReference>
 ```
 
 Identifiers (`Guid7`, `OpaqueId`, `ShortGuid`, `Slug`) are in `Pragmatic.Persistence.Identifiers` (same package `Pragmatic.Persistence`).
+
+EF Core is the default engine; `[PersistenceEngine]` on a boundary picks another: the Sql engine
+([references/sql-engine.md](references/sql-engine.md)) or the documents engine on MongoDB and Cosmos DB
+([references/documents-engine.md](references/documents-engine.md)).
 
 ## API surface
 
@@ -84,7 +88,7 @@ public partial class Order
     public string OrderNumber { get; private set; } = default!;
 
     public Guid CustomerId { get; private set; }
-    public decimal Total { get; private set; }
+    public decimal Total { get; private set; }   // numeric(18,2) on every engine; [Precision(18, 4)] keeps 4 decimals
 
     [Projectable]                                // SQL-translatable expression
     public bool IsHighValue => Total >= 1000m;
@@ -276,7 +280,7 @@ public partial class SearchOrdersQuery
     public string? OrderNumber { get; init; }
     [Filter(Operator = FilterOperator.GreaterOrEqual, MapTo = "Total")]
     public decimal? MinTotal { get; init; }
-    [Sort(MapTo = "CreatedAt", DefaultDirection = SortDirection.Descending)]
+    [Sort(MapTo = "CreatedAt", DefaultDirection = SortDirection.Descending)] // Nulls = NullOrder.Last: null keys last on every engine
     public SortDirection? CreatedAtSort { get; init; }
 }
 ```
@@ -297,7 +301,7 @@ the task needs one of these:
   (**PRAG0730**/**PRAG0731**);
 - **`[FromClock]`** with a **`[ComputedFilter]`** method: reading by the clock
   (**PRAG0733**–**PRAG0735**);
-- **`[QueryView]`** with **`[GroupBy]`**: counting instead of listing (**PRAG0732**).
+- **`[QueryView]`** with **`[GroupBy]`**: counting instead of listing (**PRAG0732**); `IncludeEmpty = true` adds a zero row per missing value of a single enum key, with nullable `[Min]`/`[Max]`/`[Avg]` (**PRAG0748**–**PRAG0750**).
 
 ### 7. GridFilter (runtime operator selection)
 
@@ -407,8 +411,8 @@ the caller's language), `[Audited]`, `[GenerateHierarchy]`, `[Published]`, `[Sea
 (**PRAG0703**) and `[ComplexFilter]`: what each generates, and where it does not reach, is in
 **[references/entity-declarations.md](references/entity-declarations.md)**.
 
-⚠️ An `[Invariant]` is not checked on every write: a repository `Add` from a job, or an action that
-changed the aggregate without loading it through `[LoadEntity]`, runs none.
+⚠️ An `[Invariant]`, or a field rule (`[MaxLength]`, …), is not checked on every write: a repository
+`Add` from a job, or an action that changed an entity not loaded through `[LoadEntity]`, runs none.
 
 ## Identifiers
 
@@ -428,7 +432,7 @@ Both are in **[references/database.md](references/database.md)**:
   clock and a temporal assertion becomes an equality;
 - a violated unique index, foreign key or constraint is a `PersistenceRuleViolationException` carrying
   an `IError` (a conflict is **409**, a delete a relation refuses is `ENTITY_IN_USE`), not a provider
-  exception;
+  exception; a duplicate is `DB_CONFLICT`, or `[Unique(…, ErrorCode = "EMAIL_TAKEN")]`'s code; `Filter = "\"ValidTo\" IS NULL"` makes it partial (not on documents: `PRAG3113`);
 - ⚠️ a failed save leaves its entity tracked, and the next save retries it: `IUnitOfWork.Detach(entity)`.
 
 ## Most frequent diagnostics
@@ -445,8 +449,7 @@ Both are in **[references/database.md](references/database.md)**:
 | **PRAG0711** | Warning | `[LoadWith]` depth greater than 3 | Reduce depth or use projection |
 | **PRAG0730** | Error | A `[FromCurrentUser]` property with a `public`/`internal`/`init` setter | `{ get; private set; }` |
 | **PRAG0731** | Error | A `[FromCurrentUser]` binding that cannot be generated (the message says why) | Name a member of the `[PragmaticUser]` entity, of the property's type; `string` for the member-less form |
-| **PRAG0732** | Error | A `[GroupBy]` key or `Via` that names no member of the entity | Name a declared or generated member; reach another entity with `Via` |
-| **PRAG0733** | Error | A `[ComputedFilter]` the generator cannot write (not `bool`, static, generic, block body, `ref`/`out`/`in`/`params` parameter) | A `bool` property or instance method with an expression body |
+| **PRAG0732** | Error | A `[GroupBy]` key or `Via` that names no member of the entity | Name a declared or generated member; reach another entity with `Via` || **PRAG0733** | Error | A `[ComputedFilter]` the generator cannot write (not `bool`, static, generic, block body, `ref`/`out`/`in`/`params` parameter) | A `bool` property or instance method with an expression body |
 | **PRAG0735** | Error | A specification in a `[Projectable]`/`[ComputedFilter]` body takes a value from the row | Pass constants or a filter method's parameters; write a row-dependent condition as a lambda |
 | **PRAG0734** | Error | A `[FromClock]` binding that cannot be generated | `DateOnly` or `DateTimeOffset`, `{ get; private set; }` |
 | **PRAG1100** | Error | `[HasOwner]` not `partial` | Add `partial` |

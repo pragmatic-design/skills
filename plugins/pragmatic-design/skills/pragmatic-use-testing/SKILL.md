@@ -27,15 +27,18 @@ Keep them apart: a unit suite that needs Docker stops being run.
 ```xml
 <!-- integration test project -->
 <ProjectReference Include="..\..\src\MyApp.Host\MyApp.Host.csproj" />
-<PackageReference Include="Pragmatic.Testing" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Testing.SourceGenerator" Version="1.0.0-alpha.2" PrivateAssets="all" />
+<PackageReference Include="Pragmatic.Testing" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Testing.SourceGenerator" Version="1.0.0-alpha.4" PrivateAssets="all" />
 <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
 <PackageReference Include="Testcontainers.PostgreSql" />
 
 <!-- unit test project: mocks and comparers are separate generators, opt in to each -->
-<PackageReference Include="Pragmatic.Testing" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Testing.Mocking.SourceGenerator" Version="1.0.0-alpha.2" PrivateAssets="all" />
-<PackageReference Include="Pragmatic.Testing.Comparers.SourceGenerator" Version="1.0.0-alpha.2" PrivateAssets="all" />
+<PackageReference Include="Pragmatic.Testing" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Testing.Mocking.SourceGenerator" Version="1.0.0-alpha.4" PrivateAssets="all" />
+<PackageReference Include="Pragmatic.Testing.Comparers.SourceGenerator" Version="1.0.0-alpha.4" PrivateAssets="all" />
+
+<!-- worker host test project (no HTTP): the factory below -->
+<PackageReference Include="Pragmatic.Testing.Hosting" Version="1.0.0-alpha.4" />
 ```
 
 Module harnesses, only where used: `Pragmatic.Temporal.Testing` (`TestClock`),
@@ -74,6 +77,23 @@ its default and the suite can stay green for the wrong reason.
 
 One PostgreSQL container per test collection (`ICollectionFixture`), the schema applied once; each
 test creates its own rows with unique keys rather than resetting the database.
+
+### A worker host (no HTTP)
+
+A host built by `PragmaticApp.RunWorkerAsync` (jobs, message handlers) has no `WebApplicationFactory`.
+`Pragmatic.Testing.Hosting` gives it `PragmaticWorkerFactory<TEntryPoint>`. It builds the host from its
+entry point and applies `ConfigureServices` after the application's own registrations. `UseSetting` and
+`UseEnvironment` are command-line arguments. `StartAsync` starts the job processor. `TEntryPoint` is any type
+of the host's assembly, its public `[Module]` for instance.
+
+```csharp
+await using var worker = new PragmaticWorkerFactory<WorkerHostModule>()
+    .ConfigureServices(s => s.Replace(ServiceDescriptor.Singleton<IDigestSender>(sender)));
+await worker.StartAsync();
+await using (var scope = worker.Services.CreateAsyncScope())
+    await scope.ServiceProvider.GetRequiredService<IJobScheduler>().ScheduleAsync<SendDigestJob>();
+await sender.Sent.WaitAsync(TimeSpan.FromSeconds(30));   // the job's effect, not a poll of the store
+```
 
 ## Who the caller is
 

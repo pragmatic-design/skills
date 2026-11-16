@@ -20,11 +20,11 @@ For entities/queries/repositories: `pragmatic-use-persistence`. For DI/host: `pr
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Actions" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Endpoints" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Result" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Validation" Version="1.0.0-alpha.2" />        <!-- if you validate input -->
-<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.2">
+<PackageReference Include="Pragmatic.Actions" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Endpoints" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Result" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Validation" Version="1.0.0-alpha.4" />        <!-- if you validate input -->
+<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.4">
   <IncludeAssets>analyzers; build; buildtransitive</IncludeAssets>
   <PrivateAssets>all</PrivateAssets>
 </PackageReference>
@@ -188,8 +188,9 @@ properties, never a collection), are in **[references/transactions.md](reference
 
 Declare the event on the operation and the generated invoker builds and dispatches it **after the
 commit**. Constructor parameters bind by name to the operation's input properties, and for a mutation
-to the entity's as well, with `Id`/`PersistenceId`/`{Entity}Id` all resolving to the entity's id.
-`OccurredAt` is filled in.
+to the entity's as well, with `Id`/`PersistenceId`/`{Entity}Id` all resolving to the entity's id. For
+an action, to the result's members and each required `[LoadEntity]`'s (its `{Entity}Id` too); an input
+wins, then the result, then the loaded row. `OccurredAt` is filled in.
 
 ```csharp
 [Mutation(Mode = MutationMode.Update)]
@@ -253,7 +254,7 @@ examples kept repeating:
 | `var x = await repo.GetByIdAsync(Id); if (x is null) return NotFoundError…` | `[LoadEntity<T>(nameof(Id))]` → field `_x`, 404 by the invoker, after validation and authorization (no 404-vs-403 probing), past a `[WithoutFilter<T>]` the operation declares. The key is the entity's key type (**PRAG0411**) |
 | a second query for a navigation of a preloaded entity (`FindMembersOfAsync(teamId)` beside `[LoadEntity<Team>]`) | `[LoadEntity<Team>(nameof(Id), Include = "Members")]`: dotted paths, comma-separated; the key may live inside the request (`[LoadEntity<RoomType>("Request.RoomTypeId")]`, every segment a property);
 without it `_team.Members` is **empty** (no lazy loading); a path that names no navigation is **PRAG0453**, as is an `[EagerLoad]` path of a mutation (**PRAG0736** on a query), checked at build time and not emitted |
-| `var rows = await repo.FindAsync(Spec.Where(x => ids.Contains(x.PersistenceId)))` and a comparison for the missing ones | `[LoadEntities<T>(nameof(Ids))]` on an `IReadOnlyList<Guid>`/array/list → field `IReadOnlyList<T> _ts` (plural; `FieldName` overrides), **one** query, rows in the order of the keys, duplicates once; the missing keys are **one** 404 naming them all (`NotFoundError.ForAll`); empty list → empty field, no query. Not a collection of the key type → **PRAG0411** |
+| `var rows = await repo.FindAsync(Spec.Where(x => ids.Contains(x.PersistenceId)))` and a comparison for the missing ones | `[LoadEntities<T>(nameof(Ids))]` on an `IReadOnlyList<Guid>`/array/list → field `IReadOnlyList<T> _ts` (plural; `FieldName` overrides), **one** query, rows in the order of the keys, duplicates once; the missing keys are **one** 404 naming them all (`NotFoundError.ForAll`); empty list → empty field, no query. Not a collection of the key type → **PRAG0411**. `Include = "Lines"` loads navigations with every row (EF Core; PRAG3036 on Sql, PRAG3111 on documents) |
 | `var x = await repo.FirstOrDefaultAsync(Specs.ActiveWithNumber(Number)); if (x is null) return NotFound…` / `var xs = await repo.FindAsync(Specs.PendingOf(Id))` | `[LoadEntity<T>(Specification = nameof(TSpecifications.ActiveWithNumber))]` / `[LoadEntities<T>(Specification = …)]`: the rule's parameters bind **by name** to the operation's properties (`PendingOf(Guid id)` ← `Id`); single: none is 404; list: none is `[]`, or 404 with `RequireAny = true`. Not a specification of the entity **PRAG0454**, unbound parameter **PRAG0455**, key and rule together **PRAG0456** |
 | `var x = await repo.GetByNumberAsync(Number, ct); if (x is null) return NotFoundError…`, a row named by its domain key (a number, a code, a slug) | `[LoadEntity<T>(nameof(Number), By = nameof(T.Number))]`: read through the generated logic-key lookup (`{Entity}Specifications.GetBy{Key}Async`), same filters and tracking as by id; 404 carries the value. `By` not the entity's single-part `[LogicKey]` (or beside a `Specification`) **PRAG0460**, property of another type **PRAG0461** |
 | two `[LoadEntity]` of one entity, or two round trips for one table | give each a distinct `FieldName` (`[LoadEntity<Employee>(nameof(ManagerId), FieldName = "_manager")]`, `[LoadEntity<Employee>(nameof(DeputyId), FieldName = "_deputy")]`): read in **one** `WHERE Id IN (…)`, each field from it, 404 per missing key; different entities stay separate queries |
@@ -267,7 +268,7 @@ without it `_team.Members` is **empty** (no lazy loading); a path that names no 
 | `repo.FindAsync(Spec<T>.Where(x => …))` inline | a named specification in the entity's generated `static partial class {Entity}Specifications` (a file next to the entity, entity namespace); the generator gives `repo.Find{Name}Async(…)` |
 | `Ensure.ThrowIfNull(found)` for a missing row | nothing: `Ensure.ThrowIf*` is for a broken invariant (a bug → exception → 500), never for a 404 or a 422 |
 | `private IClock _clock = null!;` only to read `_clock.UtcNow` / today | `[FromClock] public DateTimeOffset Now { get; private set; }` (or `DateOnly Today` → `IClock.UtcToday`), written by the invoker before `Execute`/`ApplyAsync` from the registered `IClock`, so a test that pins it pins this too |
-| `private EmployeeResolver _currentEmployee` + `ResolveAsync` + `if (employee is null) return NotFoundError…` | `[LoadCurrentUser]` → field `_current{User}` (`_currentEmployee`), filled by the invoker through the generated resolver after authorization: 401 for nobody signed in, 404 for an account with no user entity (**PRAG0451** when the module has no `[PragmaticUser]`) |
+| `private EmployeeResolver _currentEmployee` + `ResolveAsync` + `if (employee is null) return NotFoundError…` | `[LoadCurrentUser]` → field `_current{User}` (`_currentEmployee`), filled by the invoker through the generated resolver after authorization: 401 for nobody signed in, 404 for an account with no user entity (**PRAG0451** when neither the module nor a module it references has a `[PragmaticUser]`) |
 | `ICurrentUser` injected only to read `.Id` | `[FromCurrentUser] public string CallerId { get; private set; }` (401 when not authenticated), or `[FromCurrentUser(nameof(Employee.Id))]` for a member of the `[PragmaticUser]` entity (404 when the caller has none) |
 
 What stays in `Execute`: what only the domain can answer, its typed errors (overlap, overdraft,
@@ -281,7 +282,7 @@ so a validation attribute on it sees `default`. On a mutation it is also written
 entity has a member of the same name (`[FromClock] DateOnly DecidedOn` → `entity.DecidedOn`); without one
 it is simply the body's to read, and no `PRAG0414` is raised.
 
-- **Dependency injection**: ONLY via uninitialised private fields (`= null!`). The SG detects them and generates `SetDependencies` + injects them in the `Invoker`. There is **no** `[Inject]` or `[FromServices]` for Action/Mutation.
+- **Dependency injection**: ONLY via uninitialised private fields (`= null!`). The SG detects them and generates `SetDependencies` + injects them in the `Invoker`. There is **no** `[Inject]` or `[FromServices]` for Action/Mutation. A field declared nullable (`IService? _x;`) is optional: null in a host that registers nothing for it.
 - `DomainAction<TReturn>` has typed-error variants `DomainAction<TReturn, TError1...TError6>`. `Execute` always returns `Result<TReturn, IError>`.
 - `VoidDomainAction` exposes the `Success` shorthand. Variants `VoidDomainAction<TError1...>`.
 - Generates `{Type}.Invoker.g.cs` (`IDomainActionInvoker<TAction,TReturn>` in DI) and, if there are dependencies, `{Type}.SetDependencies.g.cs`.

@@ -52,6 +52,12 @@ there and calls `AddSubjectRegistry()`; do not write either in `Program.cs`. Wha
 keys: an `ISecretEncryptor` and an `ISubjectLookupKeyProvider`, from configuration, never from that
 database.
 
+On a boundary of the Sql or documents engine the same holds with `Pragmatic.Privacy.Engines`: the
+tables, or collections, come with that boundary's schema. The host registers
+`AddSqlSubjectRegistry<TBoundary>()` / `AddDocSubjectRegistry<TBoundary>()` when one place holds the
+`[DataSubject]` entities. With more than one place, register one in `Program.cs`. A `ProtectedValue`
+is not served on the engines yet.
+
 ⚠️ **Allocate the pseudonym where the person enters the system, not where they first act.** A handler
 on the registration event calling `GetOrCreateReferenceAsync`; it is idempotent, so the later call
 sites cost a lookup and nothing else. Allocating lazily, at first sign-in or first export, leaves a
@@ -171,6 +177,10 @@ public ProtectedValue? MedicalNotes { get; set; }     // the converter is applie
 - `services.AddCryptographySubjectKeys()` needs `CryptographyDbContext` and a master `ISecretEncryptor`
   (key ring from configuration or a secret store, never from the same database). **PRAG0652** reports a
   `ProtectedValue` without `Pragmatic.Cryptography.EFCore` referenced.
+- On the Sql or documents engine, reference `Pragmatic.Cryptography.Engines`: the `ProtectedValue` is stored
+  (a binary column; Base64 on documents), `__SubjectKeys` sits beside the subject registry, and the host
+  registers `AddSqlSubjectKeys<TBoundary>()` / `AddDocSubjectKeys<TBoundary>()` with it. On the Sql engine
+  **PRAG3003** names the package when a `ProtectedValue` member is there without it.
 
 ## Two judgements worth making the same way twice
 
