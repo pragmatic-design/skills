@@ -26,6 +26,9 @@ Choose `RunAsync` to reuse a read; choose the facade to invoke an operation.
 rows afterwards with `GetByIdAsync` goes through the repository's ordinary filters and may not find
 it. Declare the same `[WithoutFilter<T>]` on the operation when it has to act on what it read.
 
+`[WithoutFilter<T>]` lifts every filter of the entity, tenant, ownership and scopes too. To read the soft-deleted rows the caller
+would read alive, lift that one alone: `[WithoutFilter<Reservation>(SoftDeleteOnly = true)]`, on every engine.
+
 **Rung 1: publish a rule you already wrote.** `[Query]` sits on a **static** member returning
 `Specification<TEntity>`, and derives `{Member}Query` beside it. The member's parameters become the
 query's inputs; the specification itself is not touched, so it still composes with `&`:
@@ -93,8 +96,9 @@ public partial class GetMyBalancesQuery
 ```
 
 - `[FromCurrentUser]` binds `ICurrentUser.Id` to a `string`; `[FromCurrentUser(nameof(Employee.Id))]`
-  binds that member of the `[PragmaticUser]` entity (same compilation, `Pragmatic.Identity.Persistence`
-  referenced), read through its generated `{User}Resolver`, which the invoker constructs itself.
+  binds that member of the `[PragmaticUser]` entity, read through its generated `{User}Resolver`, which
+  the invoker constructs itself. The user may be in the query's module or in a module it references
+  (a "my tasks" query beside the tasks, the user in accounts): the resolver is then that module's, public.
 - The invoker writes it **after validation and the permission check, before the read**: not signed in
   → 401, no user entity → 404.
 - `{ get; private set; }` (**PRAG0730** otherwise). It is never a query-string, route or body
@@ -146,6 +150,14 @@ public Specification<Employee>? WhoIsAwayToday => AwayToday switch
 - **PRAG0733**: a `[ComputedFilter]` the generator cannot write. **PRAG0734**: a `[FromClock]` on a type
   the clock does not give, or with a setter anyone else reaches.
 
+**Reading the tenant: `[FromTenant]`** (`using Pragmatic.MultiTenancy`). The tenant filter already
+narrows a tenant's rows; this is for the query that needs the id itself — the company record a tenant
+id names. `[FromTenant] public string Slug { get; private set; } = "";` is filled from
+`ITenantContext.TenantId` by the invoker, with the clock's rules: no filter, no parameter, a value the
+caller sends is not read, and the same on an action or a mutation. No tenant resolved: a `string` refuses
+with 400, a `string?` reads null. **PRAG0747**: not a `string`, or a setter anyone else reaches;
+**PRAG1615** (host): no `Pragmatic.MultiTenancy` to resolve a tenant.
+
 **Counting instead of listing: a query whose result is a view.** A `GROUP BY` answers with rows that
 are not rows of the entity, so it is declared on the **result type** and the query stays a query:
 
@@ -170,6 +182,8 @@ public partial class ReservationsByStatusQuery
 
 The grouping runs in the database, and the route, the permission and the invoker are the ones every
 other query gets. Paged, the page is a page of **groups** and the total is the number of groups.
+⚠️ A key no row has has no group: a status no reservation is in is absent, not counted as zero. To
+show every status, join the answer to the enum's values in the caller.
 
 - A key may be a member the generator writes. `[GroupBy<LeaveRequest>(Properties = "TeamId")]` groups
   by the foreign key a `[Relation.*]` produces, and `Via = "AbsenceKind"` walks the navigation it

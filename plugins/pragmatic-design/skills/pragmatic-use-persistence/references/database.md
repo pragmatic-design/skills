@@ -62,6 +62,11 @@ names a *missing* row is still `DB_CONSTRAINT` (400): there the request is wrong
 DELETE /api/absence-kinds/{id}  →  409 {"code":"ENTITY_IN_USE","entityType":"AbsenceKind","usedBy":"Allowance"}
 ```
 
+A **soft** delete never reaches the constraint, so `OnDelete` does not refuse it: retiring a
+`[SoftDelete]` row its referrers still point at succeeds, and keeps their history. To refuse it, declare
+`OnSoftDelete = DeleteBehavior.Restrict` on the relation: the same 409 `ENTITY_IN_USE`, from the EF Core
+the Sql or the documents engine's save, while a live referrer exists.
+
 A Delete mutation exposed with `[Endpoint]` answers **204 and no body** unless it declares
 `[ReturnsDto<T>]` (or a key `ReturnType`): the removed row is not an answer, and serialised it is every
 public property the entity has.
@@ -69,9 +74,9 @@ public property the entity has.
 This holds for a repository write too, not only for a mutation: the generated repository's
 `SaveChangesAsync` goes through the boundary's unit of work (the same instance an invoker holds), so
 it classifies, hands over the entity's domain events, and records the save the same way. A concurrency
-conflict is the one thing not reframed: it stays a `DbUpdateConcurrencyException`, because a stale row
-is two writers meeting rather than a rule the schema enforces, and a concurrency-aware entity's
-repository answers it with `ConcurrencyError`.
+conflict is a `PersistenceRuleViolationException` whose `Error` is a `ConcurrencyError` (not a
+classified `DbConflictError`: a stale row is two writers meeting, not a rule the schema enforces), on
+every engine, and a concurrency-aware entity's repository returns that error as its `Result`.
 
 ⚠️ **A failed save leaves its entity tracked, and the next save retries it.** That is a change tracker,
 not a defect, but it means one refused row would make every later commit of the same request fail for

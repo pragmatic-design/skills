@@ -14,14 +14,14 @@ applications need only the first; reach for the second when a value must change 
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Configuration" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.2">
+<PackageReference Include="Pragmatic.Configuration" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.4">
   <IncludeAssets>analyzers; build; buildtransitive</IncludeAssets><PrivateAssets>all</PrivateAssets>
 </PackageReference>
 <!-- runtime backends, one per store you use -->
-<PackageReference Include="Pragmatic.Configuration.Database" Version="1.0.0-alpha.2" />
+<PackageReference Include="Pragmatic.Configuration.Database" Version="1.0.0-alpha.4" />
 <!-- admin actions over the store -->
-<PackageReference Include="Pragmatic.Configuration.Management" Version="1.0.0-alpha.2" />
+<PackageReference Include="Pragmatic.Configuration.Management" Version="1.0.0-alpha.4" />
 ```
 
 ## Compile-time binding
@@ -172,7 +172,7 @@ Per-tenant values are read through `ITenantOptions<T>` or the resolver.
 | `Pragmatic.Agent.Client` | `UseAgent()` replaces the configuration store with the Agent's shared KV, falling back to the previous one when the Agent is unreachable; see `pragmatic-use-distributed` |
 
 **Database backend.** Tables `pragmatic_config`, `pragmatic_secrets` and the shared audit trail's
-(`__AuditEntries`, `__AuditSegments`, `__PrunedRanges`), created on the store's first use
+(`__AuditEntries`, `__AuditSegments`, `__AuditPrunedRanges`), created on the store's first use
 (`AutoCreateSchema`, default on). Every change is written to that trail in the same transaction, as a hash
 of the previous value, never the value itself. The store connects with `ConnectionString` and `ProviderFactory` (`NpgsqlFactory.Instance`,
 `SqlClientFactory.Instance`, `SqliteFactory.Instance`); an `IDbConnectionFactory` the application registers

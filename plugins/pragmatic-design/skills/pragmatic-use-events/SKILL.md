@@ -19,9 +19,9 @@ For **cross-boundary** or **durable/async** reactions (another service, a queue,
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Events" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Events.EFCore" Version="1.0.0-alpha.2" />   <!-- EF interceptor + outbox -->
-<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.2">
+<PackageReference Include="Pragmatic.Events" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Events.EFCore" Version="1.0.0-alpha.4" />   <!-- EF interceptor + outbox -->
+<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.4">
   <IncludeAssets>analyzers; build; buildtransitive</IncludeAssets>
   <PrivateAssets>all</PrivateAssets>
 </PackageReference>
@@ -178,6 +178,8 @@ services.AddEventOutbox<AppDbContext>(o =>
 });
 ```
 
+The events an **operation** declares (`[Raises<T>]` on a mutation or an action) go through the same outbox: the invocation that owns the commit stages them, and the capture builds and writes them inside the save, after the generated values are filled. Nested operations (a mutation an action invokes, a composite's steps) hand theirs to the owner's batch, and the owner stages them with its own, so they reach the outbox in its save. The same holds for Messaging's `[EnableOutbox]`. An owner's save that writes no entity (under `[Transactional]`, after the steps saved) still writes them to the outbox.
+
 Delivery is **at-least-once** (a crash between dispatch and mark-processed re-delivers), so **handlers must be idempotent**. Rows are claimed atomically across replicas (`ClaimedBy`/`ClaimedUntil`) so an event is delivered once per healthy run; the W3C trace context and tenant are propagated across the async boundary. Deserialization is **fail-closed**: only event types with a registered handler are resolvable (no `Type.GetType` on a DB string).
 
 ### Enabling the outbox on a generated DbContext
@@ -192,7 +194,7 @@ using Pragmatic.Events.Attributes;
 public partial class OrdersBoundary;
 ```
 
-Requires the boundary project to reference `Pragmatic.Events.EFCore`; otherwise the generator emits **PRAG2752** (rather than silently doing nothing). Two boundaries sharing one physical database share a single `__EventOutbox` table. The manual three-step wiring above stays the path for a hand-written DbContext.
+Requires the boundary project to reference `Pragmatic.Events.EFCore`, or `Pragmatic.Events.Engines` for a boundary on the Sql or documents engine; otherwise the generator emits **PRAG2752** (rather than silently doing nothing). Two boundaries sharing one physical database share a single `__EventOutbox` table. The manual three-step wiring above stays the path for a hand-written DbContext.
 
 ## What the SG generates
 
@@ -213,6 +215,7 @@ Requires the boundary project to reference `Pragmatic.Events.EFCore`; otherwise 
 | **PRAG2750** | Error | `[Raises<T>]` on an entity that is not a `DomainEventSource` | Inherit `DomainEventSource` |
 | **PRAG2751** | Warning | An event constructor parameter matches no entity member (passed `default`) | Rename to match, or set it in a domain method instead |
 | **PRAG2753** | Error | `[Raises<T>]` on an **entity's method**: nothing generates that raise | Declare it on the entity class (a lifecycle transition), use `[RaisesEvent<T>]` on the state machine's target member, or `RaiseEvent(...)` in the body |
+| **PRAG2754** | Warning | `[RaisesEvent<T>]` on a state machine's state, on an entity that is not a `DomainEventSource`: the transition raises nothing | Inherit `DomainEventSource` |
 
 ## Troubleshooting
 

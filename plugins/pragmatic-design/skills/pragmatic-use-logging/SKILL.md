@@ -17,7 +17,7 @@ description: Use when configuring logging providers (app.UseLogging), adding str
 ## Package
 
 ```xml
-<PackageReference Include="Pragmatic.Logging" Version="1.0.0-alpha.2" />
+<PackageReference Include="Pragmatic.Logging" Version="1.0.0-alpha.4" />
 ```
 
 ## Configuring logging (host)
@@ -42,7 +42,7 @@ await PragmaticApp.RunAsync(args, app =>
 }).ConfigureAwait(false);
 ```
 
-Providers available on the builder: `AddConsole`, `AddFile`, `AddJson`, `AddNdjsonAsync` (async NDJSON with batching), `AddProvider<T>` (custom). Global options and presets on the same builder: `Configure(o => …)`, `UseDevelopmentPreset()`, `UseProductionPreset()`, `UseHighPerformancePreset()`, `UseCompliancePreset(standard)`, `EnableDataRedaction(…)`, `EnableAuditTrail(…)`, `EnableRateLimiting(…)`. Ready-made console configurations: `PragmaticConsoleConfiguration.ForDevelopment()`, `ForCiCd()`, `ForAdvancedConsole()`, `ForHighContrast()`, `ForMonochrome()`.
+Providers available on the builder: `AddConsole`, `AddFile`, `AddJson`, `AddNdjsonAsync` (async NDJSON with batching), `AddProvider<T>` (custom). `AddConsole` replaces Microsoft's console provider (registered by `WebApplication.CreateBuilder`): one console, which writes each entry on one line with control characters escaped, so a value with CR/LF cannot forge a line. Global options and presets on the same builder: `Configure(o => …)`, `UseDevelopmentPreset()`, `UseProductionPreset()`, `UseHighPerformancePreset()`, `UseCompliancePreset(standard)`, `EnableDataRedaction(…)`, `EnableAuditTrail(…)`, `EnableRateLimiting(…)`. Ready-made console configurations: `PragmaticConsoleConfiguration.ForDevelopment()`, `ForCiCd()`, `ForAdvancedConsole()`, `ForHighContrast()`, `ForMonochrome()`.
 
 `UseLogging` replaces `ILoggerFactory` with the Pragmatic one, preserving existing providers. Without a Pragmatic host, the entry points are named for what they do:
 

@@ -21,12 +21,12 @@ For the `[HasOwner]`/`[HasAccessScopes]` attributes on entities: also see `pragm
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Authorization" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Identity" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Identity.AspNetCore" Version="1.0.0-alpha.2" />     <!-- HTTP bridge -->
-<PackageReference Include="Pragmatic.Identity.Local.Jwt" Version="1.0.0-alpha.2" />      <!-- local JWT auth -->
-<PackageReference Include="Pragmatic.Identity.Oidc" Version="1.0.0-alpha.2" />           <!-- external IdP (OIDC) -->
-<PackageReference Include="Pragmatic.Identity.Persistence" Version="1.0.0-alpha.2" />    <!-- DB-backed users -->
+<PackageReference Include="Pragmatic.Authorization" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Identity" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Identity.AspNetCore" Version="1.0.0-alpha.4" />     <!-- HTTP bridge -->
+<PackageReference Include="Pragmatic.Identity.Local.Jwt" Version="1.0.0-alpha.4" />      <!-- local JWT auth -->
+<PackageReference Include="Pragmatic.Identity.Oidc" Version="1.0.0-alpha.4" />           <!-- external IdP (OIDC) -->
+<PackageReference Include="Pragmatic.Identity.Persistence" Version="1.0.0-alpha.4" />    <!-- DB-backed users -->
 ```
 
 `ICurrentUser`, `[RequirePermission]`, `[PragmaticUser]` are in `Pragmatic.Abstractions`. Always add `Pragmatic.SourceGenerator` as an analyzer.
@@ -102,25 +102,46 @@ string as written; nothing is derived from the operation.
 **Roles and permissions managed at runtime**: `Pragmatic.Authorization.Management`, imported with
 `[UsePackage<AuthorizationManagementPackage, TBoundary>]` and exposed action by action with
 `[ExposeEndpoint<…>]`: `CreatePermission`, `ListPermissions`, `CreateRole`, `ListRoles`,
-`AssignPermissionsToRole`, `AssignRoleToUser`, `RevokeRoleFromUser`, `GetEffectivePermissions`, under
+`AssignPermissionsToRole`, `RevokePermissionsFromRole`, `DeactivateRole`, `ReactivateRole` (a deactivated role grants nothing and
+keeps its rows), `AssignRoleToUser`, `RevokeRoleFromUser`, `CreateGroup`, `ListGroups`, `AssignRoleToGroup`,
+`RevokeRoleFromGroup`, `AssignUserToGroup`, `RemoveUserFromGroup` (a member holds the group's roles), `GetEffectivePermissions`, under
 `authorization.permissions.manage`, `authorization.roles.manage`, `authorization.assignments.manage` and
 `authorization.view`. A caller bound to a tenant can act only on its own tenant, and not on the global
 level either: a role, permission or assignment with no tenant holds in **every** tenant, so only a caller
 with no tenant may write one (`TenantBinding`, `403` otherwise).
+Over HTTP the body never carries `TenantId` (the serializer removes it). An exposed action acts on the request's
+tenant for a caller bound to one, and globally for a caller bound to none; in process, a `TenantId` given wins.
+**There is no `RenameRole`.** A role's name also lives in claims, `MapRole` and the host's group mappings, which a rename action
+could not move. Rename with the recipe in the package README:
+1. `CreateRole` the new name, and `AssignPermissionsToRole` with the old role's permissions.
+2. Move each user (`AssignRoleToUser`, then `RevokeRoleFromUser`) and each group (`AssignRoleToGroup`, then `RevokeRoleFromGroup`).
+3. `DeactivateRole` the old one.
+4. Update the claims and mappings that name it.
+
+The package names no engine: its tables are in the importing boundary's database, read through the store
+of that boundary's engine, so reference `Pragmatic.Authorization.Management.EFCore` on EF Core or
+`Pragmatic.Authorization.Management.Engines` on the Sql and documents engines. The boundary's generated
+registration adds it; without it the import is `PRAG0469`, naming the package to add.
 **The assignments are authority.** The package registers a permission provider
 (`ManagedRolePermissionProvider`) that reads its own tables on every resolution: a role assigned with
 `AssignRoleToUser` grants the permissions `AssignPermissionsToRole` gave it, in the request's tenant or
 globally, from `ValidFrom` to `ValidTo`. Assign, revoke and a change to a role's permissions evict the
 affected users from the permission cache, so the next request sees it. These add to the roles the
 identity carries (claims, `IRolePermissionStore`); they do not replace them.
+The role's **name** reaches the caller too: the package also registers `ManagedRoleProvider`, an
+`IRoleProvider`, so an assigned role (a group's included, a deactivated one not) is among
+`ICurrentUser.Authorization.Roles` and answers `IsInRole`, beside the identity's `role` claims. An
+application with its own role store implements `IRoleProvider` (`ResolveRolesAsync(ICurrentUser, ct)`) and
+registers it with `[Service<IRoleProvider>(Multiple = true)]`; the providers' roles are joined once per scope.
 
 **A tenant admin grants only what they hold.** `AssignPermissionsToRole` refuses (403) a permission the
-caller does not hold (a wildcard they hold covers what it names), so `authorization.roles.manage` and
-`authorization.assignments.manage` together cannot raise a tenant admin above their own permissions. A
-caller with no tenant, the platform operator, is not bound by this.
+caller does not hold (a wildcard they hold covers what it names), and `AssignRoleToUser` refuses (403) a role
+carrying one, so neither `authorization.roles.manage` nor `authorization.assignments.manage`, alone or
+together, can raise a tenant admin above their own permissions. A caller with no tenant, the platform
+operator, is not bound by this.
 
-**What was created at runtime is listed.** The package registers `EfDynamicRoleStore` and
-`EfDynamicPermissionStore`; `IPermissionCatalog` merges them with the compiled catalog, so `ListRoles` and
+**What was created at runtime is listed.** The package registers `ManagedDynamicRoleStore` and
+`ManagedDynamicPermissionStore`; `IPermissionCatalog` merges them with the compiled catalog, so `ListRoles` and
 `ListPermissions` show the caller's tenant and the global level. The catalog is **scoped**: resolve it
 from a scope, never from the root provider.
 
@@ -262,7 +283,7 @@ Do not map `Jwt:*` into the lambda by hand: the parameterless form does it, and 
 missing. It also reads `TokenExpiration`, `ClockSkew` (TimeSpan) and `RequireSecurityStamp`;
 `UseJwtAuthentication("Auth:Tokens")` reads another section.
 
-`UseJwtAuthentication` (from `Pragmatic.Identity.Local.Jwt`) for local token auth; `UseOidcAuthentication` (from `Pragmatic.Identity.Oidc`) when an external provider issues the tokens; `UseAuthentication(...)` / `UseAuthentication<THandler>(scheme)` for a custom handler or scheme. Each of them registers the scheme **and** the pipeline step that adds the authentication/authorization middleware, so you never write `UseAuthentication()`/`UseAuthorization()` yourself. Endpoints require authentication by default; opt out with `[AllowAnonymous]`.
+`UseJwtAuthentication` (from `Pragmatic.Identity.Local.Jwt`) for local token auth; `UseOidcAuthentication` (from `Pragmatic.Identity.Oidc`) when an external provider issues the tokens; `UseAuthentication(...)` / `UseAuthentication<THandler>(scheme)` for a custom handler or scheme. Each of them registers the scheme **and** the pipeline step that adds the authentication/authorization middleware, so you never write `UseAuthentication()`/`UseAuthorization()` yourself. Endpoints require authentication by default; opt out with `[AllowAnonymous]`. To gate a public operation by a permission an administrator can grant and revoke, put `[RequirePermission]` beside `[AllowAnonymous]` and set `authz.AnonymousRole = "anonymous"`: an unauthenticated caller holds that role's permissions (none by default) and gets 401 without them.
 
 ### External provider (OIDC)
 

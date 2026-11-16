@@ -18,11 +18,11 @@ delivery tracking + background dispatch are handled for you. Add a channel witho
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Notifications" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Notifications.Webhook" Version="1.0.0-alpha.2" />  <!-- optional -->
-<PackageReference Include="Pragmatic.Notifications.Slack" Version="1.0.0-alpha.2" />    <!-- optional -->
-<PackageReference Include="Pragmatic.Notifications.Sms" Version="1.0.0-alpha.2" />      <!-- optional -->
-<PackageReference Include="Pragmatic.Notifications.EFCore" Version="1.0.0-alpha.2" />   <!-- optional -->
+<PackageReference Include="Pragmatic.Notifications" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Notifications.Webhook" Version="1.0.0-alpha.4" />  <!-- optional -->
+<PackageReference Include="Pragmatic.Notifications.Slack" Version="1.0.0-alpha.4" />    <!-- optional -->
+<PackageReference Include="Pragmatic.Notifications.Sms" Version="1.0.0-alpha.4" />      <!-- optional -->
+<PackageReference Include="Pragmatic.Notifications.EFCore" Version="1.0.0-alpha.4" />   <!-- optional -->
 ```
 
 The SMTP channel is part of `Pragmatic.Notifications`. There is **no** `Pragmatic.Notifications.Email`
@@ -89,7 +89,7 @@ app.UseNotifications(n =>
         sender    => { sender.SenderAddress = cfg["Smtp:SenderAddress"]!; sender.SenderName = "My App"; },
         transport => { transport.Host = cfg["Smtp:Host"]!; transport.Port = 587; transport.UseSsl = true; });
 
-    n.AddWebhook(w => w.SigningSecret = cfg["Webhook:Secret"]);   // Pragmatic.Notifications.Webhook
+    n.AddWebhook(w => { w.SigningSecret = cfg["Webhook:Secret"]; w.Timeout = TimeSpan.FromSeconds(10); });  // Pragmatic.Notifications.Webhook; Timeout default 30 s; ResiliencePolicy = a retry policy's name; IWebhookSigningSecretResolver for a secret per destination
 
     n.AddSlack(s => s.DefaultWebhookUrl = cfg["Slack:WebhookUrl"]);   // Pragmatic.Notifications.Slack
 
@@ -103,6 +103,10 @@ app.UseNotifications(n =>
     n.UseEfCoreStore(db => db.UseNpgsql(cfg.GetConnectionString("App")!));  // durable tracking
 });
 ```
+
+**Each tenant sending as itself:** register a singleton `ITenantEmailSenderResolver`
+(`Pragmatic.Notifications.Email`). The e-mail channel asks it for the recipient's tenant and uses the
+`EmailSenderIdentity` it answers; `null`, or no tenant, keeps `SenderAddress`.
 
 `AddSmtp` takes the sender and the transport settings together; there is no overload without the
 transport.
@@ -121,19 +125,34 @@ public partial class BookingBoundary;
 Point `UseEfCoreStore` at that boundary's database (the same connection string). The boundary project
 references `Pragmatic.Notifications.EFCore`; without it the attribute maps nothing, and the generator
 reports **PRAG2100** (Warning) on the boundary.
+
+On a boundary the Sql or documents engine persists, the package is `Pragmatic.Notifications.Engines`
+instead, and there is no `UseEfCoreStore`: the boundary's generated `Add{Boundary}Persistence`
+registers the store over its session, and the engine's schema holds `__Notifications` with EF Core's
+columns and indexes. PRAG2100 names that package when it is missing.
 Without the attribute, the first send fails with `relation "__Notifications" does not exist`.
 
 ## Addressing a user, role or tenant
 
-`NotificationRecipient` offers `Direct`, `ToWebhook`, `User`, `Users`, `Role` and `Tenant`, but only the
-direct forms work out of the box: the library cannot know where your users live. `User`, `Users`,
-`Role` and `Tenant` resolve to nothing unless you register a resolver, and the send fails with an
-explanatory error:
+`NotificationRecipient` offers `Direct`, `ToWebhook`, `User`, `Users`, `Role` and `Tenant`. A user and
+a role are resolved through the `IRecipientDirectory`s registered (in Abstractions, several, each asked
+in turn):
+
+- local accounts (`Pragmatic.Identity.Local`) answer a user with the e-mail they sign in with; the
+  generator registers that directory beside the local identity store;
+- `Pragmatic.Authorization.Management` answers a role with the users it is assigned to, the members of
+  its groups included, in force and in the request's tenant or global. Each member is reached once.
+
+What no directory answers is **named, not dropped**: `NotificationResult.Unreached` lists it
+(`user 'u-1'`, `role 'ops'`, `tenant 't1'`, which no directory resolves), and the others are still
+delivered. When nobody is reached, the send fails and its error names them. For users stored
+elsewhere, implement `IRecipientDirectory` (`FindUserAsync`, `UsersInRoleAsync`) and register it with
+`[Service<IRecipientDirectory>(Multiple = true)]`. To decide resolution entirely, replace the resolver:
 
 ```csharp
 public sealed class AppRecipientResolver(IRepository<User> users) : IRecipientResolver
 {
-    public async Task<IReadOnlyList<ResolvedRecipient>> ResolveAsync(
+    public async Task<RecipientResolution> ResolveAsync(
         NotificationRecipient recipient, NotificationAudience audience, CancellationToken ct = default)
     {
         if (recipient.UserId is null || !Guid.TryParse(recipient.UserId, out var id))
@@ -180,6 +199,12 @@ public sealed class PushChannel(IHttpClientFactory http) : INotificationChannel
 
 app.UseNotifications(n => n.AddChannel<PushChannel>());
 ```
+
+⚠️ **An address goes only to the channels it belongs to**, whatever the priority: the router chooses among
+the registered channels in the recipient's `ResolvedRecipient.Channel`. A `Critical` notification to an
+e-mail address is one e-mail, even with SMS registered; to reach the phone too, resolve the phone number as
+a second recipient. A push channel that finds the user by e-mail address needs the resolver to say so:
+resolve that address for `NotificationChannel.Email | NotificationChannel.Push`.
 
 ## Preferences
 

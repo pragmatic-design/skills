@@ -258,12 +258,14 @@ Full treatment: `Pragmatic.Persistence/docs/20-eager-loading.md`.
 
 ## `[ComputedDefault<TEntity, TValue, TGenerator>]` and `[HasPresets]` + `[PresetProvider<TProvider>]`
 
-For what a format cannot express, both run in the **create** mutation's invoker:
+For what a format cannot express:
 
 - `[ComputedDefault<Invoice, string, InvoiceNumberGenerator>]` on a property: the generator implements
   `IDefaultValueGenerator<TEntity, TValue>` and computes the value from the new entity and the
-  `LifecycleContext` (clock, user, tenant).
-- `[HasPresets]` + `[PresetProvider<ReservationPresetProvider>]` on the entity: the provider implements
+  `LifecycleContext` (clock, user, tenant). The unit of work fills it **at the save**, on every engine,
+  for any added entity whose property is empty (a domain action's insert too). The generator is
+  registered scoped, so it may take a scoped service. A value the caller set is kept.
+- `[HasPresets]` + `[PresetProvider<ReservationPresetProvider>]` on the entity, run by the **create** mutation's invoker: the provider implements
   `IPresetProvider<TParent>.CreatePresetsAsync(parent, context, ct)` and returns child entities saved
   with the parent (a reservation created with its default room assignment). Several providers may be
   declared.
@@ -281,6 +283,7 @@ For what a format cannot express, both run in the **create** mutation's invoker:
 ## `[Relation.OneToMany<TRelated>]` / `[Relation.ManyToOne<>]` / `[Relation.OneToOne<>]` / `[Relation.ManyToMany<>]`
 
 - Fluent extension `.WithNavigation("Items", Inverse = "Parent", OnDelete = DeleteBehavior.Cascade)`.
+- **`OnDelete` governs a physical delete only.** A soft delete of a `[SoftDelete]` principal leaves the referrers as they are unless the relation declares `OnSoftDelete` (`ManyToOne`, `OneToOne`, `OneToMany`): `Restrict`/`NoAction` refuse it with 409 `ENTITY_IN_USE` while a live referrer exists, `SetNull` empties their optional key (`PRAG0640` on a required one), `Cascade` soft-deletes them with the principal's instant (`PRAG0641` on a referrer that is not `[SoftDelete]`). Applied by the EF Core, the Sql and the documents engines; on the Sql and documents engines a relation on a composite key gets no rule.
 - **Generates**: navigation properties, FK, EF config. Cross-boundary: FK only, no navigation.
 - **Relations are declared, not written.** A navigation or a `{Entity}Id` key typed as a property is `PRAG0619`; EF Core's `[ForeignKey]`/`[InverseProperty]` are `PRAG0635`. The generator owns every member a relation produces, and the features that read keys (`[GenerateHierarchy]`, `[TemporalRelation]`, `[CascadeOn]`, `[Lookup]`, `[MapFrom]`, events) read the declared relation, not a member found by name.
 - **Diagnostics**: PRAG0612/PRAG0617 (several relations to one type without `WithNavigation`/`Inverse`); PRAG0610/0611 (the two ends contradict each other); PRAG0618 (one-to-one without exactly one principal). Cross-boundary stays FK-only unless the boundary declares `[ReadAccess<T>]` on the target, in which case the navigation is generated.
@@ -372,7 +375,8 @@ public partial class GetMyBalancesQuery
 ## `[Sort(MapTo, DefaultDirection, Priority)]`
 
 - `DefaultDirection`: `SortDirection?`, meaning `Ascending`, `Descending`, or unset for no default.
-- `Priority`: multi-sort order (lower = first).
+- `Priority`: multi-sort order (lower = first), within the sorts with a default or within those without.
+- A sort with a `DefaultDirection` orders after every sort without one, whatever the declaration order: the caller's sort comes first and the default breaks its ties.
 
 ## `[GridFilter<TEntity>]`
 

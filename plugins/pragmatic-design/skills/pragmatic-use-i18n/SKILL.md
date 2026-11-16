@@ -19,9 +19,9 @@ and humanizers. Missing translations are build warnings (PRAG1802).
 ## Packages
 
 ```xml
-<PackageReference Include="Pragmatic.Internationalization" Version="1.0.0-alpha.2" />
-<PackageReference Include="Pragmatic.Internationalization.AspNetCore" Version="1.0.0-alpha.2" />  <!-- middleware -->
-<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.2">
+<PackageReference Include="Pragmatic.Internationalization" Version="1.0.0-alpha.4" />
+<PackageReference Include="Pragmatic.Internationalization.AspNetCore" Version="1.0.0-alpha.4" />  <!-- middleware -->
+<PackageReference Include="Pragmatic.SourceGenerator" Version="1.0.0-alpha.4">
   <IncludeAssets>analyzers; build; buildtransitive</IncludeAssets><PrivateAssets>all</PrivateAssets>
 </PackageReference>
 ```
@@ -58,6 +58,11 @@ var price = Money.From(99.99m, CurrencyCode.EUR);
 price.Format();   // "99,99 €" (it-IT) / "€99.99" (en-US); same-currency arithmetic enforced
 ```
 
+**Amounts from a request: `Add`, not `+`.** The operators throw on two currencies, and an exception from
+an endpoint answers 500. `price.Add(other)` / `Subtract` / `Compare` (`using Pragmatic.Result.Monetary;`)
+return `Result<…, CurrencyMismatchError>`: return it, and a mismatch answers 422 `CURRENCY_MISMATCH` with
+`left` and `right`.
+
 **On the wire, an amount needs its converter, and you get it by putting the amount there.**
 `Money` travels as `{ "amount": 99.99, "currency": "EUR" }` through `MoneyJsonConverter` and its
 siblings, which `AddPragmaticInternationalization` installs into the HTTP JSON options. A host that
@@ -89,7 +94,8 @@ there is no single-column converter, because one column loses either precision o
 The `T` class is for the application's own strings. Text **users** write in several languages (a
 product name, a category description) is a `LocalizedString` on the entity, stored as one JSON column
 (`{"en":"…","it":"…"}`) and read in the current culture with `.Value` (or `name["it"]`), falling back
-along the culture chain. With `Pragmatic.Internationalization.EFCore` referenced the generated DbContext
+along the culture chain: the culture, its language, the application's fallback chain (its default
+culture, or `I18NOptions.FallbackChain`), then `en`. With `Pragmatic.Internationalization.EFCore` referenced the generated DbContext
 applies the mapping (`ApplyPragmaticInternationalization()`); on the wire it travels as the same map.
 
 ## Plurals

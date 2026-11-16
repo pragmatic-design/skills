@@ -65,9 +65,9 @@ public partial class AppUser : IEntity
 public sealed class AccountsModule;
 ```
 
-- **The store is generated.** A `[PragmaticUser]` entity that owns a `LocalIdentity`, in a project with
-  `Pragmatic.Persistence.EFCore`, gets `{User}.LocalIdentityStore` registered as `ILocalIdentityStore`,
-  saving through the boundary's unit of work. Write your own class implementing the interface only when
+- **The store is generated.** A `[PragmaticUser]` entity that owns a `LocalIdentity`, stored by EF Core
+  or by one of the engines (Sql, documents), gets `{User}.LocalIdentityStore`
+  registered as `ILocalIdentityStore`, saving through the boundary's unit of work. Write your own class implementing the interface only when
   the credentials live elsewhere; then nothing is generated.
 - **Self-registration** (`RegisterUser`) needs a user to create: the entity implements
   `ISelfRegisteringUser<TUser>` with `static TUser Register(LocalIdentity identity)`. Without it the
@@ -160,7 +160,9 @@ app.UseKeycloakAuthentication(k =>
 ```
 
 Keycloak maps `realm_access` roles and `preferred_username`; with a confidential client it registers
-`IKeycloakAdminClient` for provisioning users and synchronising roles. There is no just-in-time
+`IKeycloakAdminClient` for provisioning users and synchronising roles. `AllowedRoles` and `RolePrefix`
+narrow the realm roles mapped (left empty they mean every one); `MapRealmRoles = false` maps none, for an
+application whose roles come from Authorization.Management or another store. There is no just-in-time
 provisioning of a local user on first external sign-in: map the token's subject to your entity with
 `[PragmaticUser(MatchClaim = "sub")]`, or create the row in your own first-use operation.
 
