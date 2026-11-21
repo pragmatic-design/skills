@@ -12,7 +12,7 @@ in Codex and in any agent that reads that format.
 
 | Plugin | Skills | For |
 |---|---|---|
-| `pragmatic-design` | 35 | .NET 10 applications on the `Pragmatic.*` NuGet packages |
+| `pragmatic-design` | 35 | .NET 10 and .NET 11 applications on the `Pragmatic.*` NuGet packages |
 | `pdxui` | 18 | Web UIs in the `.pdx` language with the `@pdxui/*` packages, a page for each of its 117 components |
 
 The two plugins install independently.
@@ -84,7 +84,8 @@ the area skills send the reader back to `pdxui`.
 
 ### Requirements
 
-- **.NET:** the .NET 10 SDK. The `Pragmatic.*` packages are prereleases on nuget.org
+- **.NET:** the .NET 10 SDK for a `net10.0` application, the .NET 11 SDK for a `net11.0` one; the skills keep
+  the target a project already has. The `Pragmatic.*` packages are prereleases on nuget.org
   (`dotnet add package … --prerelease`); builds not published yet come from a local feed in Docker, covered
   by `pragmatic-nuget-feed`.
 - **Web:** Node.js and the `@pdxui/*` packages from npm; `pdxui-setup` covers the install.
