@@ -24,21 +24,21 @@ value is free text; the options are a hierarchy → `pdx-tree-select`; the rows 
 paged table → `pdx-relation-picker`.
 
 **Pitfalls**
-- `pdx-change.detail` changes shape with `multiple`: `{ value, item }` single, `{ values, items }` multiple; a
-  clear sends `{ value: null }` or `{ values: [] }`. Read `e.detail.value`, not `e.detail`.
-- With `multiple`, `el.value` is the ARRAY. The comma-joined string survives only in the hidden input a native
-  form submits, where a value containing a comma cannot round-trip.
+- `value-change` carries `{ value }`: the option's value, or with `multiple` the array of values; a clear
+  writes `null` or `[]`. The option itself is `el.selectedItem` (the options, with `multiple`).
+- With `multiple`, `el.value` is the ARRAY, and a native form receives one entry per value under the
+  select's `name` (`formData.getAll(name)`), as from a native multi-select. With nothing chosen, a single
+  select submits an empty entry.
 - `creatable` makes the typed text both value and label and emits `pdx-create`; storing the new option is yours.
 - Over 100 options the list virtualizes by itself.
 
-**Composes with** `pdx-form` + `pdx-form-field` (wired by `name`; the field's label names it) · `pdx-data-source`
+**Composes with** `pdx-form` + `pdx-form-field` (bound through its model, `::value="f.x"`; the field's label names it) · `pdx-data-source`
 (injected when the select sits inside one).
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `options` | — | array | `() => []` | The selectable options. |
-| `source` | — | object | `null` | DataSource instance — dedicated prop for data-driven select. Takes priority over options. |
-| `value` | `value` | string \| null | `null` | The current value. |
+| `options` | — | T[] | `[]` | The selectable options. |
+| `source` | — | import('@pdxui/core').DataSource<T> \| null | `null` | DataSource instance — dedicated prop for data-driven select. Takes priority over options. |
 | `labelField` | `labelfield` | string | `'label'` | Object field used as the option label. |
 | `valueField` | `valuefield` | string | `'value'` | Object field used as the option value. |
 | `placeholder` | `placeholder` | string | `''` | Placeholder text shown while empty. |
@@ -51,18 +51,17 @@ paged table → `pdx-relation-picker`.
 | `searchable` | `searchable` | boolean | `false` | Adds a search box to filter options. |
 | `multiple` | `multiple` | boolean | `false` | Allow selecting more than one. |
 | `maxTagCount` | `maxtagcount` | number | `-1` | Multi mode: collapse selected tags in the trigger to keep it compact. -1 = unlimited (default, show all chips); 0 = summary only ("N selected"); N>0 = show N chips + a "+K" overflow chip. The dropdown is unaffected. |
-| `size` | `size` | 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' | `''` | xs, sm, md (the default), lg or xl — the same scale as pdx-input. |
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
 | `loading` | `loading` | boolean | `false` | Shows a loading / busy state. |
 | `groupField` | `groupfield` | string | `''` | Object field used to group options. |
 | `label` | `label` | string | `''` | The combobox's accessible name, and its listbox's. Not needed inside a pdx-form-field with a label, after a pdx-label, or with a <label for> the select's id: those name it. |
-| `itemTemplate` | — | object | `null` | Custom render for each option: (item: {label, value, _raw}) => string\|Node |
-| `selectedTemplate` | — | object | `null` | Custom render for selected value in trigger: (item: {label, value, _raw}) => string\|Node |
-| `searchPosition` | `searchposition` | string | `'trigger'` | Where to show search input: 'trigger' (default) or 'dropdown' |
+| `searchPosition` | `searchposition` | 'trigger' \| 'dropdown' | `'trigger'` | Where to show search input: 'trigger' (default) or 'dropdown' |
 | `creatable` | `creatable` | boolean | `false` | Allow creating new options when search has no match. Emits pdx-create. |
 | `createLabel` | `createlabel` | string | `''` | Label template for the create option. Use {query} as placeholder. Empty: the select.create component string, «Create "{query}"» in English. |
 | `remote` | `remote` | boolean | `false` | Enable debounced server-side filtering for remote DataSource. |
 | `debounce` | `debounce` | number | `200` | Debounce delay in ms for remote search. |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl — the same scale as pdx-input. |
+| `value` | `value` | unknown | `null` | The current value. |
 
 **API (via `:ref`)**
 
@@ -72,12 +71,25 @@ paged table → `pdx-relation-picker`.
 | `focus()` | Moves focus to it. |
 | `blur()` | Removes focus from it. |
 | `clear()` | Clears the value. |
+| `show()` | Open the popup. |
+| `close()` | Close the popup. |
+| `toggle()` | Open the popup when closed, close it when open. |
 
-**Events:** `pdx-change` → `detail: { values, items } | { value, item }` — Fired when the value changes.; `pdx-clear` — Fired when the value is cleared.; `pdx-close` — Fired when it closes. Does not bubble.; `pdx-create` → `detail: { value, label }` — Fired when a new item is created.; `pdx-open` — Fired when it opens. Does not bubble.; `pdx-search` → `detail: { query }` — Fired when a search is performed.
+**Events:** `open-change` → `detail: { value: boolean }` — The popup opened (`true`) or closed (`false`): its open state, read-only, as an overlay's (#287).; `pdx-clear` — Fired when the clear button empties the selection, after its `value-change`.; `pdx-create` → `detail: { value: string; label: string }` — Fired when the user creates an option from the search text.; `pdx-search` → `detail: { query: string }` — Fired as the user types in the search input.; `value-change` → `detail: { value: unknown }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `combobox` · `listbox` · `option` · `presentation` · `status`
 
-**Slot:** `item` — Scoped — renders one option in the list. Receives `{ label, value, raw, index }` (`raw` is the original option).; `selected` — Scoped — renders the selected value in the trigger. Receives `{ label, value, raw }`.
+**Injects:** `DataSourceContext` (optional)
+
+**Slot:** `item` — Renders one option in the list: a snippet `item(option, index)`; `option.raw` is the original entry.; `selected` — Renders the selected value in the trigger: a snippet `selected(option)`.
+
+**States:** `:state(open)` — The popup is open.; `:state(invalid)` — `error` is set.; `:state(success)` — `success` is set.; `:state(warning)` — `warning` is set.; `:state(disabled)` — `disabled` is set.; `:state(readonly)` — `readonly` is set.; `:state(loading)` — `loading` is set, or the DataSource is loading.; `:state(multiple)` — `multiple` is set: the trigger holds tags.
+
+**Parts:** `[data-part="root"]` — The trigger: the frame, its border, background and the states' colours.; `[data-part="search"]` — The search field, while `searchable`: in the trigger, or atop the list with `search-position="dropdown"`.; `[data-part="tag"]` — A chosen option in the trigger, while `multiple`.; `[data-part="clear"]` — The clear button, while `clearable`, something is chosen and neither `disabled` nor `readonly`.; `[data-part="spinner"]` — The loading spinner, a `role="status"`, while loading.; `[data-part="popup"]` — The floating panel that holds the list.; `[data-part="list"]` — The `role="listbox"`.; `[data-part="option"]` — An option of the list.
+
+**Tokens:** `--pdx-input-border-color` — The trigger is the text input's frame, `.pdx-input-wrap`, and reads pdx-input's tokens (#761): its border at rest (the outlined input style).; `--pdx-input-border-color-focus` — The frame's border while focused (the outlined input style).; `--pdx-input-border-color-invalid` — The frame's border in the invalid state.; `--pdx-input-border-color-success` — The frame's border in the success state.; `--pdx-input-border-color-warning` — The frame's border in the warning state.; `--pdx-input-border-width` — The frame's bottom border, in the filled input style.; `--pdx-input-focus-ring` — The ring around the frame while focused.; `--pdx-input-min-height` — The frame's height, at the md size.; `--pdx-select-caret-size`; `--pdx-select-caret-stroke`. Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples
@@ -240,7 +252,7 @@ function onCountryChange(e) {
 
 ```html
 <pdx-select :options="cascadeCountries" clearable
-  @pdx-change="onCountryChange" placeholder="Select country..." />
+  @value-change="onCountryChange" placeholder="Select country..." />
 
 <pdx-select :options="filteredCities" labelField="name" valueField="id"
   :disabled="!selectedCountry" searchable clearable
@@ -292,51 +304,28 @@ function onCountryChange(e) {
 <pdx-data-source url="/api/products" :page-size="25" />
 ```
 
-**Custom Template — Function Prop** — Use `:item-template` and `:selected-template` for rich rendering with avatars, descriptions, icons.
-
-```html
-<pdx-select :options="teamMembers"
-  labelField="name" valueField="id"
-  :item-template="renderTeamItem"
-  :selected-template="renderTeamSelected"
-  clearable placeholder="Select team member..." />
-```
-
-```js
-function renderTeamItem(item) {
-  const r = item.raw;
-  return html`<div class="team-option">
-    <span class="team-avatar">${r.initials}</span>
-    <div class="team-info">
-      <span class="team-name">${item.label}</span>
-      <span class="team-role">${r.role}</span>
-    </div>
-  </div>`;
-}
-```
-
-**Custom Template — Scoped Slot** — Alternative to function props: use `<slot let:var>` to define templates inline with data from the child. HTML-native syntax.
+**Custom Template — Snippets** — The `item` and `selected` snippets draw an option in the list and the chosen one in the trigger, with avatars, descriptions, icons: `item(option, index)` and `selected(option)`, where `option.raw` is the original entry.
 
 ```html
 <pdx-select :options="teamMembers"
   labelField="name" valueField="id"
   clearable placeholder="Select team member...">
 
-  <slot name="item" let:label let:raw>
+  @snippet item(option) {
     <div class="team-option">
-      <span class="team-avatar">{{ raw.initials }}</span>
+      <span class="team-avatar">{{ option.raw.initials }}</span>
       <div class="team-info">
-        <span class="team-name">{{ label }}</span>
-        <span class="team-role">{{ raw.role }}</span>
+        <span class="team-name">{{ option.label }}</span>
+        <span class="team-role">{{ option.raw.role }}</span>
       </div>
     </div>
-  </slot>
+  }
 
-  <slot name="selected" let:label let:raw>
+  @snippet selected(option) {
     <span class="team-selected">
-      <span class="team-avatar-sm">{{ raw.initials }}</span> {{ label }}
+      <span class="team-avatar-sm">{{ option.raw.initials }}</span> {{ option.label }}
     </span>
-  </slot>
+  }
 
 </pdx-select>
 ```

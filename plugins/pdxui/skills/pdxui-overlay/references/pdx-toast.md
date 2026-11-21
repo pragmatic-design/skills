@@ -4,9 +4,11 @@ Transient, stacked notifications.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `position` | `position` | string | `'top-right'` | Where toasts appear (e.g. 'top-right'). |
+| `position` | `position` | 'top-right' \| 'top-left' \| 'bottom-right' \| 'bottom-left' \| 'top-center' \| 'bottom-center' | `'top-right'` | Where the stack sits on the screen: top-right (the default), top-left, bottom-right, bottom-left, top-center or bottom-center. |
 
 **Renders:** roles `alert` · `status`
+
+**Parts:** `[data-part="root"]` — The element reached as `[data-part="root"]`.; `[data-part="toast"]` — The element reached as `[data-part="toast"]`.; `[data-part="icon"]` — The element reached as `[data-part="icon"]`.; `[data-part="title"]` — The element reached as `[data-part="title"]`.; `[data-part="message"]` — The element reached as `[data-part="message"]`.; `[data-part="action"]` — The element reached as `[data-part="action"]`.; `[data-part="close"]` — The element reached as `[data-part="close"]`.; `[data-part="progress"]` — The element reached as `[data-part="progress"]`.
 
 
 #### Examples

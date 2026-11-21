@@ -10,6 +10,7 @@ there's no compilation to wait for, in prod there's a build that optimizes with 
 
 The CLI is its own package and a **dev dependency**: `@pdxui/framework` does not include it, and
 without the install `npx pdx` asks the public registry for a package called `pdx` and gets a 404.
+It needs Node 22.17 or later, the first release where Node's own `fs.glob` is stable.
 
 ```bash
 npm i -D @pdxui/cli   # once per app
@@ -24,6 +25,7 @@ npx pdx builder   # component tester + theme builder, on your own components
 npx pdx theme     # generate a WCAG-AA theme from a brand color
 npx pdx i18n      # extract keys, generate typed keys, validate dictionaries
 npx pdx extract   # translation keys → template JSON
+npx pdx migrate   # rewrite the forms the beta removed, list the ones to rewrite by hand
 ```
 
 ## pdx dev — develop without a build
@@ -46,6 +48,11 @@ Here the compiler knows the whole project and generates the optimized output (in
 pre-compiled templates, pre-linked routes, dead code removed). It produces the static artifacts to
 serve.
 
+`pdx dev` and `pdx build` use the project's `vite.config` when it has one. If that config already
+registers `pdx()` — as the one `pdx new project` writes does — they use that plugin and its options,
+and add no second one; the `plugins` and `components` of `pdx.config` then go in that `pdx({ … })`
+call. Without a `pdx()` in the Vite config, they add their own, configured from `pdx.config`.
+
 Source maps are off by default. `--sourcemap` turns them on, and they point at the line of the `.pdx`
 you wrote, not at the generated code:
 
@@ -60,6 +67,92 @@ for the maps. With `--standalone`, each component gets a `<name>.js.map` beside 
 
 `--outDir` writes somewhere other than the config's (`dist` by default); `--minify` is on by
 default, and `--no-minify` leaves the output readable.
+
+### Static generation: `--ssg`
+
+```bash
+npx pdx build --ssg
+```
+
+`--ssg` writes a page for every route: `/` as `index.html`, `/about` as `about/index.html`. Each
+page is the built `index.html` with the route's content already in its body, and its `@title` and
+`@meta` in the head. A visitor sees that
+content before any JavaScript runs, and the app then takes it over instead of rendering it again:
+the elements stay the same ones, and they become interactive.
+
+The app is built with `pdx({ hydrate: true })`. If your `vite.config` registers `pdx()` itself, the
+option has to be there; without it the build stops and says so. The routes are rendered in Node, in
+a process of their own, with the app compiled for the server. The module scripts of `index.html`
+run there first, in the page's order, whether they load a file or are written inline. A route with
+parameters is generated
+for the paths you list in `pdx.config`:
+
+```ts
+export default defineConfig({ ssg: { routes: ['/posts/1', '/posts/2'] } });
+```
+
+Each path is prepared as a navigation to it would be before it is rendered. Your `onBeforeNavigate`
+hooks run, and each one is awaited, so a hook that loads what the page reads (its strings, say) has
+loaded it by the time the page is written. Then the route's guards are checked against the
+permissions your app has set. A hook the page needs has to be registered by a module, not in a
+component's setup: a setup runs during the render, which is too late.
+
+No visitor comes with a build, so there is no session and no language choice. Set what one would bring
+in a module that `ssg.setup` names. The server imports it before your entry scripts:
+
+```ts
+export default defineConfig({ ssg: { setup: './src/ssg.ts' } });
+```
+
+```ts
+// src/ssg.ts: the session a build renders the private pages with, and the language of a page
+// nobody asked for in a language
+import { setLocale } from '@pdxui/core';
+import { auth } from './auth';
+import { buildTokens } from './build-session'; // your own: tokens for an account made for builds
+
+auth.setTokens(buildTokens());
+setLocale('en');
+```
+
+A private page written this way shows what that session sees. A visitor without the session is
+sent where your app sends them, as on any first load.
+
+A route's `@loader` runs during the build, before its page is rendered, and the page is written with
+the data it returned, not its loading branch. The page also carries that data, in a `pdx-ssg-data`
+script that `ssgDataScript` (from `@pdxui/router/server`) writes. When the app starts,
+`installRouteAdoption()` keeps it as the loader's result, so the first visit does not wait for the
+loader. While the build
+is younger than the loader's `staleTime` the loader does not run again; once the build is older, the
+page shows the data it carries while the loader runs once behind it.
+
+A loader that fetches a path of your own server, `fetch('/api/…')`, needs to know where that server
+answers during the build, because Node has no page a relative URL could be relative to. Name it, and
+have the API running there while you build:
+
+```ts
+export default defineConfig({ ssg: { origin: 'http://localhost:3000' } });
+```
+
+A loader that throws stops the build, naming the path. So does a result that JSON would not bring
+back as it is, such as a `Date`, a class instance, a function or a cycle: the page carries the data as
+JSON.
+
+The build says what it did not write, and why:
+
+- a route with parameters and no path listed;
+- a path an `onBeforeNavigate` hook refused;
+- a guarded route the permissions you have set do not grant;
+- a redirect, a route's or a loader's `redirect()`;
+- a path a loader answered with `notFound()`.
+
+Reading the browser stops the build. If a component's setup, its render or a value in its template
+reads a browser global such as `window`, `document` or `localStorage`, the build names the component
+and the global. If a module
+reads one when it is imported, the build names the file and the line. That work belongs in `onMount`,
+which the server never runs, or behind `typeof window !== 'undefined'`. A component that cannot be
+written for another reason (its render builds DOM by hand) is named with the reason, and the client
+renders it at boot.
 
 ## pdx check — the quality gate
 
@@ -133,6 +226,34 @@ Prints the catalog entry for a code: its severity, what it means, what to write 
 address on [Diagnostics](diagnostics.md). A misspelt code exits 1 and names the closest one. In
 `pdx check --json`, every finding carries the same address as `url`.
 
+## pdx migrate — move code to the beta
+
+```bash
+npx pdx migrate              # the current folder: rewrite, write, report
+npx pdx migrate src --dry    # print what it would change, write nothing
+```
+
+The beta replaces the alpha, and every form it removes or changes is registered once in the compiler.
+A removed form is an error, [`PDX_REMOVED_FORM`](diagnostics.md), whose message names what to
+write instead. `pdx migrate` reads the same list: it rewrites every form that has a mechanical
+rewrite, writes the files, and lists each place a person has to rewrite — a form with no mechanical
+rewrite, and every *fix*, a behaviour that changed because the old one was a defect (an arrow function
+assigned to a `$signal` is now stored, not called with the previous value). It reads `.pdx` files,
+scripts, `vite.config.*`, where the plugin's options are, and the HTML page that mounts the app, and
+leaves `node_modules` and `dist` alone. A second run changes nothing.
+
+Some entries are `changed`: valid source whose meaning changed, rewritten so the alpha code keeps
+what it did. They fire on code written for the beta too — `event-bubbles` adds `(bubbles)` to every
+`@event` — so run `pdx migrate` once, on the alpha code, and after that read its `changed` reports
+instead of applying them. The [release notes](https://github.com/pragmatic-design/pdxui/blob/main/docs/releases/beta.md)
+list what it does not detect.
+
+One rewrite creates a file. The alpha's string context keys (`@provide user = …`, `@inject user;`)
+become tokens: `pdx migrate` writes one per key into `src/contexts.ts` (`contexts.ts` at the root
+without `src/`), adds to that module when it exists, and imports the token on both sides. A token it
+writes is `context<unknown>`; give it its type. The library's keys take the library's tokens, as
+`errorContext` takes `ErrorContext` from `@pdxui/ui/error-boundary`.
+
 ## pdx new — start fast
 
 ```bash
@@ -144,9 +265,16 @@ file: `pdx new component user-card`, `pdx new page settings`, `pdx new project s
 somewhere other than the current folder. A project comes with an `AGENTS.md`, which tells an AI agent
 opened in it how to work — see [Using PDX with an AI agent](agents.md).
 
-A new project depends on `@pdxui/framework`, with `@pdxui/cli`, `@pdxui/compiler` and `vite` as dev
-dependencies, all at the version of the CLI that created it; its `index.html` imports the design system
-once and places `<pdx-app>`. Start it from a folder with no project yet with
+A new project depends on the packages its files import by name — `@pdxui/core`, `@pdxui/design`,
+`@pdxui/router` and `@pdxui/ui`, since the compiled `.pdx` imports core, a library tag's module from
+ui and the router for `@page` — with `@pdxui/cli`, `@pdxui/compiler` and `vite` as dev dependencies,
+all at the version of the CLI that created it. Declared one by one, they install with pnpm too, which
+does not resolve a package reached only through another (`@pdxui/framework`). Its `index.html` imports
+the design system's base and one theme — `@pdxui/design/base` and `@pdxui/design/themes/neutral`, the
+theme that applies with no `pdx-theme` on `<html>` — and places `<app-root>`, the tag its `App.pdx`
+declares with `@tag 'app-root'`; each component brings its
+own CSS when the compiler imports it. To use another theme, import it instead of neutral and set
+`pdx-theme` on `<html>` ([Theming](https://pdxui.com/docs/theming#shipping-one-instead-of-thirteen)). Start it from a folder with no project yet with
 `npx @pdxui/cli new project shop`, then `npm install` and `npm run dev`.
 
 ## pdx analyze — the project manifest
@@ -158,9 +286,15 @@ npx pdx analyze --json              # prints it, writes nothing — the form for
 ```
 
 Reads every `.pdx` of the project and describes it as data. `components` lists each one with the tag
-it registers (the compiler's rule: `App.pdx` is `pdx-app`, or its `@tag`), its file, props with type
+it registers (the compiler's rule: `App.pdx` is `app-app`, or its `@tag`), its file, props with type
 and default, events with their payload, slots, exposed methods, signals, stores, `@fetch` endpoints,
-`@form` fields, and the other components it uses. `routes` is the route table: every component with
+`@form` fields, and the other components it uses. `provides` and `injects` list the context tokens of
+its `@provide` and `@inject`, each with the module it is imported from (`{ token: 'CurrentUser', from:
+'./contexts' }`); an inject with a fallback is `optional`. The library's `custom-elements.json`
+records the same under `x-pdx-context`. `actions` lists each `@action` an agent may call — those with
+`with { agent: '…' }` — with its `agent`, `consequential` and `input`, the JSON schema of its
+parameter's type (`{}` when the type is one the analysis cannot read from its text alone, such as an
+interface). `routes` is the route table: every component with
 `@page`, sorted by path, as `{ path, file, tag, guard, loader, layout }`.
 
 It is what an agent reads before it touches a project: which components exist and how to call them,

@@ -6,27 +6,34 @@ A floating action button.
 |---|---|---|---|---|
 | `icon` | `icon` | string | `'plus'` | Main button icon name |
 | `label` | `label` | string | `''` | Main button label (screen reader). Empty: the fab.label component string, «Actions». |
-| `actions` | — | array | `[]` | Speed dial actions |
-| `position` | `position` | string | `'bottom-right'` | Position: bottom-right (default), bottom-left, top-right, top-left |
-| `variant` | `variant` | string | `'primary'` | Variant: primary, secondary, danger |
-| `size` | `size` | string | `'md'` | Size: sm, md, lg |
+| `actions` | — | unknown[] | `[]` | Speed dial actions |
 | `direction` | `direction` | string | `'up'` | Speed dial direction: up (default), down, left, right |
 | `type` | `type` | string | `'linear'` | Speed dial layout: linear (default), circle, semi-circle, quarter-circle |
 | `showTooltip` | `showtooltip` | boolean | `true` | Show tooltip labels next to actions |
 | `mask` | `mask` | boolean | `false` | Show mask overlay when open |
 | `trigger` | `trigger` | string | `'click'` | Trigger mode: click (default), hover |
+| `variant` | `variant` | 'primary' \| 'secondary' \| 'danger' | `'primary'` | primary (the default), secondary or danger. |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg. |
+| `position` | `position` | 'bottom-right' \| 'bottom-left' \| 'top-right' \| 'top-left' | `'bottom-right'` | bottom-right (the default), bottom-left, top-right or top-left. |
 
 **API (via `:ref`)**
 
 | Call | Notes |
 |---|---|
-| `open()` | Opens it. |
+| `show()` | Shows it. |
 | `close()` | Closes it. |
 | `toggle()` | Toggles it open/closed. |
+| `isOpen` _(read-only)_ | Read-only, via a ref: `el.isOpen`. |
 
-**Events:** `pdx-click` → `detail: {}` — Fired on `pdx-click`.; `pdx-select` → `detail: { key, action }` — Fired when an item is selected.
+**Events:** `open-change` → `detail: { value: boolean }` — The speed dial opened (`true`) or closed (`false`): its open state, read-only (#288). The parent never writes it, so it is not a model, and `::open` on it is an error.; `pdx-click` → `detail: Record<string, never>` — The button was pressed, on a FAB with no speed dial.; `pdx-select` → `detail: { key: string; action: FabAction }` — An action of the speed dial was chosen.
 
 **Renders:** roles `menu` · `menuitem`
+
+**States:** `:state(open)` — Matched with `:state(open)`.
+
+**Parts:** `[data-part="root"]` — The element reached as `[data-part="root"]`.; `[data-part="menu"]` — The element reached as `[data-part="menu"]`.; `[data-part="item"]` — The element reached as `[data-part="item"]`.; `[data-part="label"]` — The element reached as `[data-part="label"]`.; `[data-part="mask"]` — The element reached as `[data-part="mask"]`.
+
+**Tokens:** `--pdx-fab-position`. Set one at `:root`, on a subtree, or on the element itself.
 
 **Shapes:** `FabAction { key: string; label: string; icon: string }`
 

@@ -4,7 +4,7 @@ A button that opens an action menu.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `[]` | The data items to render. |
+| `items` | — | T[] | `[]` | The data items to render. |
 | `label` | `label` | string | `''` | Visible label text. |
 | `variant` | `variant` | string | `'outline'` | Visual variant. |
 | `size` | `size` | string | `'sm'` | Size of the control (e.g. sm, md, lg). |
@@ -17,15 +17,20 @@ A button that opens an action menu.
 
 | Call | Notes |
 |---|---|
-| `open(focus?)` | Opens it. |
+| `show()` | Shows it. |
 | `close()` | Closes it. |
 | `toggle()` | Toggles it open/closed. |
+| `isOpen` _(read-only)_ | Read-only, via a ref: `el.isOpen`. |
 
-**Events:** `pdx-check` → `detail: { key, checked, radioGroup, item }` — Fired on `pdx-check`.; `pdx-select` → `detail: { key, item }` — Fired when an item is selected.
+**Events:** `open-change` → `detail: { value: boolean }` — The menu opened (`true`) or closed (`false`): its open state, read-only (#288). The parent never writes it, so it is not a model, and `::open` on it is an error.; `pdx-check` → `detail: { key: string; checked: boolean; radioGroup?: string; item: MenuItem }` — A checkbox or radio entry changed: the menu's own event, re-dispatched on this element.; `pdx-select` → `detail: { key: string; item: MenuItem }` — An entry was chosen: the menu's own event, re-dispatched on this element.
 
 **Renders:** roles `button`
 
-**Slot:** `trigger` — The menu button, when it is not this component's own: an avatar, a chip. The element placed here gets `aria-haspopup`, `aria-expanded`, `aria-controls` while open, the keys (click, ArrowDown/ArrowUp, and Enter/Space when it is not a native button) and the focus back on close. `label`, `icon`, `variant` and `size` are for the built-in button, and are ignored with it.; `item` — Scoped — renders one menu entry. Receives `{ item, key, type }` (`type` is the item's type, `'item'` when unset).
+**Slot:** `trigger` — The menu button, when it is not this component's own: an avatar, a chip. The element placed here gets `aria-haspopup`, `aria-expanded`, `aria-controls` while open, the keys (click, ArrowDown/ArrowUp, and Enter/Space when it is not a native button) and the focus back on close. `label`, `icon`, `variant` and `size` are for the built-in button, and are ignored with it.; `item` — Renders one menu entry: a snippet `item(item)`.
+
+**States:** `:state(open)` — Matched with `:state(open)`.
+
+**Parts:** `[data-part="trigger"]` — The element reached as `[data-part="trigger"]`.
 
 
 #### Examples

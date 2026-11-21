@@ -13,7 +13,7 @@ in Codex and in any agent that reads that format.
 | Plugin | Skills | For |
 |---|---|---|
 | `pragmatic-design` | 35 | .NET 10 and .NET 11 applications on the `Pragmatic.*` NuGet packages |
-| `pdxui` | 18 | Web UIs in the `.pdx` language with the `@pdxui/*` packages, a page for each of its 117 components |
+| `pdxui` | 18 | Web UIs in the `.pdx` language with the `@pdxui/*` packages, a page for each of its 122 components |
 
 The two plugins install independently.
 
@@ -178,7 +178,7 @@ the area skills send the reader back to `pdxui`.
 
 | Skill | Use it when |
 |---|---|
-| [`pdxui-language`](plugins/pdxui/skills/pdxui-language/SKILL.md) | The .pdx language: the file format (template, script setup, style scoped), the runes ($signal, $derived, $effect), the declarations (@prop, @page, @event and more), the template syntax and how a project is wired. Use before writing or editing any .pdx file, or when starting a PDX app. |
+| [`pdxui-language`](plugins/pdxui/skills/pdxui-language/SKILL.md) | The .pdx language: the file format (template, script, style scoped), the runes ($signal, $derived, $effect), the declarations (@prop, @page, @event and more), the template syntax and how a project is wired. Use before writing or editing any .pdx file, or when starting a PDX app. |
 | [`pdxui`](plugins/pdxui/skills/pdxui/SKILL.md) | Build web app UIs with PDX (@pdxui): the catalogue of its components by area, screen recipes and the measured .pdx gotchas. Use before building any UI piece, since the component usually exists. The language is pdxui-language; theming, pdxui-theme; composing a screen, pdxui-screens. |
 | [`pdxui-screens`](plugins/pdxui/skills/pdxui-screens/SKILL.md) | Compose a screen that reads as a product, not a demo: grid or cards, what the header and sidebar carry, empty, loading and error states, what never to rebuild by hand. Use when laying out a screen or an app in .pdx, after picking components (pdxui) and the brand (pdxui-theme). |
 | [`pdxui-theme`](plugins/pdxui/skills/pdxui-theme/SKILL.md) | Theme and brand a PDX app: generate a WCAG-AA theme from one brand color with `npx pdx theme`, pick one of the 13 shipped themes, use the semantic tokens, dark mode and density. Use when branding an app, editing a theme, choosing a token, or when a theme does not apply. |
@@ -187,9 +187,9 @@ the area skills send the reader back to `pdxui`.
 
 | Skill | Use it when |
 |---|---|
-| [`pdxui-layout`](plugins/pdxui/skills/pdxui-layout/SKILL.md) | PDX (@pdxui/ui) layout and shell components — pdx-app-layout, pdx-page-header, navbar, sidebar, splitter, scroll-area, row/col grid, aspect-ratio, masonry, toolbar, affix, scroll-spy — with props and events. Use when building the page structure or app shell of a .pdx app. |
+| [`pdxui-layout`](plugins/pdxui/skills/pdxui-layout/SKILL.md) | PDX (@pdxui/ui) layout and shell components — pdx-app-layout, pdx-app-shell, pdx-page-header, navbar, sidebar, splitter, scroll-area, row/col grid, aspect-ratio, masonry, toolbar, affix, scroll-spy — with props and events. Use when building the page structure or app shell of a .pdx app. |
 | [`pdxui-navigation`](plugins/pdxui/skills/pdxui-navigation/SKILL.md) | PDX navigation components — router-outlet, link, nav-menu, bottom-nav, breadcrumb, menu, menubar, dropdown and context menus, command palette, tabs, pagination, fab, split-button — with props and events. Use when adding links, navigation, menus, tabs or a command palette to a .pdx app. |
-| [`pdxui-data`](plugins/pdxui/skills/pdxui-data/SKILL.md) | PDX (@pdxui/ui) data components — data-grid, entity-grid (CRUD-wired), bulk-actions, data-source, filter-builder, chart, sparkline, list, sortable-list, tree, statistic, timeline, calendar, empty-state — with props and events. Use when showing records, a grid, a chart or a tree in a .pdx app. |
+| [`pdxui-data`](plugins/pdxui/skills/pdxui-data/SKILL.md) | PDX (@pdxui/ui) data components — data-grid, entity-grid (CRUD-wired), bulk-actions, data-source, filter-builder, chart, sparkline, list, sortable-list, tree, statistic, timeline, calendar, scheduler, empty-state — with props and events. Use when showing records, grids, charts, trees or schedules. |
 | [`pdxui-forms`](plugins/pdxui/skills/pdxui-forms/SKILL.md) | PDX (@pdxui/ui) form-building components — pdx-form, auto-form, form-template, json-editor, form-field/section/actions, fieldset, field-group/list, input-group, inline-edit, wizard — with props and events. Use when building a form, an edit screen or a wizard in a .pdx app. |
 | [`pdxui-inputs`](plugins/pdxui/skills/pdxui-inputs/SKILL.md) | PDX (@pdxui/ui) input controls — text, number, masked, password, search and rich-text inputs, checkbox, radio, switch, toggle, segmented, select, autocomplete, tree-select, cascader, date/time/color pickers, slider, rating, tags, file upload. Use when adding a form control to a .pdx app. |
 | [`pdxui-overlay`](plugins/pdxui/skills/pdxui-overlay/SKILL.md) | PDX (@pdxui/ui) overlay and feedback components — dialog, alert-dialog, drawer, edit-drawer, relation-picker, bottom-sheet, popover, tooltip, toast, banner, block-ui — with props and events. Use when showing a dialog, drawer, popover, toast or loading overlay in a .pdx app. |

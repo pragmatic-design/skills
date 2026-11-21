@@ -30,7 +30,7 @@ src/
 ```
 
 A `.pdx` anywhere under `src/` is registered automatically, and its tag comes from the filename:
-`src/components/job-row.pdx` → `<pdx-job-row>`. Nothing to declare, nothing to import — use the tag
+`src/components/job-row.pdx` → `<app-job-row>`. Nothing to declare, nothing to import — use the tag
 and the compiler adds the import.
 
 **Routes stay thin.** A route loads what the screen needs and composes; the pieces know how to render
@@ -46,16 +46,16 @@ keep the state in the route. This is what you want most of the time.
 <template>
   <div class="job-row" @click="open()">
     <strong>{{ customer }}</strong>
-    <pdx-badge :tone="tone()">{{ status }}</pdx-badge>
+    <pdx-badge :variant="variant">{{ status }}</pdx-badge>
   </div>
 </template>
 
-<script setup>
+<script>
 @prop customer: string = '';
 @prop status: string = 'aperto';
 @event selected: string;
 
-const tone = $derived(status === 'chiuso' ? 'neutral' : 'primary');
+const variant = $derived(status === 'chiuso' ? 'muted' : 'primary');
 function open() { selected(customer); }
 </script>
 ```

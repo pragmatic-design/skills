@@ -5,17 +5,19 @@ Exclusive or multi-select set of toggles.
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
 | `type` | `type` | string | `'single'` |  |
-| `value` | `value` | string | `''` | For single: string. For multiple: comma-separated string of values. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
-| `orientation` | `orientation` | string | `'horizontal'` | Layout orientation — horizontal or vertical. |
-| `variant` | `variant` | string | `'outline'` | Visual variant. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
+| `variant` | `variant` | string | `'outline'` | Passed to every toggle. |
+| `size` | `size` | string | `''` | Passed to every toggle. |
 | `loop` | `loop` | boolean | `true` |  |
 | `label` | `label` | string | `''` | Visible label text. |
+| `orientation` | `orientation` | 'horizontal' \| 'vertical' | `'horizontal'` | horizontal (the default) or vertical: the toggles joined in a row or a column. |
+| `value` | `value` | string | `''` | The pressed toggles' values: one for `single`, comma-separated for `multiple`. A form submits one entry per value, and resets it (#135). A press writes it, and the write dispatches `value-change`. |
 
-**Events:** `pdx-change` → `detail: { value, values }` — Fired when the value changes.; `valuechange` → `detail: { value, values }` — Fired on `valuechange`.
+**Events:** `value-change` → `detail: { value: string }` — Fired when the component writes `value`. Does not bubble.
 
-**Renders:** roles `group`
+**States:** `:state(disabled)` — `disabled` is set; the group is aria-disabled and every toggle disabled.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples
@@ -28,7 +30,7 @@ are checked against the manifest above._
 
 ```html
 <pdx-toggle-group type="single" label="Text alignment"
-  :value="align" @pdx-change="e => align = e.detail.value">
+  :value="align" @value-change="e => align = e.detail.value">
   <pdx-toggle value="left">Left</pdx-toggle>
   <pdx-toggle value="center">Center</pdx-toggle>
   <pdx-toggle value="right">Right</pdx-toggle>
@@ -36,11 +38,11 @@ are checked against the manifest above._
 </pdx-toggle-group>
 ```
 
-**Multiple** — Any number pressed. The event carries both forms: `detail.value` (`"bold,italic"`) and `detail.values` (an array). _(from the live demo)_
+**Multiple** — Any number pressed. `value-change` carries the comma-separated selection in `detail.value` (`"bold,italic"`); `value.split(',')` is the list. _(from the live demo)_
 
 ```html
 <div class="demo-row">
-  <pdx-toggle-group type="multiple" label="Formatting" :value="formatting" @pdx-change="e => setFormatting(e.detail.value)">
+  <pdx-toggle-group type="multiple" label="Formatting" :value="formatting" @value-change="e => setFormatting(e.detail.value)">
     <pdx-toggle value="bold" aria-label="Bold"><strong>B</strong></pdx-toggle>
     <pdx-toggle value="italic" aria-label="Italic"><em>I</em></pdx-toggle>
     <pdx-toggle value="underline" aria-label="Underline"><u>U</u></pdx-toggle>
@@ -122,13 +124,13 @@ are checked against the manifest above._
 ```html
 <div class="comp-card">
   <div class="toolbar" role="toolbar" aria-label="Text formatting">
-    <pdx-toggle-group type="multiple" label="Style" size="sm" :value="formatting" @pdx-change="e => setFormatting(e.detail.value)">
+    <pdx-toggle-group type="multiple" label="Style" size="sm" :value="formatting" @value-change="e => setFormatting(e.detail.value)">
       <pdx-toggle value="bold" aria-label="Bold"><strong>B</strong></pdx-toggle>
       <pdx-toggle value="italic" aria-label="Italic"><em>I</em></pdx-toggle>
       <pdx-toggle value="underline" aria-label="Underline"><u>U</u></pdx-toggle>
     </pdx-toggle-group>
     <span class="toolbar-sep" aria-hidden="true"></span>
-    <pdx-toggle-group type="single" label="Alignment" size="sm" :value="align" @pdx-change="e => setAlign(e.detail.value)">
+    <pdx-toggle-group type="single" label="Alignment" size="sm" :value="align" @value-change="e => setAlign(e.detail.value)">
       <pdx-toggle value="left">Left</pdx-toggle>
       <pdx-toggle value="center">Center</pdx-toggle>
       <pdx-toggle value="right">Right</pdx-toggle>

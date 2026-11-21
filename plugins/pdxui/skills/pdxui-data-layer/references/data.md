@@ -2,6 +2,8 @@
 
 # Data layer
 
+> **Formal reference:** [docs/language/data.md](https://github.com/pragmatic-design/pdxui/blob/main/docs/language/data.md) defines the grammar of what this page teaches: what each construct accepts, what it generates, which diagnostic it raises.
+
 Loading data from an API seems simple until you count everything you actually need: the loading
 state, error handling, refetching when params change, caching to avoid repeating the same call,
 invalidation when you write. Doing it by hand in every component is repetitive and fragile. `@fetch`
@@ -16,16 +18,59 @@ declares it once.
 The **method is part of the string** — `'GET /api/users'`, not `'/api/users'`. Without it the
 declaration is not recognised, and an unrecognised declaration is **dropped**: no `resource`, and
 every read of `users` below finds nothing. You get `PDX_FETCH_INVALID` for it, which is the
-diagnostic to look for when a page that reads `users.data` renders nothing at all.
+diagnostic to look for when a page that reads `users.data()` renders nothing at all.
 
-From this one line the compiler generates a typed `resource()` with three states you use directly in
-the template:
+`@fetch` **reads**, so the method is `GET`: a `POST` or a `DELETE` here is the error
+`PDX_FETCH_METHOD`. A write is a `mutation()` (below).
+
+From this one line the compiler generates a typed `resource()` you use directly in the template. It
+speaks the **async vocabulary** every source in PDX shares — a resource, `useQuery`, a mutation, a
+route loader:
+
+| Member | Meaning |
+|---|---|
+| `data()` | the last successful value, `undefined` until there is one (`null`, `0`, `false` are values) |
+| `error()` | the last error, `null` when there is none; only a new success clears it |
+| `state()` | `'idle'`, `'pending'` (the first load), `'success'` or `'error'` |
+| `pending()` | a request in flight: the first load, a refresh, a retry |
+| `stale()` | the value shown is no longer known to be current: older than `staleTime`, invalidated, or kept after a failed refresh |
+
+Each is a signal, so it is read with a call — `users.pending()`, not `users.pending`, which is the
+function itself and always true:
 
 ```pdx
-@if (users.loading) { <pdx-spinner /> }
-@if (users.error)   { <p class="err">{{ users.error.message }}</p> }
-@for (users.data as u; track u.id) { <li>{{ u.name }}</li> }
+@if (users.state() === 'pending') { <pdx-spinner /> }
+@if (users.state() === 'error')   { <p class="err" role="alert">{{ users.error()?.message }}</p> }
+@for (users.data() ?? [] as u; track u.id) { <li>{{ u.name }}</li> }
 ```
+
+A refresh keeps what is on screen: `state()` stays `'success'` while `pending()` is true. A refresh
+that fails keeps it too — `state()` becomes `'error'`, `data()` is the last value, `stale()` is
+true — so the list stays and the error goes beside it.
+
+The three branches have a block of their own, `@await`, which reads those states for you and binds
+the data with `as`:
+
+```pdx
+@await (users as list) {
+  @for (list as u; track u.id) { <li>{{ u.name }}</li> }
+  @if (users.error()) { <p role="alert">Could not refresh: showing the last list.</p> }
+} @loading {
+  <pdx-spinner />
+} @error (err, retry) {
+  <p role="alert">Could not load the users.</p> <button @click="retry()">Retry</button>
+}
+```
+
+`@loading` shows while there is no data yet; `@error` when the first load fails, and `retry` calls
+`users.refetch()`; the body otherwise, with `list` typed `User[]` — through a refresh, and through a
+refresh that failed. `{ minMs: 200, maxMs: 8000 }` after the parentheses holds `@loading` back for a
+fast answer and gives up after 8 s with an `AwaitTimeoutError` in `@error`. The full rules are in
+[Template syntax](https://pdxui.com/docs/template#waiting-for-data-await).
+
+In the editor and in `pdx check --types`, `users` is that resource with the type after `as`:
+`@fetch users: 'GET /api/users' as User[]` makes `users.data()` a `User[] | undefined`, and a
+misspelt field is an error. Without `as`, the data is `unknown`. The error is an `Error | null`.
 
 You didn't write a `useState`/`useEffect`, didn't hand-manage `try/catch`, don't have an `isLoading`
 flag to remember to turn off. You declared *which data you want*, and the state is modeled for you.
@@ -36,12 +81,12 @@ Often the URL depends on some state (the selected id, a query). Put it in with `
 
 ```pdx
 @prop id: string = '';
-@fetch user: 'GET /api/users/${id}' : User;
+@fetch user: 'GET /api/users/${id}' as User;
 ```
 
 When `id` changes, the resource **re-runs itself** with the new value — same principle as signals:
-you declared the dependency by writing it, not by managing it. The trailing `: User` is the result
-type.
+you declared the dependency by writing it, not by managing it. The trailing `as User` is the result
+type; written `: User` it is the error `PDX_FETCH_TYPE_COLON`, whose fix rewrites it.
 
 ## Cache: don't repeat the same call
 
@@ -52,22 +97,99 @@ can control how long data stays "fresh" and group it with tags for invalidation:
 @fetch users: 'GET /api/users' { staleTime: 60000, tags: ['users'] };
 ```
 
-`staleTime` avoids needless refetches within the window; the `tags` serve the next step.
+`staleTime` avoids needless refetches within the window; the `tags` serve the next step. The block
+takes `resource()`'s options — `key`, `staleTime`, `retry`, `tags`, `enabled`, `transform`,
+`onSuccess`, `onError`, `cache`, and `stale`, an old boolean accepted for compatibility that does
+nothing (`staleTime` is the option) — and any other key is the error `PDX_FETCH_UNKNOWN_OPTION`: a
+misspelled option would otherwise do nothing.
+
+**Readers of one key share one request and one value.** A list and a counter that both declare
+`@fetch users: 'GET /api/users'` make one request on load and both get its answer. The request goes
+on while any of them still waits for it, and is aborted when the last one goes. A `refetch()` from
+either replaces it for both; a `mutate(value)` from either writes the key for both, without a
+request. The same holds for any `resource()`, `httpResource` or `useQuery` on one key and one cache.
+
+**A read source owns its retries.** `retry` on a `@fetch` (0 by default) is the only retry its
+requests get: it turns the HTTP client's own retry off for them, so `retry: 2` is three requests at
+most, not twelve. It retries what retrying can fix — a network error, a 5xx, 408, 429 — never a 4xx,
+with the client's backoff and jitter. The same holds for `resource()` and `useQuery` (3 by default);
+a `useQuery` whose query function calls the client itself decides that client call's retry.
+
+**A `@fetch` lives as long as its component.** When the component goes, so does the resource: a
+request in flight is aborted, a retry waiting in its backoff does not fire, and it lets go of its
+cache entry, which is then collected after the cache's `gcTime` like any entry no one reads. The same
+holds for a `resource()` you create in a component's setup; one created at module level belongs to no
+component, and `dispose()` is what stops it.
 
 ## Mutations: write and keep everything consistent
 
 After a POST/PUT/DELETE, the lists that showed that data are stale. Instead of updating them by hand
 one by one, a mutation **invalidates tags** and the linked resources refetch:
 
-```pdx
-async function addUser(dto) {
-  await mutate('/api/users', { method: 'POST', body: dto, invalidates: ['users'] });
-  // every @fetch tagged 'users' refreshes itself
-}
+```ts
+import { mutation, getDefaultClient } from '@pdxui/core';
+
+const http = getDefaultClient();
+const addUser = mutation({
+  fn: (dto) => http.post('/api/users', dto),
+  invalidate: ['users'],   // every @fetch tagged 'users' refreshes itself
+});
+
+await addUser.execute(dto);
 ```
 
 The mental model is the same as reactivity: you declare the relationships (this resource has these
 tags), and the update propagates.
+
+**Every `@fetch` is also tagged with its own cache key**, which is `METHOD:url` —
+`'GET:/api/users'` for `@fetch users: 'GET /api/users'`, the URL as it resolves for one that reads a
+signal. So a mutation can name one fetch by its key, in the same array, with no tag written on it:
+
+```ts
+invalidate: ['GET:/api/users']   // the @fetch whose key it is
+invalidate: ['users']            // every @fetch tagged 'users'
+```
+
+Tags are for invalidating several fetches at once; the key is for one.
+
+**The button that sends it.** Give the mutation to `<pdx-button>` as its `action`, and the button
+does the rest:
+
+```html
+<pdx-button :action="addUser" :action-arg="dto">Add</pdx-button>
+```
+
+A click calls `addUser.execute(dto)`; while the write is pending the button is busy and refuses
+clicks, so a double click sends one write. A refused write stays on `addUser.error()`, which is
+where the form reads it, and the button is idle again. You write no `:loading`, no `:disabled` and
+no `@click` for it.
+
+**In a `.pdx`, declare it.** `@action` is the write's declaration, as `@fetch` is the read's: the
+compiler writes the `mutation()`.
+
+```pdx
+<template>
+  <pdx-button :action="addUser" :action-arg="draft">Add</pdx-button>
+</template>
+
+<script>
+interface UserDto { name: string }
+
+let draft = $signal<UserDto>({ name: '' });
+const canAdd = $derived(draft.name.length > 0);
+
+@action addUser(dto: UserDto, { signal }) when canAdd with { invalidate: ['GET:/api/users'], concurrency: 'drop' } {
+  await fetch('/api/users', { method: 'POST', body: JSON.stringify(dto), signal });
+}
+</script>
+```
+
+The first parameter is what `execute(arg)` passes; `{ signal }`, when you write it, is the call's
+own, aborted by `addUser.cancel()`. `when` is `addUser.enabled()`, and `with` takes `mutation()`'s
+options — `invalidate`, `optimistic`, `onSuccess`, `onError`, `concurrency` — and `agent` and
+`consequential`, which expose the action to an agent ([the CLI](../../pdxui-setup/references/cli.md)). Any other option is
+`PDX_ACTION_UNKNOWN_OPTION`. In the editor `addUser` is typed by its parameter and by what the body
+returns, so `addUser.execute(1)` is an error where it is written.
 
 ## Writing before the server agrees
 
@@ -76,12 +198,14 @@ click. An **optimistic** write puts the new value in the cache immediately and u
 server refuses.
 
 ```ts
-import { mutation } from '@pdxui/core';
+import { mutation, getDefaultClient } from '@pdxui/core';
 
+const http = getDefaultClient();
 const rename = mutation({
     fn: (input) => http.put(`/api/users/${input.id}`, input),
     optimistic: {
-        key: '/api/users',
+        // The key @fetch users: 'GET /api/users' caches under: the method, a colon, the URL.
+        key: 'GET:/api/users',
         update: (current, input) => (current as User[]).map(u => u.id === input.id ? { ...u, ...input } : u),
     },
     invalidate: ['users'],
@@ -90,9 +214,12 @@ const rename = mutation({
 await rename.execute({ id: 7, name: 'Ada' });   // the list shows Ada before the request lands
 ```
 
-What happens, in order: the cache entry is **snapshotted**, the optimistic value is written, the
-request goes out. On success the cache is invalidated by tag and the real data arrives. On failure
-the snapshot goes back — and `execute` rejects, so the `catch` is yours to write.
+What happens, in order: when the call **starts** (not when it is queued), the cache entry's value is
+kept as the **base**, the optimistic value is written, the request goes out. On success the cache is
+invalidated by tag and the real data arrives. On failure that call's optimistic value is removed —
+and `execute` rejects, so the `catch` is yours to write. Each running call's value is an overlay on
+the base: when one of two parallel calls fails, the key goes back to the base with the other call's
+value still applied.
 
 **The rollback is the half that makes this safe**, and it has one behaviour worth knowing: if the
 key had **no entry** before the write, the rollback **removes** it rather than restoring
@@ -103,9 +230,24 @@ Three more things the type does not say:
 
 - **`update` throwing is not fatal.** If your update function raises, the optimistic step is
   skipped and the mutation proceeds as a normal write — you do not get a half-applied cache.
-- **`execute()` refuses to run twice at once.** A second call while one is pending rejects with
-  `Mutation already in progress` — the double-submit guard, so a double-clicked button sends one
-  request.
+- **`execute()` calls queue, unless you choose otherwise.** `concurrency` says what a call made
+  while another is pending does, and no policy aborts the running write:
+
+  | `concurrency` | a call while one is pending |
+  | --- | --- |
+  | `'queue'` (default) | runs after it, in call order; a failed call does not stop the next |
+  | `'drop'` | is ignored: `execute()` returns the pending call's promise |
+  | `'coalesce'` | replaces the call *waiting* behind the running one; the replaced call's promise settles with its replacement |
+  | `'parallel'` | runs at once; `data()` and `error()` are the last call to settle |
+
+  `pending()` stays true while a call runs or waits. The double-submit guard is the button's —
+  `<pdx-button :action="save">` refuses clicks while `save.pending()` under `'queue'` and `'drop'`,
+  and stays clickable (showing loading) under `'coalesce'` and `'parallel'`.
+- **A call has its own `signal`.** `fn(input, { signal })`: pass it to `fetch`. `save.cancel()`
+  aborts the running call's signal and drops every waiting call; their promises reject with an
+  `AbortError`, and none of them becomes `error()`.
+- **`enabled: () => boolean`** (read as `save.enabled()`) guards a waiting call: if it is false when
+  the call's turn comes, the call does not run and rejects with `ActionDisabledError`.
 - **`state()` is `idle | pending | success | error`**, and `pending()` is the one to disable a
   button with.
 
@@ -117,14 +259,20 @@ pending state and wait: guessing produces a number that changes under the reader
 
 Three ways, in the order you should reach for them.
 
-**When the window comes back.** On by default:
+**When the window comes back.** This is `useQuery`'s, and on by default there:
 
-```pdx
-@fetch users: 'GET /api/users';   // refetchOnFocus and refetchOnReconnect are true
+```ts
+import { useQuery, getDefaultClient } from '@pdxui/core';
+
+const http = getDefaultClient();
+const users = useQuery(({ signal }) => http.get('/api/users', { signal }));   // refetchOnFocus and refetchOnReconnect: on
 ```
 
 A user who alt-tabs away for ten minutes gets fresh data on return, and an app that was offline
 refetches when the network comes back. This is the one that costs nothing.
+
+`@fetch` does **not** do it: it compiles to `resource()`, which has no focus or reconnect listener.
+A screen that must refresh on return uses `useQuery`, or refetches its resource itself.
 
 **Polling**, when the data changes without you and there is no push:
 
@@ -132,20 +280,20 @@ refetches when the network comes back. This is the one that costs nothing.
 import { useQuery } from '@pdxui/core';
 
 // The first argument is the FETCHER, not a URL: useQuery(queryFn, options).
-const jobs = useQuery(() => http.get('/api/jobs'), { refetchInterval: 5000 });   // every 5s
+const jobs = useQuery(({ signal }) => http.get('/api/jobs', { signal }), { refetchInterval: 5000 });   // every 5s
 jobs.dispose();                                                                   // stops it
 ```
 
 **A hidden tab is not polled.** The interval pauses while `document.visibilityState` is `hidden`
-and resumes when the tab comes back. That costs nothing, because `refetchOnFocus` is on by default
-and refetches on return anyway: the same freshness the moment the user looks, and none of the
-requests in between. The exception is an app that turned `refetchOnFocus` **off** — it has no
-catch-up, so for that app the interval keeps running hidden.
+and resumes when the tab comes back, whatever `refetchOnFocus` says. With the focus refetch on (the
+default) the data is refreshed the moment the user looks; with it off, on the next tick after. Either
+way a tab nobody looks at makes no requests.
 
-**A tick that arrives while the last refetch is still in flight is skipped.** Polling every second
-means asking every second, not starting a request every second regardless of the one before: at a
-1s interval against a 3s endpoint, starting a request per second regardless would mean none of them
-is ever the one whose result gets used.
+**No trigger starts a request while one is in flight for the key.** A polling tick, coming back to
+the tab and going back online all skip when a request is already running — the first load, a
+refetch, or another reader's request for the same key. Polling every second means asking every
+second, not starting a request every second regardless of the one before; and switching tab and back
+during a slow first load does not abort it and start it again.
 
 **`dispose()` is for a query you created outside a component.** Inside one, the query is torn down
 with the component — the interval and both listeners — because it registers with the same ownership
@@ -155,7 +303,7 @@ to, and there `dispose()` is the only thing that stops it.
 Both behaviours above are pinned in `packages/core/tests/use-query-interval.test.ts`.
 
 **A push from the server** is the right answer for most of what polling gets used for — see
-[Live data](#live-data-a-push-from-the-server) above. Polling is what you use when the source
+[Live data](#live-data-a-push-from-the-server) below. Polling is what you use when the source
 cannot push: a third-party API, a job queue you only own the read side of.
 
 ## Direct HttpClient
@@ -176,8 +324,8 @@ Two are on by default, because an application that has neither is worse off and 
 
 | | |
 |---|---|
-| **timeout** | 30 s. A request with no deadline never fails: `loading` stays true and no `error` is ever produced. Set `timeout: 0` to disable it. |
-| **retry** | Idempotent methods only — GET, HEAD, OPTIONS, PUT, DELETE — on 5xx, 408 and 429, with backoff. A POST or PATCH is never replayed. Set `retry: false` to disable it. |
+| **timeout** | 30 s. A request with no deadline never fails: `pending()` stays true and `error()` stays `null`. A request that runs out of time fails with an `HttpTimeoutError` — not an `AbortError`, which is what your own cancel produces — so a page can say «the server did not answer». Set `timeout: 0` to disable it. |
+| **retry** | Reads only — GET, HEAD, OPTIONS — on network errors, 5xx, 408 and 429, with backoff and jitter, honouring `Retry-After`. A write (POST, PUT, PATCH, DELETE) is never replayed unasked, nor a request that timed out or was cancelled. One request asks for its own: `api.put(url, dto, { retry: 2 })` retries a write the server makes idempotent, `{ retry: false }` turns it off for that request. Set `retry: false` on the client to disable it everywhere. |
 
 The rest are opt-in. You install them once, at startup, with `configureClient`:
 
@@ -284,11 +432,6 @@ Two things that will bite, and neither is a bug to be fixed:
 - **a queued call has already returned.** It rejected with `OfflineError` at the time, so whatever
   the caller did with that rejection has happened: the eventual success arrives with nobody
   awaiting it. Treat `OfflineError` as *accepted, not yet sent*, rather than as a failure.
-
-One limit that is a bug and is tracked rather than hidden: a mutation issued **while a replay is
-already in flight** goes straight out and can land before the older queued ones. It does not affect
-the reload path, which waits, nor the reconnect path when the app is idle — only an app that writes
-during the drain.
 
 All of the above is measured against a real network drop rather than a redefined `navigator.onLine`:
 `packages/responsive/tests/integration/ui-components/offline-queue.spec.ts` takes the network away
@@ -525,12 +668,14 @@ here than discovered:
   finding a row matters, the search has to be the grid's (a filter over the source), not the
   browser's.
 - **Printing gets the window, not the table.** A print of a virtualised grid shows the rows that
-  were on screen. Export the data instead — see *Export* below.
+  were on screen. Export the data instead — see *Export* above.
 - **The row count a screen reader announces** is the number of rendered rows unless the grid says
   otherwise: check what your own set needs before promising accessibility over a windowed list.
 
-**A list that is not a grid** — a card feed, a picker, anything with its own markup — uses the
-primitive directly. `<pdx-select>` is the library's own caller of it:
+**A list that is not a grid** — a card feed, a picker, anything with its own markup — is a `@for`
+with `@virtual` ([Lists](https://pdxui.com/docs/template)). Its runtime, `eachVirtual`, puts the rows in view inside
+the element around the `@for`, between two spacers. Under both is the virtualizer itself, which code
+of your own can use directly. `<pdx-select>` is the library's own caller of it:
 
 ```ts
 import { createVirtualizer } from '@pdxui/core';
@@ -547,17 +692,23 @@ const virt = createVirtualizer({
 virt.items();          // the visible slice, reactive: { index, start, size } each
 virt.totalSize();      // the height the inner spacer needs, in px
 virt.scrollTo(4_200, { align: 'center' });
-virt.measureElement(el);   // hand it a rendered row and its real size replaces the estimate
+virt.measureElement(el);   // hand it a rendered row: its real size replaces the estimate, and stays current
 virt.dispose();
 ```
 
-**The honest limits.** `estimateSize` is a guess and `measureElement` is how it stops being one:
-the virtualizer keeps three tiers — estimated, then measured from a `ResizeObserver` on what was
-actually rendered — so variable heights work *if you call `measureElement`*, and jump slightly if
-you do not. **Horizontal virtualisation is the same code with `horizontal: true`**, and windows one
-axis: a grid with both thousands of rows and hundreds of columns is not something this handles
-today. And `dispose()` is not optional — the observer and the scroll listener outlive the component
-that made them.
+**The honest limits.** `estimateSize` is a guess and `measureElement` is how it stops being one.
+`estimateSize` may read signals: a size you know without measuring — a row as tall as a setting —
+is computed again when they change, and the offsets after it follow.
+Hand it each row you render, with `data-virtual-index` on it. It measures the row and keeps a
+`ResizeObserver` on it, so a row that changes size later — an image that loads, text that wraps on
+resize — is measured again and the rows after it move. A row above the viewport that changes size
+moves the scroll position by the same amount, so what the reader is looking at stays put. And
+`scrollTo` corrects itself once the rows it lands on are measured, to within a pixel; measured in
+Chromium on 2 000 rows of 24 to 120 px (`virtualizer-heights.spec.ts`). Variable heights work *if you
+call `measureElement`*, and jump if you do not. **Horizontal virtualisation is the same code with
+`horizontal: true`**, and windows one axis: a grid with both thousands of rows and hundreds of
+columns is not something this handles today. And `dispose()` is not optional — the observers and
+the scroll listener outlive the component that made them.
 
 ## The primitives underneath
 
@@ -578,7 +729,7 @@ const orders = createDataSource({ transport: myTransport }); // a server: the sa
 That symmetry is the point, and it is the reason to reach for it rather than for a plain array: a
 grid built against `createDataSource(rows)` does not change when the data outgrows the browser — the
 paging, sorting, filtering and grouping descriptors go to the transport instead of running locally.
-`data()`, `total()`, `loading()` and `error()` are signals, so the template follows a page or sort
+`data()`, `total()`, `isLoading()` and `error()` are signals, so the template follows a page or sort
 change without being told to. `<pdx-data-grid>`, `<pdx-entity-grid>`, `<pdx-list>` and `<pdx-select>`
 all take one.
 
@@ -587,12 +738,15 @@ Below `@fetch` there is a `resource`, and two shapes of it are worth knowing by 
 - **`httpResource(url, options)`** — a resource over the configured `HttpClient`, where `url` may
   be a **function** and `params` a signal-returning one. Read either inside the fetcher and the
   resource refetches when they change: that is how a filter or a page number drives a request
-  without an effect written by hand.
+  without an effect written by hand. The request a newer one supersedes is aborted on the network,
+  as it is for `@fetch`: a search box that starts ten requests while the user types leaves one
+  running, not ten. A `resource(fetcher)` of your own gets the same when its fetcher takes the
+  request's signal and passes it on: `resource(({ signal }) => fetch(url, { signal }))`.
 - **`resourceWhen(res, handlers)`** — renders a resource's states as a fragment, so a template
   branches on them without a chain of `@if`s. The handlers are `loading`, `success(data)`,
-  `error(err, retry)` — the retry is handed to you, so the error branch can offer it —
-  plus `stale(data)` and `reloading(data)`, which are the two that let a refetch keep the old data
-  on screen instead of flashing a spinner over it.
+  `error(err, retry)` — the retry is handed to you, so the error branch can offer it. `success`
+  stays on screen while a refetch runs and after a refetch that fails, so the old data is not
+  covered by a spinner.
 
 Two more you will meet rarely and should know exist:
 
@@ -607,8 +761,8 @@ Two more you will meet rarely and should know exist:
 
 ## In practice
 
-- **Read data** → `@fetch name: 'GET /url'` and use `name.loading/error/data`.
+- **Read data** → `@fetch name: 'GET /url' as Type` and read `name.state()`, `name.pending()`, `name.error()`, `name.data()`.
 - **Feed a grid or a select** → `createDataSource(rows)` or `createDataSource({ transport })`.
 - **Depends on state** → put `${signal}` in the URL: it re-runs itself.
 - **Avoid duplicate requests** → `staleTime` + `tags`.
-- **After a write** → `mutate(..., { invalidates: [...] })`: the lists refresh.
+- **After a write** → `mutation({ fn, invalidate: [...] })`: the lists refresh.

@@ -4,10 +4,37 @@ Patterns proved on the screens of a LOB app. The service-desk showcase in `packa
 Always read [gotchas.md](gotchas.md) and the [catalogue](README.md) too.
 
 ## App shell (header + sidebar + content + footer)
-The component: **`pdx-app-layout`** (its regions come from `data-region="header|navbar|aside|footer"`, and everything else is main).
-- Collapsing to a mini rail: `navbar-collapsed` plus `navbar-collapsed-width`. Responsively: `navbar-breakpoint` (below it →
-  a drawer overlay). The variants: `navbar-full-height` (a sidebar that swallows the header) against a full-width header.
-- Toggling the mobile drawer: the imperative API, `document.querySelector('pdx-app-layout').__appLayout.toggleNavbar()`.
+**An app with a navigation model — groups of screens, favourites, recents, permissions — takes
+`pdx-app-shell`.** It draws the model:
+- a rail of the reader's own entries: `home`, the favourites, which are pinned from the catalogue
+  and start from `default-favourites`, and the lists opened lately, per `user`;
+- «All», a searchable catalogue of every entry the reader may see. An entry with a `permission` the
+  reader lacks is not drawn (`setPermissions`);
+- a bar and the page.
+
+A choice goes through the router when one runs (core's `navigateTo`), and the active entry follows
+the router's path (`locationPath()`): no wiring. The rail is 300px, or 80px when `collapsed`, a model
+the shell keeps across visits; below 600px it is a drawer opened from the bar. The **profile menu is
+the app's**, in `slot="bar"` beside the title: a `pdx-dropdown-menu` with the scheme (`setScheme`),
+the density and the sign-out. The shell draws no menu of its own, because no two apps put the same
+things in it. `before-navigate` is cancelable, for an entry the app opens its own way. The example is
+the App Shell page of the showcase.
+
+```html
+<pdx-app-shell :items="nav" :home="{ key: 'home', label: 'Dashboard', href: '/', icon: 'home' }"
+  :default-favourites="['tickets']" :user="auth.user()?.id ?? ''">
+  <strong slot="brand">ACME</strong>
+  <div slot="bar"><span>{{ title }}</span><pdx-dropdown-menu label="Ada" icon="user" :items="profile"></pdx-dropdown-menu></div>
+  <pdx-router-outlet></pdx-router-outlet>
+</pdx-app-shell>
+```
+
+The lower-level component, for a layout with no navigation model: **`pdx-app-layout`** (its regions come from `data-region="header|navbar|aside|footer"`, and everything else is main).
+- Collapsing to a mini rail: `navbar-collapsed` plus `navbar-collapsed-width`. It is a model: `::navbarCollapsed="collapsed"`
+  follows `toggleNavbar()`/`openNavbar()`/`closeNavbar()`, announced by `navbar-collapsed-change`. Responsively: `navbar-breakpoint`
+  (below it → a drawer overlay). The variants: `navbar-full-height` (a sidebar that swallows the header) against a full-width header.
+- Toggling the navbar: the element's methods, `toggleNavbar()`, `openNavbar()`, `closeNavbar()` — the drawer below the
+  breakpoint, the rail above it. Style a state from the host: `pdx-app-layout:state(navbar-collapsed)`, `:state(drawer-open)`.
 - The nav: **`pdx-nav-menu`** (`:items` is `{key,label,icon,href,disabled,badge,children}`, plus `active-key` and `@pdx-select`).
 - Keep the developer tools (the theme and scheme switchers) OUTSIDE the layout: a `position:fixed` gear opening a `pdx-drawer`.
 - `:class` on a `data-region` is fine — it merges with the class the layout adds (measured). ⚠️ But the region NAMES are a closed set of four: anything else drops out of the layout in
@@ -18,10 +45,10 @@ The component: **`pdx-data-grid`**, with either `:data` (an array, auto-wrapped 
 - **Fill the viewport without scrolling the page**: `fill-height` plus `virtual-scroll` plus a host with `flex:1; min-height:0`
   inside a full-height column. Only the body scrolls, and it is virtualised.
 - FLEX columns → set a **`minWidth`** per column (≥120 when it is filterable). For anything richer than text use
-  **`cell:`**, not `format:` — the type marks `format` `@deprecated` («a function that returns HTML is sanitized but
-  fragile and not generator-friendly»). The typed renderers, all exported from `@pdxui/core`:
+  **`cell:`**, not `format:` — what `format` returns is shown as TEXT, markup written out rather than parsed (#292).
+  The typed renderers, all exported from `@pdxui/core`:
   **`badge()` `status()` `currency()` `dateCell()` `link()` `booleanIcon()` `actions()` `rowMenu()`** — the grid builds
-  the DOM with `textContent`, no `innerHTML`. A plain string formatter is still fine for simple text.
+  the DOM with `textContent`, no `innerHTML`. A string formatter is right for text: a label, a unit, a rounding.
 - **A row's OWN actions**: `actions()` draws a button per entry — right for one or two, wrong for four, because at
   390px a row of four icon buttons is the whole width of the phone. Past two, `rowMenu({ items })` draws ONE trigger
   that opens the grid's menu (arrows, type-ahead, Escape back to the trigger). Its items carry what a row of buttons
@@ -34,7 +61,8 @@ The component: **`pdx-data-grid`**, with either `:data` (an array, auto-wrapped 
 - Multiple selection: `selection="multiple"` → the `pdx-selection-change {selected:ids,count}` event. Give the
   source `selection: {mode:'multiple'}` and `ds.selectedCount()` / `ds.selectedItems()` follow the ticks too, with
   cross-page select-all and optional persistence; without it the source stays empty by design. The bulk-action bar:
-  build it yourself (sticky at the bottom), driven imperatively from the handler (see the reactivity gotchas). The API:
+  `pdx-bulk-actions` (pdxui-data), with `:count` set from the selection and its `pdx-action` / `pdx-clear` events
+  handled by the page. The API:
   `el.clearSelection()` and `el.getSelectedIds()` — FLAT on the element (there is no `__dataGrid`; measured).
 - The canonical examples: `Pragmatic.Design.Builder/golden/app/src/routes/patients.pdx` (plus `patients-paged/header/builder.pdx`).
 - **A reusable structure (DRY, the shape the generator emits)**: THIN screens that wire up a
@@ -52,7 +80,7 @@ The component: **`pdx-data-grid`**, with either `:data` (an array, auto-wrapped 
 KPIs go in a **`pdx-card`** (a large value, a muted label, a coloured trend and an icon pill) or in a **`pdx-statistic`**.
 Charts: **`pdx-chart`** (`type` of line, bar or doughnut, plus `:data`, `x-field`, `y-field` and `series-names`). For a dual-axis combo:
 `series-config` (a JSON string carrying `field`, `type` and `yAxisIndex`) plus `y-axis-right-name` and `y-right-format`.
-The activity table: a `pdx-data-grid` using `format` for the status badges. The canonical example: `Pragmatic.Design.Builder/golden/app/src/routes/home.pdx`.
+The activity table: a `pdx-data-grid` with `cell: status()` (or `badge()`) for the status column. The canonical example: `Pragmatic.Design.Builder/golden/app/src/routes/home.pdx`.
 
 ## Auth / login
 An uncontrolled form (no `:value`), with submit-on-Enter through `@keydown`. A per-route guard (`requireAuth()`), and the chrome conditioned on the
@@ -73,52 +101,44 @@ route rather than on the authentication. The credential fields: `autocomplete="u
   (the golden app does; a signal set from a custom event does update the template — measured). The form is **rebuilt on every
   opening** (`createFormFromSchema` → `form.reset(row)` → a `pdx-form-template` around that form): form-template's value
   binding happens at build time and is not reactive (see the gotchas). To save: `form.getValues()` → `ds.update` plus `ds.sync`.
-- The other edit modes (planned): a modal (`pdx-dialog`, or the grid's `edit-mode="dialog"`), and a dedicated page.
+- The other edit modes: the grid's own `editable edit-mode="dialog"` (or `"row"`), a `pdx-dialog`, or a dedicated page.
 
 ## A long form filled in more than one sitting: `<pdx-form :form>`
 
-For a form you write by hand, this is the best path: a form from
-`createForm`, a `<pdx-form :form>` around the fields, and in each `<pdx-form-field name="x">` a
-control carrying **the same** `name="x"`. The compiler wires the rest (`codegen-form-binding.ts`):
-every named control gets its change and blur events routed into `form.fields.x`, and every named
-field gets its `error` / `touched` / `warning` from it. You write no `:value`, no `@input`.
+For a form you write by hand, this is the best path: a form from `createForm`, a `<pdx-form :form>`
+around the fields, each control bound to its field through its model — `::value="form.x"`,
+`::checked` on a checkbox or a switch — and each `<pdx-form-field :field="form.x">`. The binding
+writes the field, marks the control invalid and required from it, and touches it on leave; the form
+field shows its error, warning and required marker. A control wired by its `name` alone is
+`PDX_REMOVED_FORM` (#128); `pdx migrate` writes the binding.
 
-**A long form splits into sections, and each section is a component.** The wiring is a
-compile-time pass over the HTML of one `.pdx`, and it runs in two places:
-
-- in the file that holds `<pdx-form :form>`, over what is inside it;
-- in a file whose script calls **`tryUseForm()`** (or `useForm()`): that call declares "this
-  component is a section of the form above me", and its **whole template** is wired to that form.
+**A long form splits into sections, and each section is a component.** A section names the form it
+sits in with **`@form form: Values from parent;`** (#613): it creates no form, `form` is the one of the
+`<pdx-form>` above, and its controls bind the fields as any control does.
 
 ```pdx
 <!-- employee-identity.pdx: a section, used inside the page's <pdx-form> -->
 <template>
-  <pdx-form-field name="firstName" label="First name"><pdx-input name="firstName" /></pdx-form-field>
-  <pdx-form-field name="lastName" label="Last name"><pdx-input name="lastName" /></pdx-form-field>
+  <pdx-form-field :field="form.firstName" label="First name"><pdx-input ::value="form.firstName" /></pdx-form-field>
+  <pdx-form-field :field="form.lastName" label="Last name"><pdx-input ::value="form.lastName" /></pdx-form-field>
 </template>
-<script setup>
-import { tryUseForm } from '@pdxui/core';
-const form = tryUseForm();   // the declaration; the bindings find the form themselves
+<script>
+type EmployeeValues = { firstName: string; lastName: string };   // the page's form's values
+@form form: EmployeeValues from parent;
 </script>
 ```
 
-You write no `:value`, no `@pdx-input`, no prop to pass the form down: `<pdx-form>` provides it,
-and the section's bindings look it up. Measured: two named controls, one beside `<pdx-form>` and
-one in a child, typed into both, read `{ "here": "A", "deep": "A" }`.
+No prop passes the form down: `<pdx-form>` provides it. ⚠️ A child can set up BEFORE its
+`<pdx-form>` — happy-dom connects children before parents, and in Chromium a projected child mounts
+detached — so `form.firstName` is read when it is asked, not at setup: the binding follows the form
+from the moment it is provided (value shown, typing written, leaving touches, reset reaches it).
+Measured in Chromium on the showcase's intake wizard. A section rendered with no form above it renders
+and writes nowhere. A named control with no binding, in a section as beside `<pdx-form>`, is
+`PDX_REMOVED_FORM` (#613): nothing wires a control by its name. `pdx migrate` rewrites it to the form
+the section declares, and flags a section that only calls `tryUseForm()`, which names no values type.
 
-**`tryUseForm()`, not `useForm()`, for the declaration.** ⚠️ A child can set up BEFORE its
-`<pdx-form>` — happy-dom connects children before parents, and a browser does too when the form's
-module loads after the fields'. `useForm()` then throws; `tryUseForm()` answers
-`undefined`, and the section still works, because the generated bindings do not use your variable:
-each one calls `tryUseForm(ctx.el)`, which re-runs the moment a form is provided. The same holds for a
-section rendered with no form above it at all — its controls are simply unbound. Your own `form`
-variable is what the lookup found at setup, so it can be `undefined`: guard it (`form?.…`) where your
-code reads it.
-
-A control is wired only in a file that is inside a form or declares itself a section.
-A plain child component that does neither is compiled from another file and is never seen. And
-the boundary is the **component**, not the depth — any nesting of ordinary markup
-(`<div><fieldset><pdx-input name="x">`) is still that template and is wired.
+A control is bound only by its own binding, `::value="form.x"`. A plain child component that has
+none is bound to nothing, however deep it sits.
 
 And when the sections are genuinely separate forms rather than one form
 split up, give each `<pdx-form>` a `name` and put a **coordinator** above them
@@ -128,9 +148,9 @@ them together.
 Passing `form` down as a prop works, and it is not what the framework offers: `provideForm` /
 `useForm` is the designed path, and what `pdx-form` does internally. Without it a long form tends to
 stay one file of several hundred lines.
-Pinned by `compiler/tests/form-binding-boundary.test.ts` (the form's own file) and
-`compiler/tests/form-binding-injected.test.ts` with `ui/tests/unit/form-section-runtime.test.ts` (a
-section).
+Pinned by `compiler/tests/form-name-binding.test.ts` (the removed name wiring, in the form's own file
+and in a section) and `ui/tests/unit/form-section-from-parent.test.ts` with
+`ui/tests/unit/form-section-runtime.test.ts` (a section, mounted).
 
 ### Rows that repeat: `<pdx-field-list>` or `createFieldArray`
 
@@ -142,9 +162,9 @@ Two mechanisms, no shared implementation, and **they do not compose**. Pick one 
 | where a row lives | dotted paths in the form — `rooms.0.type`, `rooms.1.type` | `{ __id, value }` wrappers in a signal |
 | how you address a row | by **index**, and the index moves: removing a row re-indexes every row after it (the form carries each row's value, error, touched and dirty along) | by **`__id`**, which survives a removal, a move and an `update()` |
 | what a row can contain | plain controls only — text, email, number, textarea, checkbox, switch. A `select` gets **no options**; anything else becomes a text input | anything you can render |
-| writing one field of one row | the form field at that path: `form.fields['rooms.0.type'].onChange(v)` | `rows.update(i, { ...rows.getValues()[i], type: v })` — `update` keeps the `__id`, `replace` does not |
+| writing one field of one row | the form field at that path: `form['rooms.0.type'].onChange(v)` | `rows.update(i, { ...rows.getValues()[i], type: v })` — `update` keeps the `__id`, `replace` does not |
 
-**Choose the component** when the rows are plain fields and you want the table, the dialog mode and the buttons for free. **Choose the primitive** when a row needs a picker, a select with options or a component of its own — then draw it yourself, or keep `pdx-field-list` and put the row in its `row` slot, which receives `{ item, index, fields, remove }`.
+**Choose the component** when the rows are plain fields and you want the table, the dialog mode and the buttons for free. **Choose the primitive** when a row needs a picker, a select with options or a component of its own — then draw it yourself, or keep `pdx-field-list` and put the row in its `row` snippet, `@snippet row(item, index, remove) { … }`.
 
 ⚠️ **Never both on one name.** They are two storages, and `form.getValues()` merges the field arrays back **last**: one call to `form.array('rooms')` on a name a `<pdx-field-list name="rooms">` is managing replaces everything the list has written, with the array's own contents — which it seeded from `initialValues`, not from what you typed. Measured: a field edited through the list reads back as its initial value the moment `form.array()` is called on that name, with nothing in the console.
 
@@ -159,7 +179,7 @@ createForm({
   validateOn?,         // 'onBlur' (default) | 'onChange' | 'onSubmit'
   warnings?, asyncValidators?, schema?, saveMode?, source?,
 })
-// → form.fields.x.{ value(), error(), touched(), dirty(), onChange(v), onBlur() }
+// → form.x.{ value(), error(), touched(), dirty(), onChange(v), onBlur() }
 //   form.setValues(partial) · form.getValues() · form.reset(values?) · form.validate()
 //   form.valid() · form.dirty() · form.handleSubmit(fn)
 ```
@@ -169,25 +189,25 @@ A shipment form whose draft survives closing the tab:
 ```html recipe:long-form
 <template>
   <pdx-form :form="form" @pdx-submit="send">
-    <pdx-form-field name="shipper" label="Shipper" required>
-      <pdx-input name="shipper"></pdx-input>
+    <pdx-form-field :field="form.shipper" label="Shipper" required>
+      <pdx-input name="shipper" ::value="form.shipper"></pdx-input>
     </pdx-form-field>
-    <pdx-form-field name="service" label="Service">
-      <pdx-select name="service" :options="services"></pdx-select>
+    <pdx-form-field :field="form.service" label="Service">
+      <pdx-select name="service" ::value="form.service" :options="services"></pdx-select>
     </pdx-form-field>
-    <pdx-form-field name="weight" label="Weight (kg)">
-      <pdx-number-input name="weight"></pdx-number-input>
+    <pdx-form-field :field="form.weight" label="Weight (kg)">
+      <pdx-number-input name="weight" ::value="form.weight"></pdx-number-input>
     </pdx-form-field>
-    <pdx-form-field name="notes" label="Notes">
-      <pdx-textarea name="notes"></pdx-textarea>
+    <pdx-form-field :field="form.notes" label="Notes">
+      <pdx-textarea name="notes" ::value="form.notes"></pdx-textarea>
     </pdx-form-field>
     <pdx-form-actions submitLabel="Send"></pdx-form-actions>
   </pdx-form>
-  <button class="pdx-btn pdx-outline save-draft" type="button" @click="saveDraft()">Save draft</button>
+  <button class="pdx-outline save-draft" type="button" @click="saveDraft()">Save draft</button>
   <span class="draft-state pdx-txt-small pdx-ink-muted">{{ savedAt }}</span>
 </template>
 
-<script setup>
+<script>
 import { createForm, required, minLength, min } from '@pdxui/core';
 
 const DRAFT_KEY = 'shipment-draft';
@@ -216,7 +236,7 @@ function send(e) { localStorage.removeItem(DRAFT_KEY); console.log('sent', e.det
 </script>
 ```
 
-A `<script setup>` needs no rune to work: one with none is compiled like any other.
+A `<script>` needs no rune to work: one with none is compiled like any other.
 
 What that gives you (`packages/ui/tests/unit/recipe-long-form.test.ts` runs this block):
 - **`form.setValues(draft)` reaches controls already on screen**, the `pdx-select` included — `pdx-form`
@@ -225,14 +245,15 @@ What that gives you (`packages/ui/tests/unit/recipe-long-form.test.ts` runs this
   With `validateOn: 'onChange'` every keystroke validates, and the field shows the error at once;
   with the default `'onBlur'` it appears on the first blur and then follows every keystroke.
 - **The field keeps its node, and so its focus.** The gotcha "a controlled `:value` plus `@input`
-  recreates the input" does **not** apply inside `<pdx-form :form>`: text controls get no `:value`.
+  recreates the input" does **not** apply to `::value`: the binding writes the value only when it
+  changes, and the control is never re-created.
 - `@pdx-submit` fires after `validate()` passes, with `detail.values`; a failed submit scrolls to the
   first error.
 
-Nested data: wrap fields in `<pdx-field-group name="customer">` and a field `name="email"` inside it is
-`form.fields['customer.email']`. The compiler writes that full path into the DOM too: the control and
-its `pdx-form-field` carry `name="customer.email"`, so that is the selector to use in a test or a
-measurement — `[name="customer.email"]`, not `[name="email"]`. Repeated rows: `pdx-field-list` — see
+Nested data: a field of `customer` is bound by its full path, `::value="form['customer.email']"`,
+and `<pdx-field-group name="customer">` groups it on screen. Write the control's `name` as the full
+path too, `name="customer.email"` (`pdx migrate` does): that is the selector to use in a test or a
+measurement. Repeated rows: `pdx-field-list` — see
 its `itemFields` note for when a row needs its own component.
 
 **Your own validator is a function.** A `Validator` takes the value and returns the message when it
@@ -242,15 +263,15 @@ expression you need not write one: `pattern(regex, msg)`.
 ```html
 <template>
   <pdx-form :form="form" @pdx-submit="book">
-    <pdx-form-field name="chip" label="Microchip">
-      <pdx-input name="chip"></pdx-input>
+    <pdx-form-field :field="form.chip" label="Microchip">
+      <pdx-input name="chip" ::value="form.chip"></pdx-input>
     </pdx-form-field>
-    <pdx-form-field name="day" label="Day">
-      <pdx-input name="day"></pdx-input>
+    <pdx-form-field :field="form.day" label="Day">
+      <pdx-input name="day" ::value="form.day"></pdx-input>
     </pdx-form-field>
   </pdx-form>
 </template>
-<script setup>
+<script>
 import { createForm, required, pattern } from '@pdxui/core';
 
 const notSunday = (v) => (v && new Date(v).getDay() === 0 ? 'The clinic is closed on Sunday' : undefined);
@@ -276,14 +297,14 @@ in the browser's own words.
 ```html
 <template>
   <pdx-form :form="form" @pdx-submit="save">
-    <pdx-form-field name="name" label="Owner" required>
-      <pdx-input name="name"></pdx-input>
+    <pdx-form-field :field="form.name" label="Owner" required>
+      <pdx-input name="name" ::value="form.name"></pdx-input>
     </pdx-form-field>
     <pdx-form-actions submitLabel="Save"></pdx-form-actions>
   </pdx-form>
 </template>
 
-<script setup>
+<script>
 import { createForm, required } from '@pdxui/core';
 import { navigate } from '@pdxui/router';
 import { saveOwner } from './lib/owners';
@@ -337,8 +358,10 @@ there.
 
 ## Day agenda per resource (vets, rooms, technicians)
 
-There is no scheduler component yet (`pdx-scheduler` is on the roadmap, not planned). A day agenda is a
-CSS grid: one column per resource with a sticky header, one row per five minutes with a sticky time
+`pdx-scheduler` draws this: `view="day"` with `resources`, one column per resource, events placed by
+their times, the keyboard and the accessible names included (`pdxui-data`, `pdx-scheduler.md`). Reach
+for the recipe below only for a read-only agenda that has to look different from it. A day agenda is
+a CSS grid: one column per resource with a sticky header, one row per five minutes with a sticky time
 column, and each appointment placed by `grid-row: start / span n`.
 
 **Short appointments stay readable.** A 15-minute slot is three rows, so it holds one line at the body
@@ -348,18 +371,18 @@ lines stacked in a 32px block under `overflow: hidden` cut the name.
 
 ```html
 <template>
-  <pdx-segmented class="agenda-pick" :options="resourceOptions" :value="shown" @pdx-change="e => shown = e.detail.value"></pdx-segmented>
-  <div class="agenda" :style.--agenda-cols="String(resources.length)">
+  <pdx-segmented class="agenda-pick" :options="resourceOptions" ::value="shown"></pdx-segmented>
+  <div class="agenda" :style="{ '--agenda-cols': String(resources.length) }">
     <div class="agenda-corner"></div>
     @for (resources as r; track r.id) {
-      <div class="agenda-res" :class.agenda-hidden="!isShown(r.id)" :style.grid-column="String(col(r.id))">{{ r.name }}</div>
+      <div class="agenda-res" :class="{ 'agenda-hidden': !isShown(r.id) }" :style="{ gridColumn: String(col(r.id)) }">{{ r.name }}</div>
     }
     @for (hours as h; track h) {
-      <div class="agenda-time" :style.grid-row="row(h) + ' / span 12'">{{ h }}</div>
+      <div class="agenda-time" :style="{ gridRow: row(h) + ' / span 12' }">{{ h }}</div>
     }
     @for (appointments as a; track a.id) {
-      <div class="agenda-cell" :class.agenda-hidden="!isShown(a.resource)" :style.grid-column="String(col(a.resource))" :style.grid-row="row(a.start) + ' / span ' + a.minutes / 5">
-        <button type="button" class="agenda-appt" :class.agenda-short="a.minutes < 30" :aria-label="label(a)" @click="open(a)">
+      <div class="agenda-cell" :class="{ 'agenda-hidden': !isShown(a.resource) }" :style="{ gridColumn: String(col(a.resource)), gridRow: row(a.start) + ' / span ' + a.minutes / 5 }">
+        <button type="button" class="agenda-appt" :class="{ 'agenda-short': a.minutes < 30 }" :aria-label="label(a)" @click="open(a)">
           <span class="agenda-line">{{ a.start }} · {{ a.patient }}</span>
           @if (a.minutes >= 30) { <span class="agenda-line agenda-more">{{ a.animal }} — {{ a.reason }}</span> }
         </button>
@@ -369,7 +392,7 @@ lines stacked in a 32px block under `overflow: hidden` cut the name.
   </div>
 </template>
 
-<script setup>
+<script>
 const resources = [{ id: 'rossi', name: 'Dr. Rossi' }, { id: 'bianchi', name: 'Dr. Bianchi' }];
 const hours = ['08:00', '09:00', '10:00', '11:00'];
 const DAY_START = 8 * 60;
@@ -432,6 +455,115 @@ function open(a) { console.log('open appointment', a.id); }
   (`scrollHeight <= clientHeight` on the line's own box), and the block stays inside its slot. Measure
   the text's box, not the block's: when a slot is too short the block keeps its height and the
   `overflow: hidden` line shrinks and cuts its own text. CSS that stacks three lines in a short block fails the measure.
+
+## A comment thread (notes on a ticket, a review, a task)
+
+There is no thread component, by decision (#1022): mentions, reactions and how deep replies go differ
+from app to app more than a component could fix. A thread is a composition: **`pdx-list`** draws the
+comments, **`pdx-avatar`** and **`pdx-relative-time`** fill each one, and a form with
+**`pdx-textarea`** and **`pdx-button`** adds to it. The working example is the "A comment thread"
+section of pdx-list's page (`compiler/demo/showcase-new/pages/sections/comp-list/demo-comp-list-comment-thread.pdx`,
+on the site at `/components/pdx-list`), and `packages/site/tests/comment-thread-recipe.spec.ts` holds
+what follows in Chromium.
+
+```html
+<template>
+  <pdx-list :items="thread.comments" dividers>
+    @snippet item(c) {
+      <article :aria-label="c.author + ', ' + c.text">
+        <pdx-avatar :alt="c.author" size="sm" decorative></pdx-avatar>
+        <p><strong>{{ c.author }}</strong> <pdx-relative-time :datetime="c.at"></pdx-relative-time></p>
+        <p>{{ c.text }}</p>
+        <pdx-button variant="ghost" size="sm" @click="openReply(c, $event)">Reply</pdx-button>
+        @if (replyTo === c.id) {
+          <form @submit.prevent="sendReply(c.id)">
+            <pdx-textarea ::value="replyDraft" :ariaLabel="'Reply to ' + c.author" @keydown="onReplyKey($event, c.id)"></pdx-textarea>
+            <pdx-button type="submit" size="sm" :disabled="!replyDraft.trim()">Reply</pdx-button>
+          </form>
+        }
+        @if (c.replies.length > 0) {
+          <ul aria-label="Replies">
+            @for (c.replies as r; track r.id) { <li><article :aria-label="r.author + ', ' + r.text">…</article></li> }
+          </ul>
+        }
+      </article>
+    }
+    @snippet empty() { <p>No comments yet.</p> }
+  </pdx-list>
+
+  <form @submit.prevent="send()">
+    <pdx-textarea :ref="composer" ::value="draft" arialabel="Add a comment" @keydown="onComposerKey($event)"></pdx-textarea>
+    <pdx-button type="submit" size="sm" :disabled="!draft.trim()">Comment</pdx-button>
+  </form>
+  <p class="pdx-sr-only" role="status">{{ announcement }}</p>
+</template>
+
+<script>
+const ME = 'You';
+const thread = $store({ comments: [/* { id, author, at: ISO, text, replies: [] } */] });
+let draft = $signal('');
+let announcement = $signal('');
+let composer = $signal(null);
+
+function send() {
+  const text = draft.trim();
+  if (!text) return;
+  thread.comments.push({ id: crypto.randomUUID(), author: ME, at: new Date().toISOString(), text, replies: [] });
+  draft = '';
+  announcement = 'Comment added.';
+}
+function onComposerKey(e) {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+}
+
+let replyTo = $signal(null);          // one reply form at a time
+let replyDraft = $signal('');
+let replyOpener = null;               // the Reply button that opened it
+
+function openReply(c, e) {
+  replyOpener = e.target.closest('button');          // the native button inside pdx-button
+  const article = e.target.closest('article');
+  replyDraft = '';
+  replyTo = c.id;
+  requestAnimationFrame(() => article.querySelector('pdx-textarea')?.focus());
+}
+function closeReply() {
+  replyTo = null;
+  replyOpener?.focus();
+}
+function sendReply(id) {
+  const text = replyDraft.trim();
+  if (!text) return;
+  thread.comments.find((c) => c.id === id)?.replies.push({ id: crypto.randomUUID(), author: ME, at: new Date().toISOString(), text });
+  announcement = 'Reply added.';
+  closeReply();
+}
+function onReplyKey(e, id) {
+  if (e.key === 'Escape') { e.preventDefault(); closeReply(); }
+  else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); sendReply(id); }
+}
+</script>
+```
+
+- **The thread is a `$store`, not a `$signal` holding an array.** A reply is `parent.replies.push(…)`
+  into a comment whose `id` does not change. A list row reused for an unchanged key is not drawn again
+  for a replaced object (`{ ...c, replies: [...] }` shows nothing, and core warns in development); a
+  store notifies the row's own reads.
+- **Ctrl+Enter (⌘+Enter) sends** and the field keeps focus; Enter alone is a new line. An empty or
+  blank comment cannot be sent: the button is disabled on `!draft.trim()`.
+- **A reply opens in place, one at a time**, and its field takes focus once it is rendered (a
+  `requestAnimationFrame` after setting the state). Escape and Cancel close it and give focus back to
+  the Reply button that opened it: the native `<button>` inside `pdx-button` (`e.target.closest('button')`),
+  not the host, which is not focusable.
+- **Deleting a comment moves focus to the composer.** The focused button went away with its comment;
+  left alone, focus falls to `<body>`.
+- **Every change is announced** through one `role="status"` line: added, replied, deleted.
+- **Each comment is an `article` named by its author and text**, so a screen reader moving by article
+  hears who said what. The avatar is `decorative`: its `alt` still draws the initials and the colour,
+  but it leaves the accessibility tree, so beside the written name it is not read twice.
+- **Replies go one level deep**, in a `ul` inside their comment. Deeper threads, editing, mentions
+  (`pdx-mention` in place of `pdx-textarea`) and saving through your API are the app's: the store is
+  where an optimistic write goes, and a failed save takes the comment back out and says so.
 
 ## A generic LOB admin: a descriptor → `createCrud` and `createDetail` (canonically `Pragmatic.Design.Builder/profiler/app`)
 An app with dozens of entities: **no hand-written per-entity `.pdx` at all**. Two runtimes and two generators.
@@ -591,10 +723,10 @@ Two ways, and they are the same machinery.
 
 ```html
 @try {
-  <pdx-wire-feed :source="agencies" />
+  <app-wire-feed :source="agencies" />
 } @catch (err, retry) {
   <div class="pdx-surface pdx-surface-card" role="alert">
-    <p>{{ err.message }}</p>
+    <p>{{ err instanceof Error ? err.message : String(err) }}</p>
     <pdx-button variant="outline" @click="retry()">Riprova</pdx-button>
   </div>
 }
@@ -607,7 +739,7 @@ it costs nothing extra.
 
 ```html
 <pdx-error-boundary max-retries="3">
-  <pdx-data-heavy-panel />
+  <app-data-heavy-panel />
 </pdx-error-boundary>
 ```
 
@@ -681,7 +813,7 @@ Then, in a page:
   <pdx-pagination :source="rows"></pdx-pagination>
 </template>
 
-<script setup>
+<script>
 import { makeSource } from './lib/mock-backend';
 const rows = makeSource({ pageSize: 10 });
 const columns = [
@@ -768,7 +900,7 @@ template is not on `ctx`:
   <label><input type="checkbox" @change="e => setFailing(e.target.checked)"> Simulate failure</label>
   <pdx-data-grid :source="records" :columns="columns"></pdx-data-grid>
 </template>
-<script setup>
+<script>
 import { service, makeRecords } from './lib/records-service';
 const records = makeRecords([{ id: 1, name: 'Fido' }, { id: 2, name: 'Birba' }]);
 const columns = [{ field: 'name', header: 'Name' }];

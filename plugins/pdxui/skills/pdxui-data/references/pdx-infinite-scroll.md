@@ -6,7 +6,7 @@ Load more as you scroll.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `source` | — | object | `null` | DataSource instance for auto-paging |
+| `source` | — | Record<string, unknown> \| null | `null` | DataSource instance for auto-paging |
 | `threshold` | `threshold` | number | `200` | Pixels from bottom to trigger load |
 | `disabled` | `disabled` | boolean | `false` | Disable loading more |
 | `loading` | `loading` | boolean | `false` | External loading state override |
@@ -17,6 +17,12 @@ Load more as you scroll.
 **Events:** `pdx-load-more` → `detail: {}` — Fired on `pdx-load-more`.
 
 **Renders:** roles `status`
+
+**Injects:** `DataSourceContext` (optional)
+
+**States:** `:state(loading)` — The source is pending, or `loading` is set: the host is `aria-busy` too (A4).; `:state(ended)` — The source has nothing more to load.; `:state(disabled)` — `disabled` is set: nothing more is loaded.
+
+**Parts:** `[data-part="sentinel"]` — The invisible line whose coming into view loads more.; `[data-part="loading"]` — The «loading» status, with its spinner; it says something only while loading.; `[data-part="end"]` — The «no more data» status; it says something only at the end of the source.
 
 
 #### Examples

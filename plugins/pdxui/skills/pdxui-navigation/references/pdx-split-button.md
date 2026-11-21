@@ -6,16 +6,29 @@ A primary action plus a menu.
 |---|---|---|---|---|
 | `label` | `label` | string | `''` | Primary button label |
 | `icon` | `icon` | string | `''` | Primary button icon name |
-| `items` | — | array | `[]` | Dropdown menu items |
+| `items` | — | unknown[] | `[]` | Dropdown menu items |
 | `variant` | `variant` | string | `'primary'` | Variant: primary, secondary, outline, ghost, danger |
 | `size` | `size` | string | `'sm'` | Size: xs, sm, md, lg |
 | `loading` | `loading` | boolean | `false` | Loading state (spinner on primary) |
 | `disabled` | `disabled` | boolean | `false` | Disable entire button |
 | `menuLabel` | `menulabel` | string | `''` | Accessible name for the dropdown trigger (chevron has no visible text). Empty: the split-button.menu component string, «More actions» in English. |
 
-**Events:** `pdx-click` → `detail: {}` — Fired on `pdx-click`.; `pdx-select` → `detail: { key, item }` — Fired when an item is selected.
+**API (via `:ref`)**
+
+| Call | Notes |
+|---|---|
+| `show()` | Shows it. |
+| `close()` | Closes it. |
+| `toggle()` | Toggles it open/closed. |
+| `isOpen` _(read-only)_ | Read-only, via a ref: `el.isOpen`. |
+
+**Events:** `open-change` → `detail: { value: boolean }` — The menu opened (`true`) or closed (`false`): its open state, read-only (#288). The parent never writes it, so it is not a model, and `::open` on it is an error.; `pdx-click` → `detail: Record<string, never>` — The primary button was pressed.; `pdx-select` → `detail: { key: string; item: MenuItem }` — An entry of the menu was chosen.
 
 **Renders:** roles `menu` · `menuitem`
+
+**States:** `:state(open)` — Matched with `:state(open)`.; `:state(loading)` — Matched with `:state(loading)`.
+
+**Parts:** `[data-part="root"]` — The element reached as `[data-part="root"]`.; `[data-part="primary"]` — The element reached as `[data-part="primary"]`.; `[data-part="trigger"]` — The element reached as `[data-part="trigger"]`.; `[data-part="menu"]` — The element reached as `[data-part="menu"]`.; `[data-part="item"]` — The element reached as `[data-part="item"]`.; `[data-part="separator"]` — The element reached as `[data-part="separator"]`.
 
 
 #### Examples

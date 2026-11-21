@@ -43,10 +43,10 @@ is rendering, not composing.
 **Recognise it:** eight `<fieldset class="group">` blocks in one route, beside the loading, the
 autosave queue and the leave guard.
 
-**A form's field groups are sections.** Move a group into its own `.pdx` and call `tryUseForm()` in
-its script: that declares it a section of the `<pdx-form>` above it, and the compiler wires its named
-controls and `<pdx-form-field name>`s to that form, as it does in the form's own file — no `:value`, no
-`@pdx-input` (`recipes.md`, "A long form filled in more than one sitting"). The route keeps
+**A form's field groups are sections.** Move a group into its own `.pdx` and declare the form it sits
+in, `@form form: Values from parent;`: its controls bind `::value="form.x"` and its form fields
+`:field="form.x"`, as in the form's own file (`recipes.md`, "A long form filled in more than one
+sitting"). The route keeps
 the form, the loading and what the sections share; each section is a component.
 
 ### CD-B3 — Do not extract what has no life of its own
@@ -63,11 +63,10 @@ belong to the form's validator.
 | reach | put it in |
 |---|---|
 | one component | `$signal` |
-| a subtree reads it | `provide` a read value (`provide-inject` docs) |
-| a descendant must write it | `provideWritable` |
-| the parent gives orders | `createCommands` / `createChannel` |
+| a subtree reads it | `provide` a read value under a `context<T>()` token (`provide-inject` docs) |
+| a descendant must write it | `provide` a signal |
+| the parent gives orders | `@expose` + a typed ref |
 | unrelated components, or kept across navigation | `@store` |
-| an *event* between unrelated components | `createBus` |
 | part of what the screen is (a filter, a tab, an id) | the URL |
 
 A page may keep a **mirror** of a child's state to render from it: the grid's selection as
@@ -126,7 +125,7 @@ export function createRecents(key: string) {
 
 ### CD-L1 — Logic repeated across pages is a composable; logic *with its markup* is a component
 
-A composable is a plain `.ts` function called in `<script setup>`. It returns signals, or an object of
+A composable is a plain `.ts` function called in `<script>`. It returns signals, or an object of
 signals and methods: `use*` when it attaches to something that exists, `create*` when it makes a thing
 the caller owns. Lifecycle hooks inside it (`onMount`, `onDestroy`, `onBeforeLeave`) bind to the
 calling component, and they must run synchronously during setup: outside setup they throw. In a
@@ -182,6 +181,19 @@ const first = document.querySelector('[data-test="catalog"] .pdx-nav-item');
 let firstEl = $signal(null);   // <a :ref="firstEl" …>
 ```
 
+A choice among a fixed set of looks (a tone, a size) is a variant: `@variants` declares it once, each
+axis a prop typed with its values and reflected on the host; the styles key on it with `@variant` (CD-C1).
+
+```js
+@variants {
+  variant: { primary, ghost, danger } = primary;
+  size: { sm, md, lg } = md;
+}
+```
+
+An axis of two words, `connectorStyle`, is reflected as `connector-style="dashed"` and named so in a
+rule: `@variant connector-style(dashed)`.
+
 ### CD-A2 — A component does not write its own props, except as the user's input
 
 A prop the component edits is a two-way value: it emits the new value, and the parent writes it back.
@@ -226,6 +238,19 @@ onMount(() => {
 });
 ```
 
+### CD-D4 — A page loads its closed overlays when it is idle, not on the first visit
+
+A page's dialogs and drawers that open on a click go inside one `@defer (idle)`: otherwise the first
+visit loads them, and every component inside, before anyone asks. `PDX_OVERLAY_NOT_DEFERRED` reports one
+left outside; its quick fix writes the block. Not a popover: it opens itself from the element before it.
+
+```pdx
+@defer (idle) {
+    <pdx-dialog ::open="editing" title="Edit">…</pdx-dialog>
+    <pdx-drawer ::open="filtersOpen" title="Filters">…</pdx-drawer>
+}
+```
+
 ## 6. Styles
 
 ### CD-C1 — A component's styles live in its own `<style scoped>`; the app's globals are few and named
@@ -233,11 +258,23 @@ onMount(() => {
 When you split a component, its styles go with its markup. The shell and the layout keep only what
 several pieces read: the rhythm tokens, the breakpoints that move several regions at once.
 
+A variant's look is keyed by its axis with `@variant`, never by a class assembled from the prop. A
+value no rule styles is `PDX_VARIANT_UNSTYLED`; a rule for a value that does not exist, `PDX_VARIANT_UNKNOWN`.
+
+```css
+[data-part="root"] { background: var(--pdx-color-primary); }
+@variant variant(ghost) { [data-part="root"] { background: transparent; } }
+@variant variant(ghost) and size(sm) { [data-part="root"] { padding-inline: 0; } }
+```
+
 ### CD-C2 — A page does not style a library component's internals
 
-Style a library element through its props, its variants and its documented `--pdx-*` properties. An
-internal class (`.pdx-dg-row`, `.pdx-nav-item`) is not an API: it can be renamed, and every page that
-reached it breaks silently. If several pages need the same override, the element needs a prop. File it.
+Style a library element through its props, its variants, its documented `--pdx-*` properties, its
+states, with `:state(name)` (`pdx-select:state(open) …`; a component declares a state with `@state`), and
+its parts, with `[data-part="name"]` (`pdx-select [data-part="popup"] …`; declared with `@part`). The
+manifest lists both. An internal class (`.pdx-dg-row`, `.pdx-nav-item`) is not an API: it can be
+renamed, and every page that reached it breaks silently. If several pages need the same override, the
+element needs a prop. File it.
 
 ```css
 /* before — six list pages */

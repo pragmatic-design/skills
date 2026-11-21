@@ -4,18 +4,22 @@ A vertical sequence of events.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `[]` | The data items to render. |
-| `mode` | `mode` | string | `'left'` | Alignment: 'left', 'right' or 'alternate'. |
+| `items` | — | T[] | `[]` | The data items to render. |
 | `reverse` | `reverse` | boolean | `false` | Renders items newest-first. |
 | `pending` | `pending` | boolean | `false` | Shows a pending node at the end. |
 | `pendingLabel` | `pendinglabel` | string | `''` | The pending row's text. Empty: the timeline.pending component string. |
 | `clickable` | `clickable` | boolean | `false` | Whether items are clickable. |
-| `connectorStyle` | `connectorstyle` | string | `'solid'` | Line style between nodes (solid, dashed, …). |
-| `dotAlign` | `dotalign` | string | `'start'` | Dot vertical alignment relative to content: 'start' \| 'center' \| 'end' |
+| `mode` | `mode` | 'left' \| 'right' \| 'alternate' \| 'horizontal' | `'left'` | Where the events sit: beside the line, on the right of it, both sides in turn, or in a row. |
+| `connectorStyle` | `connectorstyle` | 'solid' \| 'dashed' \| 'dotted' | `'solid'` | How the connector between the dots is drawn. |
+| `dotAlign` | `dotalign` | 'start' \| 'center' \| 'end' | `'start'` | Where a dot sits against its event's content. |
 
-**Events:** `pdx-click` → `detail: { item, index }` — Fired on `pdx-click`.
+**Events:** `pdx-click` → `detail: { item: TimelineItem; index: number }` — A clickable event was clicked, or pressed with Enter or Space.
 
-**Slot:** `content` — Scoped — renders the content of one entry. Receives `{ item, index, status }` (`status` is `'default'` when unset).
+**Slot:** `content` — Renders the content of one entry: a snippet `content(item, index)`.
+
+**States:** `:state(pending)` — `pending`: a last row says more is to come.; `:state(clickable)` — `clickable`: each event is a tab stop, and a click or Enter emits `pdx-click`.
+
+**Parts:** `[data-part="list"]` — The `<ol>` of events.; `[data-part="item"]` — One event, an `<li>`.; `[data-part="track"]` — The column of an event's line and dot.; `[data-part="line"]` — The connector, drawn as the axis `connector-style` says.; `[data-part="dot"]` — The event's dot, with its icon when it has one.; `[data-part="content"]` — The event's text, or the `content` snippet.; `[data-part="title"]` — The event's title.; `[data-part="description"]` — The event's description.; `[data-part="date"]` — The event's date.; `[data-part="pending"]` — The pending row, while `pending`.
 
 **Shapes:** `TimelineItem { title: string; description?: string; date?: string; icon?: string; color?: string; status?: 'default' | 'success' | 'warning' | 'error' | 'info'; statusLabel?: string }`
 
@@ -93,23 +97,21 @@ are checked against the manifest above._
 </div>
 ```
 
-**Slot Template** — Use the `content` slot with PDX components for rich timeline entries.
+**Slot Template** — Use the `content` snippet, `content(item, index)`, with PDX components for rich timeline entries.
 
 ```html
-<!-- PDX components inside a scoped slot -->
+<!-- PDX components inside a snippet -->
 <pdx-timeline :items="events">
-  <slot name="content" let:item let:index>
+  @snippet content(item) {
     <pdx-card variant="outline" compact>
       <div class="header">
-        <strong>{item.title}</strong>
-        <pdx-chip size="xs" :variant="{item.status}">
-          {item.status}
-        </pdx-chip>
+        <strong>{{ item.title }}</strong>
+        <pdx-chip size="sm">{{ item.status }}</pdx-chip>
       </div>
-      <p>{item.description}</p>
-      <small>{item.date}</small>
+      <p>{{ item.description }}</p>
+      <small>{{ item.date }}</small>
     </pdx-card>
-  </slot>
+  }
 </pdx-timeline>
 ```
 

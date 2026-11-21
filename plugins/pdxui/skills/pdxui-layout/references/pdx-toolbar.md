@@ -11,6 +11,8 @@ A row of grouped actions.
 
 **Renders:** roles `toolbar`
 
+**States:** `:state(compact)` — `compact` is set: less padding, a tighter gap.; `:state(bordered)` — `bordered` is set: a border and a background.; `:state(vertical)` — `vertical` is set: the controls in a column, ↑/↓ between them.
+
 
 #### Examples
 
@@ -23,8 +25,8 @@ are checked against the manifest above._
 ```html
 <pdx-toolbar bordered label="Text formatting">
   <div class="pdx-toolbar-group">
-    <button class="pdx-btn pdx-ghost pdx-btn-xs" title="Bold"><pdx-icon name="bold"></pdx-icon></button>
-    <button class="pdx-btn pdx-ghost pdx-btn-xs" title="Italic"><pdx-icon name="italic"></pdx-icon></button>
+    <button class="pdx-ghost pdx-btn-xs" title="Bold"><pdx-icon name="bold"></pdx-icon></button>
+    <button class="pdx-ghost pdx-btn-xs" title="Italic"><pdx-icon name="italic"></pdx-icon></button>
   </div>
   <span class="pdx-toolbar-sep"></span>
   ...
@@ -35,14 +37,14 @@ are checked against the manifest above._
 
 ```html
 <pdx-toolbar bordered label="File actions">
-  <button class="pdx-btn pdx-ghost pdx-btn-xs">
+  <button class="pdx-ghost pdx-btn-xs">
     <pdx-icon name="file-plus"></pdx-icon> New
   </button>
-  <button class="pdx-btn pdx-ghost pdx-btn-xs" aria-label="Undo">
+  <button class="pdx-ghost pdx-btn-xs" aria-label="Undo">
     <pdx-icon name="undo"></pdx-icon>
   </button>
   <span class="pdx-toolbar-spacer"></span>
-  <button class="pdx-btn pdx-primary pdx-btn-xs">Publish</button>
+  <button class="pdx-primary pdx-btn-xs">Publish</button>
 </pdx-toolbar>
 ```
 
@@ -50,7 +52,7 @@ are checked against the manifest above._
 
 ```html
 <pdx-toolbar compact bordered label="Row actions">
-  <button class="pdx-btn pdx-ghost pdx-btn-xs" aria-label="Edit">
+  <button class="pdx-ghost pdx-btn-xs" aria-label="Edit">
     <pdx-icon name="edit" size="13"></pdx-icon>
   </button>
   ...

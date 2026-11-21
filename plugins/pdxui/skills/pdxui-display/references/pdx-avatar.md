@@ -5,12 +5,19 @@ User image or initials, any size.
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
 | `src` | `src` | string | `''` | Image URL; falls back to initials if it fails. |
-| `alt` | `alt` | string | `''` | The person's name: initials, accessible name and auto color. Without it the avatar is decorative (aria-hidden). |
-| `size` | `size` | string | `'md'` | Size of the control (e.g. sm, md, lg). |
-| `shape` | `shape` | string | `'circle'` | Shape: 'circle' or 'square'. |
+| `alt` | `alt` | string | `''` | The person's name: initials, accessible name and auto color. Without it, or with `decorative`, the avatar is aria-hidden. |
 | `color` | `color` | string | `'auto'` | 'auto' generates color from name. Or pass a CSS color. Default: 'auto'. |
+| `decorative` | `decorative` | boolean | `false` | Beside the person's name written out: the initials and the colour still come from `alt`, but the avatar is aria-hidden, with no role or label, so the name is not read twice (#1054). |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs (24px), sm (32px), md (40px, the default), lg (48px) or xl (64px). |
+| `shape` | `shape` | 'circle' \| 'square' | `'circle'` | circle (the default) or square (the theme's medium radius). |
 
 **Renders:** roles `img`
+
+**States:** `:state(broken)` — Its image failed to load: the initials show in its place.
+
+**Parts:** `[data-part="root"]` — The avatar's box, `role="img"` when it has a name.; `[data-part="image"]` — The picture, when `src` is set and has loaded.; `[data-part="fallback"]` — The initials, shown without a picture or when it fails.
+
+**Tokens:** `--pdx-avatar-bg`; `--pdx-avatar-fg`; `--pdx-avatar-radius`; `--pdx-avatar-size`. Set one at `:root`, on a subtree, or on the element itself.
 
 
 #### Examples

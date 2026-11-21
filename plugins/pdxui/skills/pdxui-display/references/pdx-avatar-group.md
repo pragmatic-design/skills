@@ -4,17 +4,19 @@ Stacked avatars with an overflow count.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `null` | The data items to render. |
+| `items` | — | unknown[] \| null | `null` | The data items to render. |
 | `max` | `max` | number | `5` | Maximum allowed value. |
-| `size` | `size` | string | `'md'` | Size of the control (e.g. sm, md, lg). |
 | `overlap` | `overlap` | number | `-8` | How much adjacent avatars overlap. |
 | `direction` | `direction` | string | `'row'` | Stacking direction. |
 | `clickable` | `clickable` | boolean | `false` | Avatars and the +N become buttons: a click, Enter or Space fires pdx-click / pdx-overflow-click. |
 | `bordered` | `bordered` | boolean | `true` | Adds a border. |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | The avatars' and the badge's size: xs, sm, md (the default), lg or xl. |
 
-**Events:** `pdx-click` → `detail: { item, index }` — Fired on `pdx-click`.; `pdx-overflow-click` → `detail: { count, items }` — Fired when the overflow is clicked.
+**Events:** `pdx-click` → `detail: { item: unknown; index: number }` — A clickable group's avatar was pressed: its item and its index.; `pdx-overflow-click` → `detail: { count: number; items: unknown[] }` — The «+N» counter was pressed: how many are hidden, and which.
 
 **Renders:** roles `button` · `img`
+
+**Parts:** `[data-part="root"]` — The row the avatars and the counter are laid out in.; `[data-part="avatar"]` — Each avatar shown.; `[data-part="overflow"]` — The «+N» counter for the avatars not shown.
 
 
 #### Examples

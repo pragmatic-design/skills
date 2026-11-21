@@ -9,15 +9,10 @@ Read this BEFORE writing any `.pdx`: every entry cost real debugging.
 > read before every `.pdx` anyone writes.
 
 ## Template reactivity
-- **A signal appears in the template only inside an expression or a wrapper function**, never as a bare identifier:
-  `@if (open())` and `:class="x > 0 ? 'a' : 'b'"` are fine; `{{ signalBare }}` or `@if (signalBare)` → a ReferenceError.
-  **An import is not on `ctx`**: a signal imported and used in the template makes the component throw at mount
-  (`ctx.X is not a function`); a function imported and used in `@click` throws the same when clicked, and nothing
-  happens. Bring it into the `<script setup>`: a **function** as `const goTo = go` or a wrapper function; a **shared
-  signal** as `const user = $derived(shared())`, then `{{ user.name }}` follows it. Not `const user = shared()` —
-  a snapshot that never updates — and not `const user = shared` read as `{{ user.name }}`, which renders "read",
-  a property of the signal function. (Measured.)
-- **The name `error` is forbidden** for a signal (the compiler does not rewrite it) → use `errMsg`.
+- **An import in the template is called as written**, without `ctx.`: `@click="go('home')"` calls the imported
+  `go`, and an imported signal is read with its parentheses, `{{ shared().name }}`, which follows it. In the script,
+  `const user = $derived(shared())` follows it too; `const user = shared()` does not — it is a snapshot that never
+  updates. (Measured: `packages/ui/tests/unit/import-in-template.test.ts`.)
 
 ## Binding & DOM
 - 🔴 **`pdx-app-layout` knows exactly four regions**: `data-region="header" | "navbar" | "aside" | "footer"`.
@@ -27,21 +22,19 @@ Read this BEFORE writing any `.pdx`: every entry cost real debugging.
   silence** — no class, no `grid-area`, no warning.
 - **A controlled `:value` plus an `@input` over the same signal** on a `<pdx-input>` → the input is recreated on every keystroke → and it loses
   focus. The answer: an **uncontrolled** input (`@input` alone to read it; no `:value` coming back). This does **not** apply inside
-  `<pdx-form :form>`: there the compiler wires named controls itself and gives text controls no `:value` — see the recipe
+  `<pdx-form :form>`: there each control binds its field with `::value="form.x"`, which writes the value only when it changes — see the recipe
   "A long form filled in more than one sitting".
 - **Props that collide with a read-only DOM property**: do NOT use `:prefix` on a custom element
   (`Element.prefix` is read-only → a TypeError). Put the value somewhere else (in the `value`, for instance).
-- 🔴 **Two components that declare the same `@event` name corrupt the parent's state, in silence.**
-  Component events bubble, so a child's `changed` reaches a listener put on its grandparent for a
-  DIFFERENT `changed`. Measured: `pdx-unit-field` declares `@event changed: number`,
-  `pdx-room-rows` declares `@event changed: any`, the parent listens for `@changed` on
-  `<pdx-room-rows>` — and the field's number lands in `rooms`, giving
-  `TypeError: (rooms ?? []).reduce is not a function` from inside the framework, a section that
-  empties itself, and an acceptance check failing with "cannot type into the fields" because the
-  fields are gone. **Nothing warns, and nothing should**: two components declaring the same event
-  name is legal. `changed` is the most natural name there is, which makes it the collision that
-  does the most damage. Name events so they are greppable and cannot collide —
-  `valuechanged`, `roomschanged` — the same rule this repository applies to its own identifiers.
+- 🔴 **An `@event(bubbles)` can corrupt an ancestor's state, in silence.** Component events stay on
+  the component unless declared `@event(bubbles)` (#138) — the default exists because of this. Measured
+  when every event bubbled: `app-unit-field` declared `@event changed: number`, `app-room-rows`
+  declared `@event changed: any`, the parent listened for `@changed` on `<app-room-rows>` — and the
+  field's number landed in `rooms`, giving `TypeError: (rooms ?? []).reduce is not a function` from
+  inside the framework, a section that emptied itself, and fields that were gone. A bubbling event
+  still does this to any ancestor listening for the same name. Mark `(bubbles)` only on an event an
+  ancestor must hear, and name it so it cannot collide — `valuechanged`, `roomschanged`, the same rule
+  this repository applies to its own identifiers.
   `.self` on the listener stops the bubble, but only once you know to suspect it.
 - **A bound `:src` with a `data:image/svg+xml` URL is dropped, by design** — an SVG opened as a
   document runs its script. `sanitizeMediaUrl` accepts http(s), relative URLs, `blob:` and
@@ -51,7 +44,7 @@ Read this BEFORE writing any `.pdx`: every entry cost real debugging.
   sanitiser runs on BOUND attributes), and **`blob:` passes** — `URL.createObjectURL(file)` is how
   you preview a file the user just picked. For an inline SVG icon use `pdx-icon`, or a
   `blob:` URL from a Blob you build yourself.
-- **A `:prop` that is a JSON string** (`pdx-chart`'s `series-config`, `filter-mode`, and so on): pass a **string**
+- **A `:prop` that is a JSON string** (`pdx-chart`'s `series-config`): pass a **string**
   (`JSON.stringify(...)`), not an object (the component calls `JSON.parse`).
 
 ## Design system and tokens
@@ -59,12 +52,26 @@ Read this BEFORE writing any `.pdx`: every entry cost real debugging.
   success, info, warning, subtle), plus `--pdx-space-*`, `--pdx-shadow-sm/md/lg/xl` and `--pdx-radius-*`. NOT `--ink` or `--surface`.
   Never a hardcoded fallback (they break dark mode). The theme goes on `<html>` through `pdx-theme`, the scheme through `pdx-scheme`.
 - **A `.pdx` scoped style does NOT reach light DOM created at runtime** by a component (a data-grid cell built through
-  `column.format`, say). Use a **global** stylesheet (imported in index.html) for those classes.
+  `cell:`, say). Use a **global** stylesheet (imported in index.html) for those classes.
 - To centre an icon inside a button: `pdx-icon { display:block; line-height:0 }`.
+- **A library component is restyled through what it exposes, not its classes.** Its tokens
+  (`--pdx-button-bg`, set at any level, listed as **Tokens** on its page), its host attributes
+  (`pdx-button[variant="primary"]`), its custom states (`pdx-input:state(invalid)`) and its parts
+  (`[data-part="root"]`). The classes it writes on its own elements — `.pdx-input-wrap.error`,
+  `.pdx-primary` on pdx-button's inner button, `.pdx-input-sm` — changed in the beta and match
+  nothing: `pdx-input:state(invalid) [data-part="root"] { … }`. A native `<button class="pdx-primary">`
+  keeps its class.
+
+## Snippets of library menus and trees
+- A snippet's parameter is your own item: `@snippet item(it) { {{ it.lable }} }` is an error where it is
+  written, and a field your items carry reads with its type. A menu or a tree leaves out of the
+  snippet's type the entries it draws itself, a header or a separator, **when their `type` is a
+  literal**: write `{ key: 's', type: 'separator' as const }`; without `as const` its `type` is a
+  `string`, and the entry stays in the snippet's type.
 
 ## Routing / guard
 - No global `effect` that reads `currentPath()` and calls `navigate()` (it loops). Guard **per route** in the
-  `<script setup>` (a `requireAuth()` that calls `navigate('/login')` when not authenticated). Condition the **chrome** on the
+  `<script>` (a `requireAuth()` that calls `navigate('/login')` when not authenticated). Condition the **chrome** on the
   ROUTE (`currentPath() !== '/login'`), not on `authed()` (authentication resolves asynchronously).
 - "Leaving loses the unsaved work": that is not a per-route guard, it is `onBeforeNavigate` from
   `@pdxui/router`, asked before every navigation, Back included. The recipe "Do not leave with unsaved
@@ -119,7 +126,7 @@ Read this BEFORE writing any `.pdx`: every entry cost real debugging.
 
 ## A project's own reusable `.pdx` components
 - A `.pdx` under `src/**` is registered automatically as a component; its **tag** comes from `@tag 'name'` or from the filename
-  (`list-header.pdx` → `<pdx-list-header>`). Props come from the **`@prop name: type = default`** rune (read bare in the template).
+  (`list-header.pdx` → `<app-list-header>`). Props come from the **`@prop name: type = default`** rune (read bare in the template).
   Types map to the runtime like this: `T[]`→Array, the primitives→their counterparts, **everything else (any, object, functions)→Object**.
 - The robust pattern for reuse: a partial is **pure markup** with `data-*` hooks; the logic (the events, the buttons) is wired by a
   **TS service** in `onMount` (`querySelector` plus `addEventListener`) — which avoids function props, `.pdx` events, and the
@@ -159,23 +166,25 @@ framework. Each line below is measured; the assertions live in `skill-claims.spe
   measured: the dropdown at left 1826 instead of 925 on a 1280 viewport — so do not set one on the panel
   yourself, or the trap comes back.
 - **Setting a signal inside a CUSTOM event's handler updates the template.** Measured twice: a `CustomEvent`
-  dispatched from outside any handler, and a component's own `@pdx-change`. Both update `{{ }}` **and** flip an
+  dispatched from outside any handler, and a component's own `@value-change`. Both update `{{ }}` **and** flip an
   `@if`. Write the handler normally; do not drive the DOM by hand.
 - **`:class` on a `data-region` element of `pdx-app-layout` is fine** — measured: `:class="x"` on the header
   leaves `class="x pdx-app-header"` with `grid-area: header` intact. It merges.
 - **`pdx-select` reflects the choice onto `.value`**: `reflectValue()` writes the selection back, so after
   picking, `el.value` IS the chosen value (single → scalar, `multiple` → an **array**). Read `el.value`; do not
   keep it in `el.__val` yourself. Do **not** copy `select-fix.ts` from the profiler app: it works around a bug
-  that does not exist. The event carries it too: `e.detail.value` single, `e.detail.values` with `multiple`.
-- **A `pdx-drawer` opens when you set `.open = true` from JS**: `el.open = true` sets `[data-open]` on the panel
-  and the backdrop and slides it in at the `position` you asked for. Do not drive `[data-open]` by hand and do
-  not copy `position`/`size` onto the panel yourself.
+  that does not exist. The event carries it too: `value-change`, with `e.detail.value` (an array with `multiple`); or bind `::value`.
+- **A `pdx-drawer` opens when you set `.open = true` from JS**: `el.open = true` puts the host in
+  `:state(open)` and slides the panel in at the `position` you asked for. Do not drive `[data-open]` by hand
+  and do not copy `position`/`size` onto the panel yourself. `open` is a model: `::open="x"` follows the
+  drawer when it closes itself.
 - **Inside an app-layout, do not reparent the drawer onto `<body>`.** The component portals itself, and only
   when an ancestor actually traps fixed positioning (a transform, a filter, `contain`). Measured inside
   `pdx-app-layout`: nothing paints over the open panel. Reparenting by hand is actively harmful — it detaches
   slotted content from its scoped styles and reconnects child components.
-- **The drawer's own X closes it** — measured: clicking the X sets `open` to false, drops `[data-open]`, and
-  emits `pdx-close` once. Listen to the event if you need to know; you do not need to close it yourself.
+- **The drawer's own X closes it** — measured: clicking the X sets `open` to false and emits `open-change`
+  `{ value: false }` once. Bind `::open`, or listen to `open-change`, if you need to know; you do not need to
+  close it yourself.
 - **A static `createDataSource({data})` renders its rows** — measured: three rows in, six cells rendered. Use a
   transport when the data comes from a server, not as a workaround.
 - **The 'No data' message does not end up at the bottom** — measured on a 420px grid, the empty block sits

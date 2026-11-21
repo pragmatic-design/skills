@@ -4,17 +4,19 @@ Key/value pairs, neatly aligned.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `null` | The data items to render. |
+| `items` | — | T[] | `null` | The data items to render. |
 | `columns` | `columns` | number | `1` | Number of key/value columns to lay out. |
 | `layout` | `layout` | string | `'horizontal'` | Layout: 'horizontal' (label beside value) or 'vertical'. |
 | `bordered` | `bordered` | boolean | `false` | Adds a border. |
 | `striped` | `striped` | boolean | `false` | Alternates row backgrounds. |
-| `size` | `size` | string | `'md'` | Size of the control (e.g. sm, md, lg). |
 | `labelWidth` | `labelwidth` | string | `'auto'` | Fixed width for the label column. |
 | `colon` | `colon` | boolean | `true` | Appends a colon after each label. |
-| `renderValue` | — | object | `null` | Render function for a value. |
+| `renderValue` | — | Record<string, unknown> \| null | `null` | Render function for a value. |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg. |
 
-**Slot:** `value` — Scoped — renders the value of one entry. Receives `{ item, label, value, index }`.
+**Slot:** `value` — Renders the value of one entry: a snippet `value(item, index)`.
+
+**Parts:** `[data-part="root"]` — The `<dl>`, with the classes a native list uses (`.pdx-dl`, `-bordered`, `-striped`…).
 
 **Shapes:** `DescriptionListItem { label: string; value: string | HTMLElement; span?: number; icon?: string }`
 
@@ -169,13 +171,13 @@ function renderValue(item) {
 </div>
 ```
 
-**Slot Template** — Use the `value` slot to customize how each value is rendered. Priority: slot > renderValue > default.
+**Slot Template** — Use the `value` snippet, `value(item, index)`, to customize how each value is rendered. Priority: snippet > renderValue > default.
 
 ```html
 <pdx-description-list :items="items" :columns="2" :bordered="true" label-width="100px">
-  <slot name="value" let:item let:index>
-    <span class="dl-custom-value">$&lbrace;item.value&rbrace;</span>
-  </slot>
+  @snippet value(item, index) {
+    <span class="dl-custom-value">{{ item.value }}</span>
+  }
 </pdx-description-list>
 
 .dl-custom-value {

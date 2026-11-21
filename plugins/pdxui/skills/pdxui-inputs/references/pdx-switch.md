@@ -4,17 +4,17 @@ Toggle a setting on or off.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `checked` | `checked` | boolean | `false` | Whether it is checked / on. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `loading` | `loading` | boolean | `false` | Shows a loading / busy state. |
 | `label` | `label` | string | `''` | Visible label text. |
 | `description` | `description` | string | `''` | Secondary descriptive text. |
 | `ariaLabel` | `arialabel` | string | `''` | Accessible name when there is no visible label (forwarded to the inner input) |
 | `labelPosition` | `labelposition` | string | `'right'` | Where the label sits relative to the control. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `error` | `error` | boolean | `false` | Marks the control as invalid. |
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
 | `value` | `value` | string | `''` | The current value. |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg: the track's size. |
+| `checked` | `checked` | boolean | `false` | Whether it is checked / on. |
 
 **API (via `:ref`)**
 
@@ -24,9 +24,15 @@ Toggle a setting on or off.
 | `blur()` | Removes focus from it. |
 | `clear()` | Clears the value. |
 
-**Events:** `pdx-change` → `detail: { checked, value }` — Fired when the value changes.
+**Events:** `checked-change` → `detail: { value: boolean }` — Fired when the component writes `checked`. Does not bubble.
 
 **Renders:** roles `switch`
+
+**States:** `:state(checked)` — It is on.; `:state(invalid)` — `error` is set; the switch is aria-invalid.; `:state(disabled)` — `disabled` is set.; `:state(loading)` — `loading` is set; the switch is aria-busy and takes no toggle.
+
+**Parts:** `[data-part="root"]` — The native checkbox with role="switch", the track drawn; the size variants key by it.; `[data-part="label"]` — The `label` text, when set.; `[data-part="description"]` — The `description` text, when set.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

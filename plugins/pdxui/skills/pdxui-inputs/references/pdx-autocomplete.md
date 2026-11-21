@@ -9,26 +9,25 @@ Suggestions as you type.
 on blur.
 
 **Pitfalls**
-- After a pick, `el.value` is the LABEL the input shows; the code from `value-field` is only in
-  `pdx-change.detail.value`.
-- Typing emits `pdx-input`, not `pdx-change`: `pdx-change` fires on a pick, a clear, or a `force-selection` wipe.
+- After a pick, `el.value` is the CODE from `value-field`, not the label the input shows: that is
+  `el.getText()`, and the picked suggestion `el.getSelectedItem()`.
+- Typing emits `query-change` with the text, not `value-change`: the value changes on a pick, on free text
+  confirmed by blur or Enter, on a clear, or on a `force-selection` wipe.
 - `force-selection` compares the typed text with the labels, case-insensitively, 150 ms after blur.
 - Suggestions appear from `min-length` characters (default 1), at most `max-items` (default 10).
 - `remote` filters the source with `contains` on `label-field`: the server has to honour that operator.
 
 **Composes with** `pdx-data-source` (wrap it and the source is injected, no `:source` needed) · `pdx-form`
-(wired by `name`).
+(bound through its model, `::value="f.x"`).
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `value` | `value` | string | `''` | The current value. |
-| `suggestions` | — | array | `() => []` | The list of suggestions to match against. |
-| `source` | — | object | `null` | The data source to render from. |
+| `suggestions` | — | T[] | `[]` | The list of suggestions to match against. |
+| `source` | — | Record<string, unknown> \| null | `null` | The data source to render from. |
 | `labelField` | `labelfield` | string | `'label'` | Object field used as the visible label. |
 | `valueField` | `valuefield` | string | `'value'` | Object field used as the value. |
 | `placeholder` | `placeholder` | string | `''` | Placeholder text shown while empty. |
 | `label` | `label` | string | `''` | Visible label text. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `readonly` | `readonly` | boolean | `false` | Makes the value read-only — visible but not editable. |
 | `minLength` | `minlength` | number | `1` | Minimum characters before suggestions appear. |
@@ -43,20 +42,35 @@ on blur.
 | `error` | `error` | boolean | `false` | Marks the control as invalid. |
 | `success` | `success` | boolean | `false` | Applies the success state styling. |
 | `warning` | `warning` | boolean | `false` | Applies the warning state styling. |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl — the same scale as pdx-input. |
+| `value` | `value` | unknown | `''` | The model's value. A form submits it: a picked suggestion's value, not the label shown; free text as typed (#135). |
 
 **API (via `:ref`)**
 
 | Call | Notes |
 |---|---|
-| `open()` | Opens it. |
-| `close()` | Closes it. |
+| `show()` | Open the popup. |
+| `close()` | Close the popup. |
+| `toggle()` | Open the popup when closed, close it when open. |
 | `clear()` | Clears the value. |
+| `getText()` | The text the field shows: the picked suggestion's label, or the free text. |
+| `getSelectedItem()` | The suggestion last picked, as given; null when the value is free text or set from outside. |
 
-**Events:** `pdx-change` → `detail: { value, label, item }` — When the value is committed: a suggestion picked (`value` is its value field, `item` the suggestion), the field cleared, or free text confirmed by leaving the field or pressing Enter with no option chosen (`value` and `label` the text, `item` null). Once per edit, like a native `change`.; `pdx-clear` — Fired when the value is cleared.; `pdx-input` → `detail: { value }` — Fired on each input as the user types.
+**Events:** `open-change` → `detail: { value: boolean }` — The popup opened (`true`) or closed (`false`): its open state, read-only, as an overlay's (#287).; `pdx-clear` — Fired when the clear button empties the field, after its `value-change`.; `query-change` → `detail: { value: string }` — The text typed, on each keystroke: the query the suggestions are filtered by.; `value-change` → `detail: { value: unknown }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `combobox` · `listbox` · `option` · `status`
 
-**Slot:** `option` — Scoped — renders one option. Receives `{ label, value, raw, highlighted, index }` (`raw` is the original item).
+**Injects:** `DataSourceContext` (optional)
+
+**Slot:** `option` — Renders one option: a snippet `option(option, index, highlighted)`; `option.raw` is the original item.
+
+**States:** `:state(open)` — The popup is open.; `:state(invalid)` — `error` is set.; `:state(success)` — `success` is set.; `:state(warning)` — `warning` is set.; `:state(disabled)` — `disabled` is set.; `:state(readonly)` — `readonly` is set.; `:state(loading)` — `loading` is set, or the DataSource is loading.
+
+**Parts:** `[data-part="root"]` — The frame: border, background and the states' colours.; `[data-part="input"]` — The native `<input>`, the combobox.; `[data-part="clear"]` — The clear button, while `clearable` and something is typed.; `[data-part="spinner"]` — The loading spinner, while loading.; `[data-part="popup"]` — The floating panel that holds the list.; `[data-part="list"]` — The `role="listbox"`.; `[data-part="option"]` — A suggestion of the list.
+
+**Tokens:** `--pdx-input-border-color` — The trigger is the text input's frame, `.pdx-input-wrap`, and reads pdx-input's tokens (#761): its border at rest (the outlined input style).; `--pdx-input-border-color-focus` — The frame's border while focused (the outlined input style).; `--pdx-input-border-color-invalid` — The frame's border in the invalid state.; `--pdx-input-border-color-success` — The frame's border in the success state.; `--pdx-input-border-color-warning` — The frame's border in the warning state.; `--pdx-input-border-width` — The frame's bottom border, in the filled input style.; `--pdx-input-focus-ring` — The ring around the frame while focused.; `--pdx-input-min-height` — The frame's height, at the md size.. Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples
@@ -72,10 +86,10 @@ are checked against the manifest above._
   placeholder="Type a fruit..."
   :suggestions="['Apple', 'Banana', 'Cherry', ...]"
   clearable
-  @pdx-change="onSelect" />
+  @value-change="onSelect" />
 ```
 
-**Object Array — Custom Fields** — Use `label-field` and `value-field` for object arrays. The input shows the label; `pdx-change` sends the value field as `value`, with `label` and the whole `item`.
+**Object Array — Custom Fields** — Use `label-field` and `value-field` for object arrays. The input shows the label; The value is the value field; `getText()` is the label shown and `getSelectedItem()` the whole item.
 
 ```html
 <pdx-autocomplete
@@ -83,7 +97,7 @@ are checked against the manifest above._
   :suggestions="cities"
   label-field="name"
   value-field="code"
-  @pdx-change="onSelect" />
+  @value-change="onSelect" />
 ```
 
 ```js
@@ -120,7 +134,7 @@ const countryDS = createDataSource({
     placeholder="Must match a color..."
     :suggestions="colors"
     force-selection
-    @pdx-change="onColorChange" />
+    @value-change="onColorChange" />
   <p class="pdx-txt-small pdx-ink-muted result">Color: {{ colorValue }}</p>
 </div>
 ```
@@ -154,6 +168,6 @@ const countryDS = createDataSource({
   searchable
   creatable
   @pdx-create="onTagCreate"
-  @pdx-change="onTagChange" />
+  @value-change="onTagChange" />
 ```
 

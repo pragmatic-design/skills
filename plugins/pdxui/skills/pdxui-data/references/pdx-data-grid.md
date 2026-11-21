@@ -17,7 +17,7 @@ type lives in core rather than next to the component, so it is written out here:
   editable?: boolean | ((row) => boolean);
   align?: 'left' | 'center' | 'right';
   cell?: CellSpec;            // ← an OBJECT from a builder below, never a function
-  format?: string | ((value, row) => string);   // plain text: fine; HTML: @deprecated
+  format?: string | ((value, row) => string);   // shown as TEXT: markup is written out, not parsed
 }
 ```
 
@@ -62,8 +62,8 @@ rowMenu({
 ```
 
 **To relabel a value, use `format`.** A function that returns a **plain string** is supported:
-`format: (v) => (v ? 'Sì' : 'No')`. What `format` is deprecated for is returning HTML: that gets
-sanitised, warns once per column, and belongs in a builder. The grid applies `cell` first, then
+`format: (v) => (v ? 'Sì' : 'No')`. What `format` returns is always text: markup in it is shown
+literally (and, in development, warns once per column), so markup belongs in a builder. The grid applies `cell` first, then
 `format`, then the default for the column's `type`.
 
 ```html
@@ -71,7 +71,7 @@ sanitised, warns once per column, and belongs in a builder. The grid applies `ce
   <pdx-data-grid :data="shipments" :columns="columns"></pdx-data-grid>
 </template>
 
-<script setup>
+<script>
 import { badge, booleanIcon, currency } from '@pdxui/core';
 
 let shipments = $signal([
@@ -92,9 +92,9 @@ nothing on a narrow viewport.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `source` | — | object | `null` | The data source to render from. |
-| `columns` | — | array | `null` | Column definitions: field, header, width, sortable, render, etc. |
-| `data` | — | array | `null` | The row data to display. |
+| `source` | — | import('@pdxui/core').DataSource<T> \| null | `null` | The data source to render from. |
+| `columns` | — | unknown[] \| null | `null` | Column definitions: field, header, width, sortable, render, etc. |
+| `data` | — | T[] | `null` | The row data to display. |
 | `striped` | `striped` | boolean | `false` | Alternates row background colours. |
 | `hover` | `hover` | boolean | `true` | Highlights the row under the pointer. |
 | `rowClickable` | `rowclickable` | boolean | `false` | The rows open something: a click on a row is handled (`pdx-row-click`), so the row takes a pointer, so a page does not write its own `.pdx-dg-row { cursor: pointer }`, reaching into this component's internal class. Enter on a row is unchanged: it edits a cell in an editable grid and does nothing otherwise, so give a keyboard reader a way in of its own (an `actions()` column). |
@@ -113,10 +113,10 @@ nothing on a narrow viewport.
 | `search` | `search` | boolean | `false` | A search field at the toolbar's right: the term is looked for in the columns marked `searchable`. |
 | `showGroupBar` | `showgroupbar` | boolean | `false` | Shows the drag-to-group bar. |
 | `paginationPosition` | `paginationposition` | string | `'bottom'` | Where the pager sits: 'top', 'bottom' or 'both'. |
-| `pageSizes` | — | array | `[]` | The rows-per-page choices the footer's pager offers; empty, it offers none. |
+| `pageSizes` | — | unknown[] | `[]` | The rows-per-page choices the footer's pager offers; empty, it offers none. |
 | `expandable` | `expandable` | boolean | `false` | Allows rows to expand into a detail panel. |
 | `rowReorder` | `rowreorder` | boolean | `false` |  |
-| `groupBy` | — | array | `null` | Fields to group rows by. |
+| `groupBy` | — | unknown[] \| null | `null` | Fields to group rows by. |
 | `virtualScroll` | `virtualscroll` | boolean | `false` | Renders only visible rows for large datasets. |
 | `rowHeight` | `rowheight` | number | `0` | Row height in px for virtual scrolling (42 when unset); ignored otherwise. |
 | `maxHeight` | `maxheight` | number | `0` | Caps the grid height in px; the body scrolls beyond it. 0 = no cap (a virtual grid uses 400). |
@@ -153,7 +153,13 @@ nothing on a narrow viewport.
 
 **Renders:** roles `columnheader` · `grid` · `gridcell` · `menu` · `menuitem` · `menuitemradio` · `row` · `rowgroup` · `status` · `toolbar`
 
-**Shapes:** `GridContext { grid: { sort: Function; resize: Function; reorder: Function; toggleColumn: Function; saveState: Function; loadState: Function; source: any; sortState: any; rows: any; columns: any; total: any; page: any; totalPages: any; isLoading: any } | null; getSlot: (name: string) => SlotFunction | undefined; getSelectionMode: () => string; getRowClass: (row: Record<string, unknown>, index: number) => string; getIdField: () => string; selectedIds: Set<unknown>; getHeaderEl?: () => HTMLElement | null; getBodyEl?: () => HTMLElement | null; emit: (name: string, detail: unknown) => void; hasFilterRow: () => boolean; hasToolbar: () => boolean; hasSearch: () => boolean; pageSizes: () => number[]; filterMode: () => string; forceUpdate: () => void; popoverFilters: Record<string, { op1: string; val1: string; logic: 'and' | 'or'; op2: string; val2: string }>; inlineFilterValues: Record<string, unknown>; inlineFilterOps: Record<string, string>; isExpandable: () => boolean; isRowReorder: () => boolean; expandedRows: Set<unknown>; collapsedGroups: Set<string>; editMode: () => string; editingCell: EditCellState | null; editingRowId: unknown | null; editForm: Form<Record<string, unknown>> | null; batchChanges: Map<unknown, Record<string, unknown>>; getLabel?: () => string; nav: { key: string; index: number; col: number; pending?: boolean } | null; navFocused: boolean; afterRender?: () => void }` · `VirtualScrollState { update: () => void; dispose: () => void }`
+**Slot:** `cell` — Draws a cell, one snippet for every column: `cell(row, column, value)`, switching on `column.field`. A column it draws nothing for (no element, no text) is drawn by the grid, so a page writes only the columns it changes.; `header` — Draws a column's header: `header(column)`; a column it draws nothing for keeps its title.; `detail` — Draws an expanded row's detail: `detail(row)`.; `editCell` — Draws the editor of the cell being edited: `editCell(row, column, value, form)`, switching on `column.field`; a column it draws nothing for gets the grid's editor. Enter, Tab and a click outside commit the value of its first control. `form` is null in a cell edit.; `filter` — Draws a column's cell in the filter row: `filter(column)`; a column it draws nothing for keeps the grid's input.; `filterPopover` — Draws a column's filter popover: `filterPopover(column, apply, clear)`. `apply()` applies the grid's filters and closes it, `clear()` drops this column's filter and closes it. A column it draws nothing for gets the grid's popover.; `toolbarStart` — Draws at the start of the toolbar, after Reload: `toolbarStart(grid)`.; `toolbarEnd` — Draws at the end of the toolbar, after the spacer: `toolbarEnd(grid)`.; `empty` — Draws the empty state in place of the grid's icon and title: `empty()`.
+
+**States:** `:state(striped)` — `striped`: every other row is tinted.; `:state(hover)` — `hover`: a row under the pointer is highlighted.; `:state(row-clickable)` — `row-clickable`: the rows open something, and take a pointer.; `:state(compact)` — `compact`: tighter cells.; `:state(sticky-header)` — `sticky-header`: the header stays while the body scrolls.; `:state(fill-height)` — `fill-height`: the grid fills its parent's height and only its body scrolls.; `:state(loading)` — The source is pending; the grid is `aria-busy` meanwhile.; `:state(empty)` — The source has settled with no row; the empty status says so.; `:state(editing)` — A cell or a row is being edited.
+
+**Parts:** `[data-part="toolbar"]` — The toolbar, with `show-toolbar`.; `[data-part="group-bar"]` — The group bar, with `show-group-bar`.; `[data-part="grid"]` — The scroll area that is the `role="grid"`: header, filter row, body, summary.; `[data-part="header"]` — The header row group.; `[data-part="column-header"]` — A column's header cell.; `[data-part="filter-row"]` — The inline filter row, with `filter-mode="row"`.; `[data-part="body"]` — The rows' group.; `[data-part="row"]` — A data row.; `[data-part="cell"]` — A data cell.; `[data-part="summary"]` — The summary row, when a column declares an aggregate.; `[data-part="footer"]` — The footer and its pager; above the grid too with `pagination-position`.; `[data-part="empty"]` — The empty status, while the source has settled with no row.; `[data-part="loading"]` — The loading overlay, while the source is pending.
+
+**Shapes:** `GridContext { grid: { sort: Function; resize: Function; reorder: Function; toggleColumn: Function; saveState: Function; loadState: Function; source: any; sortState: any; rows: any; columns: any; total: any; page: any; totalPages: any; isLoading: any } | null; customCell: (row: Record<string, unknown>, col: AnyColumn, value: unknown, index: number) => Node | null; customHeader: (col: AnyColumn) => Node | null; customDetail: (row: Record<string, unknown>, index: number, id: unknown) => Node | null; customEditCell: (row: Record<string, unknown>, col: AnyColumn, value: unknown) => Node | null; customFilter: (col: AnyColumn) => Node | null; customFilterPopover: (col: AnyColumn) => ((apply: () => void, clear: () => void) => Node | null) | null; customToolbar: (side: 'start' | 'end') => Node | null; customEmpty: () => Node | null; getSelectionMode: () => string; getRowClass: (row: Record<string, unknown>, index: number) => string; getIdField: () => string; selectedIds: Set<unknown>; getHeaderEl?: () => HTMLElement | null; getBodyEl?: () => HTMLElement | null; emit: (name: string, detail: unknown) => void; hasFilterRow: () => boolean; hasToolbar: () => boolean; hasSearch: () => boolean; pageSizes: () => number[]; filterMode: () => string; forceUpdate: () => void; popoverFilters: Record<string, { op1: string; val1: string; logic: 'and' | 'or'; op2: string; val2: string }>; inlineFilterValues: Record<string, unknown>; inlineFilterOps: Record<string, string>; isExpandable: () => boolean; isRowReorder: () => boolean; expandedRows: Set<unknown>; collapsedGroups: Set<string>; editMode: () => string; editingCell: EditCellState | null; editingRowId: unknown | null; editForm: Form<Record<string, unknown>> | null; batchChanges: Map<unknown, Record<string, unknown>>; getLabel?: () => string; nav: { key: string; index: number; col: number; pending?: boolean } | null; navFocused: boolean; afterRender?: () => void }` · `VirtualScrollState { update: () => void; dispose: () => void }`
 
 
 #### Examples
@@ -444,23 +450,23 @@ const columns = [
 const ds = createDataSource({ data: bigData, pageSize: 0 });
 ```
 
-**Row Detail (Master-Detail)** — `expandable` adds a chevron to each row. Click to expand and show a detail panel. Use the `detail` slot for custom content.
+**Row Detail (Master-Detail)** — `expandable` adds a chevron to each row. Click to expand and show a detail panel. Use the `detail(row)` snippet for custom content.
 
 ```html
 <pdx-data-grid :source="ds" :columns="columns"
   expandable hover>
 
-  <slot name="detail" let:row let:id>
+  @snippet detail(row) {
     <div style="padding: 16px">
-      <strong>Details for {row.name}</strong>
-      <p>Role: {row.role}</p>
+      <strong>Details for {{ row.name }}</strong>
+      <p>Role: {{ row.role }}</p>
     </div>
-  </slot>
+  }
 
 </pdx-data-grid>
 ```
 
-**Command Column** — `command: true` on a column disables sort/filter/resize/reorder automatically. Use the `col:{field}` slot for custom action buttons.
+**Command Column** — `command: true` on a column disables sort/filter/resize/reorder automatically. Draw its action buttons in the `cell(row, column, value)` snippet, for that column's field.
 
 ```js
 const columns = [
@@ -472,12 +478,14 @@ const columns = [
 
 ```html
 <pdx-data-grid :source="ds" :columns="columns" hover>
-  <slot name="col:_actions" let:row let:id>
-    <pdx-button size="xs" @click="edit(id)">Edit</pdx-button>
-    <pdx-button size="xs" variant="danger" @click="remove(id)">
-      Delete
-    </pdx-button>
-  </slot>
+  @snippet cell(row, column) {
+    @if (column.field === '_actions') {
+      <pdx-button size="xs" @click="edit(row.id)">Edit</pdx-button>
+      <pdx-button size="xs" variant="danger" @click="remove(row.id)">
+        Delete
+      </pdx-button>
+    }
+  }
 </pdx-data-grid>
 ```
 
@@ -536,7 +544,7 @@ const ds = createDataSource({
 </pdx-data-grid>
 ```
 
-**Slot Templates** — Custom cell rendering via `<slot name="col:field">`. Custom header via `<slot name="header:field">`. Custom empty state via `<slot name="empty">`.
+**Snippets** — A custom cell with `@snippet cell(row, column, value)`, one for every column: it switches on `column.field`, and the columns it draws nothing for are the grid's. A custom header with `@snippet header(column)`, the empty state with `@snippet empty()`.
 
 ```js
 import { status } from '@pdxui/core';
@@ -551,27 +559,30 @@ const columns = [
 ```
 
 ```html
-<pdx-data-grid :source="ds" :columns="columns" hover>
+<!-- `row` is typed from :data: each row is an element of it -->
+<pdx-data-grid :data="users" :columns="columns" hover>
 
-  <!-- Custom cell for 'name' column -->
-  <slot name="col:name" let:row let:value>
-    <div class="user-cell">
-      <pdx-avatar size="xs" :alt="row.name"></pdx-avatar>
-      <strong>{{ value }}</strong>
-    </div>
-  </slot>
+  <!-- A custom cell for the 'name' column; the others are the grid's -->
+  @snippet cell(row, column, value) {
+    @if (column.field === 'name') {
+      <div class="user-cell">
+        <pdx-avatar size="xs" :alt="row.name"></pdx-avatar>
+        <strong>{{ value }}</strong>
+      </div>
+    }
+  }
 
-  <!-- Custom header -->
-  <slot name="header:name" let:col>
-    <pdx-icon name="user" size="14"></pdx-icon>
-    {col.header}
-  </slot>
+  <!-- A custom header -->
+  @snippet header(column) {
+    @if (column.field === 'name') {
+      <pdx-icon name="user" size="14"></pdx-icon> {{ column.header }}
+    }
+  }
 
-  <!-- Custom empty state -->
-  <slot name="empty" let:_>
-    <pdx-empty-state title="No results" icon="search">
-    </pdx-empty-state>
-  </slot>
+  <!-- A custom empty state -->
+  @snippet empty() {
+    <pdx-empty-state title="No results" icon="search"></pdx-empty-state>
+  }
 
 </pdx-data-grid>
 ```

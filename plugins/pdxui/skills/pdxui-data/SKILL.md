@@ -1,11 +1,11 @@
 ---
 name: pdxui-data
-description: "PDX (@pdxui/ui) data components — data-grid, entity-grid (CRUD-wired), bulk-actions, data-source, filter-builder, chart, sparkline, list, sortable-list, tree, statistic, timeline, calendar, empty-state — with props and events. Use when showing records, a grid, a chart or a tree in a .pdx app."
+description: "PDX (@pdxui/ui) data components — data-grid, entity-grid (CRUD-wired), bulk-actions, data-source, filter-builder, chart, sparkline, list, sortable-list, tree, statistic, timeline, calendar, scheduler, empty-state — with props and events. Use when showing records, grids, charts, trees or schedules."
 ---
 
 # UI · Data display & data-bound
 
-> Grids, charts, lists and data sources.  (17 components)  ·  catalogue generated from the library's custom-elements manifest.
+> Grids, charts, lists and data sources.  (19 components)  ·  catalogue generated from the library's custom-elements manifest.
 > Cross-cutting playbook, recipes and gotchas: the **`pdxui`** skill.
 > **Names.** Bind a prop by its kebab-case name, `:max-height="620"`, `:empty-title="t"`: the component
 > receives the camelCase prop (`maxHeight`). In a `.pdx` template the camelCase form, `:maxHeight`, compiles
@@ -25,8 +25,10 @@ Each page has the props, events, slots and API, the notes, and the examples of t
 - [`<pdx-entity-grid>`](references/pdx-entity-grid.md) — A CRUD grid: create, edit, delete, bulk.
 - [`<pdx-filter-builder>`](references/pdx-filter-builder.md) — Build complex filters visually.
 - [`<pdx-infinite-scroll>`](references/pdx-infinite-scroll.md) — Load more as you scroll.
+- [`<pdx-kanban>`](references/pdx-kanban.md) — Columns of cards, moved by pointer, keyboard or menu.
 - [`<pdx-list>`](references/pdx-list.md) — Data-driven list with custom rows.
 - [`<pdx-relative-time>`](references/pdx-relative-time.md) — Auto-updating “3 days ago”.
+- [`<pdx-scheduler>`](references/pdx-scheduler.md) — Events in time: day, week, month, year, agenda and timeline views, by resource.
 - [`<pdx-sortable-list>`](references/pdx-sortable-list.md) — A list the user can put in another order, by dragging a row's handle or from the keyboard alone.
 
 It emits `pdx-reorder` with the indices and never writes to `items`: the application applies the

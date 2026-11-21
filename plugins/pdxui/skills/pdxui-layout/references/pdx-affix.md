@@ -8,7 +8,7 @@ window, and in that shell the window never scrolls: `pdx-app-layout` is `overflo
 scroll that does not happen and never sticks — with no error and nothing in the console.
 
 ```html
-<pdx-affix target=".pdx-app-main" :offset="16">…</pdx-affix>
+<pdx-affix target=".pdx-app-main" :offset-top="16">…</pdx-affix>
 ```
 
 Measured in `skill-claims.spec.ts` (case `who-scrolls`).
@@ -19,7 +19,9 @@ Measured in `skill-claims.spec.ts` (case `who-scrolls`).
 | `offsetBottom` | `offsetbottom` | number | `-1` | Offset from bottom when affixed (px) |
 | `target` | `target` | string | `''` | Target scroll container selector (default: window) |
 
-**Events:** `pdx-change` → `detail: { affixed }` — Fired when the value changes.
+**Events:** `affixed-change` → `detail: { value: boolean }` — It started or stopped sticking: `true` while stuck.
+
+**States:** `:state(affixed)` — The element is stuck: fixed to the window, or sticking in its `target`.
 
 
 #### Examples
@@ -28,13 +30,13 @@ _From the component's demo, one per section. They illustrate the markup and the 
 code left out, and a script is the part that matters, not a whole file. The props and events they use
 are checked against the manifest above._
 
-**Live Demo** — Scroll the box below. The toolbar sticks to the top of the scroll container, and `pdx-change` says so.
+**Live Demo** — Scroll the box below. The toolbar sticks to the top of the scroll container, and `affixed-change` says so.
 
 ```html
 <div class="scroll-container" id="affix-container">
   …
   <pdx-affix :offsetTop="0" target="#affix-container"
-    @pdx-change="e => affixed = e.detail.affixed">
+    @affixed-change="e => affixed = e.detail.value">
     <div class="sticky-bar">Sticky Toolbar</div>
   </pdx-affix>
   …

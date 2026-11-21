@@ -12,9 +12,8 @@ option breaks WAI-ARIA. Select by clicking the row, and read the state from `ari
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `[]` | All items — array of { value, label, disabled? } |
-| `value` | — | array | `[]` | Values currently in the target (right) panel |
-| `source` | — | object | `null` | DataSource or raw array of objects |
+| `items` | — | unknown[] | `[]` | All items — array of { value, label, disabled? } |
+| `source` | — | Record<string, unknown> \| null | `null` | DataSource or raw array of objects |
 | `labelField` | `labelfield` | string | `'label'` | Field to use as item label (default: 'label') |
 | `valueField` | `valuefield` | string | `'value'` | Field to use as item value/id (default: 'value') |
 | `assignedField` | `assignedfield` | string | `''` | Field that determines left vs right panel (boolean or matched value) |
@@ -24,22 +23,31 @@ option breaks WAI-ARIA. Select by clicking the row, and read the state from `ari
 | `sourceTitle` | `sourcetitle` | string | `''` | Left panel title |
 | `targetTitle` | `targettitle` | string | `''` | Right panel title |
 | `disabled` | `disabled` | boolean | `false` | Disabled state |
-| `size` | `size` | string | `''` | Component size |
 | `showAllButtons` | `showallbuttons` | boolean | `false` | Show "move all" buttons |
 | `draggable` | `draggable` | boolean | `false` | Enable drag and drop |
 | `name` | `name` | string | `''` | Form field name |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg: the rows, the search fields and the move buttons. |
+| `value` | — | string[] | `[]` | The values of the items in the target list. A form submits one entry per value under the name (#135). |
 
 **API (via `:ref`)**
 
 | Call | Notes |
 |---|---|
-| `getValue()` | The keys currently on the target side. |
-| `setValue(v)` | Replace the target side and emit `pdx-change`, dropping any move not yet committed. |
 | `clear()` | Clears the value. |
+| `getChanges()` | In DataSource mode, the last move's diff to persist: `{ value, [assignedField] }` per item; else []. |
+| `getDirection()` | The last move's direction, 'right' (to the target) or 'left'; null before any move. |
 
-**Events:** `pdx-change` → `detail: { changes, targetValues, direction } | { value }` — Fired when the value changes.; `pdx-clear` — Fired when the value is cleared.
+**Events:** `pdx-clear` — Fired when the value is cleared.; `value-change` → `detail: { value: string[] }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `group` · `listbox` · `option`
+
+**States:** `:state(disabled)` — `disabled` is set.
+
+**Parts:** `[data-part="root"]` — The frame, a `role="group"` holding the two panels and the move buttons.; `[data-part="panel"]` — A side, the source or the target: its header, its filter and its list.; `[data-part="search"]` — A side's filter, while `searchable`; it filters, it is not the value.; `[data-part="list"]` — A side's `role="listbox"`.; `[data-part="option"]` — An item of a list.; `[data-part="move"]` — A button that moves the chosen items, or all of them, to the other side.
+
+**Tokens:** `--pdx-transfer-check-bg-selected`; `--pdx-transfer-option-bg-selected`. Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 **Shapes:** `TransferItem { value: string; label: string; disabled?: boolean; _raw?: any }`
 
@@ -72,6 +80,26 @@ are checked against the manifest above._
     sourcetitle="Available"
     targettitle="Selected"
   ></pdx-transfer>
+</div>
+```
+
+**Sizes** — `size` is sm, md (the default) or lg, as the form fields beside it: the search field is as tall as a `pdx-input` of the same size, and the rows and the move buttons follow. _(from the live demo)_
+
+```html
+<div class="demo-stack">
+  @for (sizes as s; track s) {
+    <div class="demo-stack">
+      <pdx-input :size="s" :placeholder="s + ' field'"></pdx-input>
+      <pdx-transfer
+        :size="s"
+        searchable
+        :items="items"
+        :value="['b']"
+        sourcetitle="Available"
+        targettitle="Selected"
+      ></pdx-transfer>
+    </div>
+  }
 </div>
 ```
 

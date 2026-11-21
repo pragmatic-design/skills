@@ -4,23 +4,23 @@ Pick a number by dragging.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `value` | `value` | number | `0` | The current value. |
 | `min` | `min` | number | `0` | Minimum allowed value. |
 | `max` | `max` | number | `100` | Maximum allowed value. |
 | `step` | `step` | number | `1` | Increment step. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `ariaLabel` | `arialabel` | string | `''` | Accessible name when there is no visible label. |
 | `label` | `label` | string | `''` | What the slider sets ("Volume"): the thumb's name, and in range mode "{label}, minimum" / "{label}, maximum". Not needed after a pdx-label, which names it. |
-| `orientation` | `orientation` | string | `'horizontal'` | Layout orientation — horizontal or vertical. |
 | `marks` | `marks` | string | `''` | Comma-separated mark values, or "step" to show all steps |
 | `showLabel` | `showlabel` | boolean | `false` | Show value label on thumb while dragging |
 | `labelAlways` | `labelalways` | boolean | `false` | Always show label (not just on drag) |
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `error` | `error` | boolean | `false` | Marks the control as invalid. |
-| `range` | `range` | boolean | `false` | Range mode: value is "min,max" |
+| `range` | `range` | boolean | `false` | Two thumbs: `value` is `[low, high]`; the `value` attribute may give it as `"low,high"`. |
 | `minGap` | `mingap` | number | `0` | Minimum gap between thumbs in range mode |
-| `color` | `color` | string | `''` | Color the fill portion |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg: the track's and thumb's size. |
+| `color` | `color` | 'primary' \| 'success' \| 'warning' | `'primary'` | primary (the default), success or warning: the fill's and thumb's colour. |
+| `orientation` | `orientation` | 'horizontal' \| 'vertical' | `'horizontal'` | horizontal (the default) or vertical. |
+| `value` | `value` | number \| number[] | `0` | The value, or `[low, high]` with `range`. A form submits it; a range as two entries, the low then the high (#135). |
 
 **API (via `:ref`)**
 
@@ -30,9 +30,15 @@ Pick a number by dragging.
 | `blur()` | Removes focus from it. |
 | `clear()` | Clears the value. |
 
-**Events:** `pdx-change` → `detail: { value, min, max } | { value }` — Fired when the value changes.; `pdx-change-end` → `detail: { value }` — Fired on `pdx-change-end`.
+**Events:** `pdx-change-end` → `detail: { value }` — Fired on `pdx-change-end`.; `value-change` → `detail: { value: number | number[] }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `slider`
+
+**States:** `:state(disabled)` — `disabled` is set.; `:state(invalid)` — `error` is set; every thumb is aria-invalid.; `:state(dragging)` — A pointer is dragging a thumb.
+
+**Parts:** `[data-part="root"]` — The frame the pointer acts on.; `[data-part="track"]` — The rail.; `[data-part="fill"]` — The coloured portion: from the minimum to the value, or between the thumbs.; `[data-part="thumb"]` — A thumb, `role="slider"`: one, or two in range mode; aria-invalid with `error`.; `[data-part="mark"]` — One of `marks`.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

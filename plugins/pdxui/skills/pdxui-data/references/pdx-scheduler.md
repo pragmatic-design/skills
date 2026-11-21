@@ -1,0 +1,174 @@
+### `<pdx-scheduler>`
+
+Events in time: day, week, month, year, agenda and timeline views, by resource.
+
+**Use it when** events live in time and someone plans them: a day or week of slots, by person, room or
+machine, a month, a year, an agenda, or a timeline of resources in rows — moved, resized, created, edited,
+repeated, exported.
+**Not when** only dates are picked → `pdx-date-picker` or `pdx-calendar`; a list of past happenings →
+`pdx-timeline`; a board of stages → `pdx-kanban`.
+
+**Pitfalls**
+- A start or end has three shapes, and the shape is the meaning: `2026-09-21T09:00` is a wall time in
+  `time-zone`, `2026-09-21T07:00:00Z` (or with an offset) an instant, `2026-09-21` a whole day, its `end`
+  the day AFTER the last. The scheduler writes a changed event back in the shape it was written in.
+- Bind `::events`: the scheduler writes `events` itself after every change the app allowed. Refuse a change
+  in its `before-*` (`before-move`, `before-resize`, `before-create`, `before-save`, `before-remove`,
+  `before-import`) with `preventDefault()`, never by putting the old array back afterwards.
+- Load by period: `period-change` gives the view's `start` and `end`; fetch those events and set `events`.
+- A series is one event with `rrule` (FREQ, INTERVAL, COUNT, UNTIL, BYDAY, BYMONTHDAY, BYMONTH, WKST) and
+  `exdate`; an override is its own event with `seriesId` and `recurrenceId`. A drawn occurrence's `id` is
+  the scheduler's (`<series>::<start>`), not one of `events`. `scope` on `before-move` / `before-resize`
+  is the app's to set ('occurrence', the default, or 'series'); the editor asks the reader.
+- `import` and `export` are reserved words: the events after them are `imported` and `exported`; the
+  delete is `remove`.
+- `editorFields(event, set)` adds to the built-in editor and validates nothing: check what `set` wrote in
+  `before-save`. `editorContent(event, actions)` replaces the fields and buttons, not the dialog.
+- The app's own fields ride on the event (`client`, `priority`): `events` keeps them, the files do not —
+  CSV and Excel carry title, times, resource and notes; iCalendar also the colour, the rule and the
+  exceptions.
+
+**Composes with** `useDrag` from `@pdxui/core` (an app element dropped on the grid, `external-drop`) ·
+a file input for `importIcs(text)` · `pdx-splitter` beside a list of unplanned work to drag in.
+
+| Prop | Attr | Type | Default | Notes |
+|---|---|---|---|---|
+| `resources` | — | SchedulerResource[] | `[]` | The resources: each with its own columns in the time grid, where children are drawn as their leaves; each a row of the timeline, children under their parent. Empty: one column per day, one timeline row. |
+| `views` | — | ('day' \| 'week' \| 'days' \| 'month' \| 'year' \| 'agenda' \| 'timeline')[] | `['day', 'week', 'days', 'month', 'year', 'agenda', 'timeline']` | The views the bar offers, in order; one or none hides the switcher. |
+| `timelineScale` | `timelinescale` | 'day' \| 'week' \| 'month' \| 'year' | `'week'` | The timeline's period and its columns: a day of slots, a week or a month of days, a year of months. |
+| `days` | `days` | number | `3` | How many days the `days` view shows. |
+| `agendaDays` | `agendadays` | number | `7` | How many days the `agenda` view lists, from the reference date. |
+| `dayMaxEvents` | `daymaxevents` | number | `3` | How many events a day of the month shows before its «+N». |
+| `groupBy` | `groupby` | 'resource' \| 'date' | `'resource'` | With resources: each resource's days together (`resource`) or each day's resources (`date`). |
+| `weekends` | `weekends` | boolean | `true` | Show Saturday and Sunday in the day columns and the month. |
+| `firstDay` | `firstday` | number | `-1` | The first day of the week, 0 = Sunday … 6 = Saturday; -1: the locale's. |
+| `startHour` | `starthour` | string | `'00:00'` | The first visible hour, `HH:mm`. |
+| `endHour` | `endhour` | string | `'24:00'` | The end of the visible hours, `HH:mm`, up to `24:00`. |
+| `scrollTo` | `scrollto` | string | `'08:00'` | The hour the time grid opens scrolled to. |
+| `slotMinutes` | `slotminutes` | number | `30` | The length of a slot, in minutes. |
+| `businessHours` | — | BusinessHours | `{ 1: { start: '09:00', end: '18:00' }, 2: { start: '09:00', end: '18:00' }, 3: { start: '09:00', end: '18:00' }, 4: { start: '09:00', end: '18:00' }, 5: { start: '09:00', end: '18:00' } }` | The working hours per weekday, shaded outside; a resource's own `businessHours` win in its columns. |
+| `nowIndicator` | `nowindicator` | boolean | `true` | Draw a line at the current time. |
+| `timeZone` | `timezone` | string | `''` | The IANA time zone events are shown in. Empty: the browser's. |
+| `locale` | `locale` | string | `''` | Locale for dates and times. Empty: the page's language (`lang`), then the browser's. |
+| `label` | `label` | string | `''` | The scheduler's accessible name. Empty: «Scheduler». |
+| `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
+| `readonly` | `readonly` | boolean | `false` | No event is moved, resized or created; an event or resource can still allow it for itself. |
+| `preventOverlap` | `preventoverlap` | boolean | `false` | Refuse a move, resize or create that would overlap another event of the same resource. |
+| `createId` | — | () => string | `() => crypto.randomUUID()` | The id of an event the scheduler creates. |
+| `editor` | `editor` | 'dialog' \| 'none' | `'dialog'` | The built-in editor: `dialog` opens it on Enter or a double click on an event, on Enter on an empty slot, and on a create; `none` leaves those to the app (`event-open`, `slot-open`, `create`). |
+| `exports` | — | ('csv' \| 'xlsx' \| 'ics' \| 'print')[] | `['csv', 'xlsx', 'ics', 'print']` | What the bar's «Export» menu offers, in order: the period's events as CSV or Excel, `events` as iCalendar, and printing the view. Empty hides it. |
+| `events` | — | SchedulerEvent[] | `[]` | The events. A start or end with an offset or `Z` is an instant; without one, a wall time in `time-zone`; a date alone, all day. One with `rrule` is a series, drawn once per occurrence; one with `seriesId` and `recurrenceId` replaces an occurrence of its series. Written by the scheduler after a move, resize or create the app allowed. |
+| `view` | `view` | 'day' \| 'week' \| 'days' \| 'month' \| 'year' \| 'agenda' \| 'timeline' | `'week'` | The view on screen. |
+| `date` | `date` | string | `''` | The reference date (ISO). Empty: today. |
+
+**API (via `:ref`)**
+
+| Call | Notes |
+|---|---|
+| `exportCsv(save?)` | The period's events as a CSV file, one row each, saved unless `save` is false. |
+| `exportXlsx(save?)` | The period's events as an Excel workbook, one row each, saved unless `save` is false. |
+| `exportIcs(save?)` | `events` as an iCalendar file — a series with its rule, an override with its RECURRENCE-ID — saved unless `save` is false. |
+| `importIcs(text)` | The iCalendar file `text` added to `events`, asking `before-import` first, which may change the events or refuse them: an event of the same id is replaced, the others added, and `imported` is emitted. What it added and what it skipped, or null when it was refused. |
+| `print()` | The view and period on screen printed whole — every slot, row and column, no scroll, the period as its title — and the scheduler alone on the page. The page is redrawn before the browser's print is asked for: window.print() blocks, and what the runtime redraws in a microtask would not be drawn yet. |
+
+**Events:** `before-create` → `detail: { start: string; end: string; resource: string | null; allDay: boolean; conflicts: SchedulerEvent[] }` — A drag over empty slots is about to create an event there (ISO, UTC); `preventDefault()` refuses it.; `before-import` → `detail: { events: SchedulerEvent[]; skipped: IcsSkipped[] }` — `importIcs` is about to add a file's events: `events` may be changed or replaced, `skipped` says what the file had that the scheduler cannot draw, and why; `preventDefault()` refuses them.; `before-move` → `detail: { event: SchedulerEvent; from: { start: string; end: string; resource?: string | string[] }; to: { start: string; end: string; resource?: string | string[] }; conflicts: SchedulerEvent[]; scope?: 'occurrence' | 'series' }` — An event is about to move, to another time, day or resource; `preventDefault()` refuses it. For an occurrence of a series, `scope` is 'occurrence' (it becomes an override in `events`); set it to 'series' to move the whole series.; `before-remove` → `detail: { event: SchedulerEvent; scope?: 'occurrence' | 'series' }` — An event is about to be removed, from the editor's Delete or with the Delete key; `preventDefault()` refuses it. On an occurrence of a series, `scope`: 'occurrence' adds it to the series' `exdate`, 'series' removes the series (`event`) and its overrides. (Not `delete`, a reserved word, #1130.); `before-resize` → `detail: { event: SchedulerEvent; edge: 'start' | 'end'; from: { start: string; end: string; resource?: string | string[] }; to: { start: string; end: string; resource?: string | string[] }; conflicts: SchedulerEvent[]; scope?: 'occurrence' | 'series' }` — An event is about to be resized by one edge; `preventDefault()` refuses it. `scope` as for `before-move`.; `before-save` → `detail: { event: SchedulerEvent; previous: SchedulerEvent | null; isNew: boolean; scope?: 'occurrence' | 'series' }` — The editor's Save is about to write an event: `previous` is it as it was, null for a new one; `preventDefault()` refuses it and the editor stays open. On an occurrence of a series, `scope` says what the reader chose: 'occurrence' writes an override, 'series' changes the series (`event` is then the series).; `create` → `detail: { event: SchedulerEvent }` — An event was created, by a drag over empty slots, the keyboard, the editor or a drop from outside, and added to `events`.; `date-change` → `detail: { value: string }` — Fired when the component writes `date`. Does not bubble.; `event-open` → `detail: { event: SchedulerEvent }` — An event was clicked, or Enter pressed on it.; `events-change` → `detail: { value: SchedulerEvent[] }` — Fired when the component writes `events`. Does not bubble.; `exported` → `detail: { format: 'csv' | 'xlsx' | 'ics'; count: number }` — A file went out, from the bar's menu or a method: its format and how many events it holds. (Not `export`, a reserved word, #1130.); `external-drop` → `detail: { data: unknown; start: string; end: string; resource: string | null; allDay: boolean; conflicts: SchedulerEvent[] }` — Something the app made draggable with `useDrag` was dropped on the grid: its data and where (ISO, UTC); `preventDefault()` refuses it, else an event is created there from `data.title` and `data.duration` (minutes).; `imported` → `detail: { events: SchedulerEvent[]; skipped: IcsSkipped[] }` — A file's events were added to `events`, an event of the same id replaced. (Not `import`, a reserved word.); `move` → `detail: { event: SchedulerEvent; from: { start: string; end: string; resource?: string | string[] }; to: { start: string; end: string; resource?: string | string[] }; conflicts: SchedulerEvent[]; scope?: 'occurrence' | 'series' }` — An event moved; `events` is already written. `event` is the override written, or the series moved, as `scope` says.; `period-change` → `detail: { view: 'day' | 'week' | 'days' | 'month' | 'year' | 'agenda' | 'timeline'; start: string; end: string }` — The period on screen changed, by the bar, the keyboard, or a day opened from the month or the year.; `rejected` → `detail: { action: 'move' | 'resize' | 'create'; event: SchedulerEvent | null; to: { start: string; end: string; resource?: string | string[] }; reason: 'overlap' | 'prevented'; conflicts: SchedulerEvent[] }` — A move, resize or create was refused: by `prevent-overlap` (`overlap`) or by the app (`prevented`).; `remove` → `detail: { event: SchedulerEvent; scope?: 'occurrence' | 'series' }` — An event was removed; `events` is already written.; `resize` → `detail: { event: SchedulerEvent; edge: 'start' | 'end'; from: { start: string; end: string; resource?: string | string[] }; to: { start: string; end: string; resource?: string | string[] }; conflicts: SchedulerEvent[]; scope?: 'occurrence' | 'series' }` — An event was resized; `events` is already written. `event` and `scope` as for `move`.; `save` → `detail: { event: SchedulerEvent; previous: SchedulerEvent | null; isNew: boolean; scope?: 'occurrence' | 'series' }` — The editor saved an event; `events` is already written.; `slot-open` → `detail: { start: string; end: string; resource: string | null; allDay: boolean }` — An empty slot or day was clicked, or Enter pressed on it: its start and end (ISO, UTC), its resource, and whether it is a whole day.; `view-change` → `detail: { value: 'day' | 'week' | 'days' | 'month' | 'year' | 'agenda' | 'timeline' }` — Fired when the component writes `view`. Does not bubble.
+
+**Renders:** roles `columnheader` · `grid` · `gridcell` · `group` · `row` · `rowgroup` · `rowheader` · `toolbar` · `treegrid`
+
+**Slot:** `event` — What an event draws; without it, its time and title.; `editorFields` — Fields the app adds to the built-in editor, under Notes: `set(patch)` merges its values into the event Save writes (a key set to `undefined` is left out). Validate in `before-save`.; `editorContent` — The editor's content, drawn by the app in place of the built-in fields and buttons; the scheduler keeps its dialog, the occurrence / series question, `before-save` / `before-remove` and writing `events`.
+
+**States:** `:state(disabled)` — `disabled` is set.; `:state(dragging)` — An event is being moved, resized or created with the pointer.; `:state(lifted)` — An event is picked up from the keyboard.; `:state(selecting)` — Empty slots or days are selected from the keyboard, to create an event over.; `:state(printing)` — The page is being printed: every slot, row and column is drawn.
+
+**Parts:** `[data-part="root"]` — The scheduler, a `role="group"` named by `label`.; `[data-part="toolbar"]` — The bar above the grid: previous, today, next, the period and the views.; `[data-part="prev"]` — The button to the previous period.; `[data-part="todayButton"]` — The button back to today.; `[data-part="next"]` — The button to the next period.; `[data-part="period"]` — The period on screen, which names the grid.; `[data-part="viewSwitcher"]` — The view buttons, shown when `views` offers more than one and the scheduler is wide.; `[data-part="viewMenu"]` — The views as a menu, a button named by the view on screen: in place of the view buttons when the scheduler is narrow.; `[data-part="exportButton"]` — The bar's «Export» button, which opens the formats `exports` offers.; `[data-part="grid"]` — The `role="grid"` of the time slots, of the month's days, or of the timeline's rows (a `treegrid` when resources nest), which scrolls.; `[data-part="columnHeader"]` — A day's or a resource's header, a weekday's in the month, a slot's, day's or month's in the timeline.; `[data-part="rowHeader"]` — A resource's name at the start of its timeline row; a parent's carries the row's `aria-expanded`.; `[data-part="allDayRow"]` — The row of all-day events.; `[data-part="slot"]` — A cell: a time slot of a day and resource, its all-day cell, a day of the month or of the year, a resource's slot, day or month in the timeline.; `[data-part="event"]` — An event, the box that holds its button, its edges and its ⋯; `[data-before]` / `[data-after]` mark one that goes on past the piece shown, `[data-movable]` one that can be dragged, `[data-dragging]` the one being dragged.; `[data-part="eventButton"]` — An event's button: its name, what the `event` snippet draws; a click or Enter opens it.; `[data-part="eventMenu"]` — An event's ⋯ button, which opens «Move» and «Resize»: shown on hover and focus, always for a coarse pointer.; `[data-part="resizeHandle"]` — An edge of an event that resizes it, `[data-edge="start"]` or `[data-edge="end"]`.; `[data-part="more"]` — A month day's «+N», the events that did not fit; it opens the day.; `[data-part="yearMonth"]` — A month of the year view, a `role="grid"` of its own.; `[data-part="agendaList"]` — The agenda's list of days.; `[data-part="nowLine"]` — The line at the current time.
+
+**Tokens:** `--pdx-scheduler-bar-height`; `--pdx-scheduler-column-min`; `--pdx-scheduler-event-color`; `--pdx-scheduler-header-height`; `--pdx-scheduler-height`; `--pdx-scheduler-lane-height`; `--pdx-scheduler-slot-height`; `--pdx-scheduler-time-width`; `--pdx-scheduler-timeline-column`. Set one at `:root`, on a subtree, or on the element itself.
+
+**Shapes:** `SchedulerEvent { id: string; title: string; start: string; end: string; allDay?: boolean; resource?: string | string[]; color?: string; readonly?: boolean; draggable?: boolean; resizable?: boolean; background?: boolean; rrule?: string; exdate?: string[]; seriesId?: string; recurrenceId?: string; notes?: string }` · `SchedulerResource { id: string; label: string; color?: string; children?: SchedulerResource[]; readonly?: boolean; draggable?: boolean; resizable?: boolean; businessHours?: BusinessHours }` · `IcsSkipped { uid: string; title: string; reason: string }`
+
+
+#### Examples
+
+_From the component's demo, one per section. They illustrate the markup and the calls: `...` marks
+code left out, and a script is the part that matters, not a whole file. The props and events they use
+are checked against the manifest above._
+
+**A week** — Events from an array: a start with a time is a timed event, a date alone is all day. Overlapping events share their day, and the line marks the current time. Click an event or an empty slot, or focus the grid and press Enter: the scheduler says which with `event-open` and `slot-open`. _(from the live demo)_
+
+```html
+<pdx-scheduler label="Team calendar" :events="events" first-day="1" scroll-to="08:00" @event-open="onEvent" @slot-open="onSlot"></pdx-scheduler>
+<p class="pdx-txt-small pdx-ink-muted">{{ last }}</p>
+```
+
+**Month, year and agenda** — The same events in the other views. The month stacks a day's events under its number, all-day and multi-day events as bars, and counts what does not fit in a `+N` that opens the day; `day-max-events` sets how many fit. The year marks the days that have events, and a day opens on Enter or a click. The agenda lists the period's events by day, `agenda-days` of them. _(from the live demo)_
+
+```html
+<pdx-scheduler label="Team calendar, month" view="month" first-day="1" :events="events" day-max-events="2" @event-open="onEvent"></pdx-scheduler>
+<p class="pdx-txt-small pdx-ink-muted">{{ last }}</p>
+```
+
+**By resource** — Give it `resources` and each one gets its own columns: an event goes where its `resource` says, and one that names two shows in both. A resource's `color` tints its events, and its own `businessHours` shade its columns. `group-by="date"` puts each day's resources together instead. _(from the live demo)_
+
+```html
+<pdx-scheduler label="Rooms" view="day" :date="today" :resources="rooms" :events="bookings" :views="['day', 'week']" scroll-to="08:00"></pdx-scheduler>
+```
+
+**Drag, resize, create** — With the mouse or a pen, drag an event to another time or room, pull its top or bottom edge to resize it, or drag over empty slots to create one. With a finger, a long press lifts the event or its edge first, so a finger that moves still scrolls; from the keyboard, Space picks an event up, and its ⋯ offers «Move» and «Resize» to a single pointer. Drag the card below onto a room to book it. Each change asks first — `before-move`, `before-resize`, `before-create`, `external-drop` — and the app can refuse it with `preventDefault()`; then the scheduler writes `events`. Here `prevent-overlap` refuses a room that is already booked, and `rejected` says so. The workshop is `readonly`. _(from the live demo)_
+
+```html
+<div class="drag-demo">
+  <div class="job" :ref="jobEl">Site visit · 1 h</div>
+  <pdx-scheduler label="Rooms, bookable" view="day" :date="today" :resources="rooms" ::events="bookings" :views="['day', 'week']" scroll-to="08:00" prevent-overlap
+    @move="onMove" @resize="onResize" @create="onCreate" @rejected="onRejected"></pdx-scheduler>
+</div>
+<p class="pdx-txt-small pdx-ink-muted" aria-live="polite">{{ last }}</p>
+```
+
+**Editing an event** — Enter or a double click on an event opens the built-in editor; Enter on an empty slot, or a drag over empty slots, opens it on a new one. It edits the title, the start and end, all day, how the event repeats — every day, week (on which weekdays), month or year, and until when — the resource and the notes. Save asks `before-save`, Delete `before-remove`. On an occurrence of «Stand-up», a weekly series, it asks first whether the change is for this occurrence or the whole series. The app adds its own fields with `@snippet editorFields(e, set)` — here a client, saved with the event; `@snippet editorContent(e, actions)` draws the editor's content instead, and `editor="none"` turns it off. _(from the live demo)_
+
+```html
+<pdx-scheduler label="Team, editable" view="week" :date="today" ::events="items" :views="['week', 'month', 'agenda']" scroll-to="08:00"
+  @save="onSave" @remove="onRemove">
+  @snippet editorFields(e, set) {
+    <pdx-form-field label="Client">
+      <pdx-input :value="e.client ?? ''" @value-change="set({ client: $event.detail.value })"></pdx-input>
+    </pdx-form-field>
+  }
+</pdx-scheduler>
+<p class="pdx-txt-small pdx-ink-muted" aria-live="polite">{{ last }}</p>
+```
+
+**Export, import, print** — The bar's «Export» menu saves the period's events as CSV or Excel — one row each, a series as its occurrences — or `events` as iCalendar, the data itself: a series with its rule, an override with the occurrence it replaces, a wall time with its time zone. «Print» prints the view whole, every hour and resource, with the scheduler alone on the page. `exports` chooses what the menu offers. The same are methods for the app's own buttons — `exportCsv()`, `exportXlsx()`, `exportIcs()`, `print()` — and `importIcs(text)` reads a calendar file back, asking `before-import` first. _(from the live demo)_
+
+```html
+<div class="demo-row">
+  <pdx-button variant="outline" @click="saveIcs()">Save as .ics</pdx-button>
+  <label class="pick">Import an .ics <input type="file" accept=".ics,text/calendar" @change="importFile($event)"></label>
+</div>
+<pdx-scheduler :ref="schedulerEl" label="Team calendar" view="week" :date="today" ::events="items" :views="['week', 'month', 'agenda']" scroll-to="08:00"></pdx-scheduler>
+<p class="pdx-txt-small pdx-ink-muted" aria-live="polite">{{ last }}</p>
+```
+
+**Timeline** — `view="timeline"` puts each resource on a row along the period: `timeline-scale` is a day of slots, a week or a month of days, or a year of months. A resource's `children` sit under it, and the parent opens and closes with a click, Enter or the arrows. Events that overlap stack in their row. Only the rows and columns in view are drawn, so this fleet of 200 vans costs what a screenful does. _(from the live demo)_
+
+```html
+<pdx-segmented label="Timeline scale" :value="scale" options='["day","week","month","year"]' @value-change="e => scale = e.detail.value"></pdx-segmented>
+<pdx-scheduler label="Fleet" view="timeline" :timeline-scale="scale" :date="today" :resources="fleet" :events="jobs" :views="['timeline']" scroll-to="08:00"></pdx-scheduler>
+```
+
+**What an event draws** — The `event` snippet draws an event's content; the scheduler keeps its place, its size and its accessible name. Without the snippet an event shows its time and title. _(from the live demo)_
+
+```html
+<pdx-scheduler label="Clinic" view="days" :days="3" :date="start" :events="visits" start-hour="08:00" end-hour="18:00" scroll-to="08:00">
+  @snippet event(e) {
+    <strong>{{ e.title }}</strong>
+    <span class="pdx-ink-muted">{{ e.patient }} · {{ e.reason }}</span>
+  }
+</pdx-scheduler>
+```
+
+**Working week and hours** — Without `weekends` the week is Monday to Friday. `start-hour` and `end-hour` bound the visible day, `slot-minutes` sets the grid's step, and `business-hours` shades the time outside work. `time-zone` shows the events in an IANA zone: a start with an offset is an instant, placed at its time there. _(from the live demo)_
+
+```html
+<pdx-scheduler label="Support rota" :weekends="false" first-day="1" start-hour="07:00" end-hour="19:00" slot-minutes="15" time-zone="America/New_York" :business-hours="hours" :events="shifts"></pdx-scheduler>
+```
+

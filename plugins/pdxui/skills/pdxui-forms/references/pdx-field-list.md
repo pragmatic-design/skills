@@ -13,8 +13,8 @@ comparison, and which to choose, is in the recipe "Rows that repeat".
 
 `itemFields` builds **plain controls only** — text, email, number, textarea, checkbox, switch. A
 `select` gets no options, and anything else becomes a text input: a row that needs a picker, a select
-with options or a component of its own goes in the `row` slot, which receives
-`{ item, index, fields, remove }`.
+with options or a component of its own goes in the `row` snippet, `@snippet row(item, index, remove)
+{ … }`: `item` holds that row's values, and `remove()` removes the row.
 
 **Use it when** a form field is a list of plain sub-records — order lines, contacts, addresses — and you want
 the rows, add and remove, min and max drawn for you; or a row field must be `required`: a rule written inside
@@ -23,22 +23,22 @@ added. **Not when** you want keyed rows that survive a removal → `createFieldA
 
 **Pitfalls**
 - It needs a form: `:form`, or an enclosing `<pdx-form>`. Without one the add button does nothing, silently.
-- A row's fields are not in `form.fields` until the row exists; a per-step check reads them by dotted path,
+- A row's fields are not fields of the form until the row exists; a per-step check reads them by dotted path,
   `lines.${i}.activity`.
-- `form.fields.<name>` — the array itself — mirrors the rows only when the array was seeded EMPTY; a filled
+- `form.<name>` — the array itself — mirrors the rows only when the array was seeded EMPTY; a filled
   initial array has no such leaf, and the dotted fields are the only state.
 - Inside a `<pdx-field-group>` its rows are prefixed with the group's path.
 
 **Composes with** `pdx-form` (the form it writes into) · `pdx-field-group` (a nested path) · `pdx-wizard` (rows
-inside a step) · `pdx-select` and other components in the `row` slot.
+inside a step) · `pdx-select` and other components in the `row` snippet.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
 | `name` | `name` | string | `''` | Array field name in the form (e.g., 'items'). |
 | `label` | `label` | string | `''` | Optional label rendered above the list. |
-| `form` | — | object | `null` | Form instance. If not provided, uses form context. |
-| `itemFields` | — | array | `[]` | Field definitions per array item. Builds one plain control per `type` — text, email, number, textarea, checkbox, switch (a `select` gets no options; anything else is a text input). A row that needs a component of its own, a picker or a select with options, goes in the `row` slot. |
-| `itemDefault` | — | object | `null` | Default values for a new item. |
+| `form` | — | Form<any> \| null | `null` | Form instance. If not provided, uses form context. |
+| `itemFields` | — | unknown[] | `[]` | Field definitions per array item. Builds one plain control per `type` — text, email, number, textarea, checkbox, switch (a `select` gets no options; anything else is a text input). A row that needs a component of its own, a picker or a select with options, goes in the `row` slot. |
+| `itemDefault` | — | Record<string, unknown> \| null | `null` | Default values for a new item. |
 | `minItems` | `minitems` | number | `0` | Minimum number of items (default: 0). |
 | `maxItems` | `maxitems` | number | `999` | Maximum number of items (default: 999). |
 | `addLabel` | `addlabel` | string | `''` | Label for the add button. Empty: the `field-list.add` component string ("+ Add" in English). |
@@ -47,7 +47,11 @@ inside a step) · `pdx-select` and other components in the `row` slot.
 
 **Renders:** roles `dialog`
 
-**Slot:** `row` — Scoped — renders one row. Receives `{ item, index, fields, remove }` (`item` holds that row's values; `remove()` removes the row, for a row that draws its own button — the list also draws its remove button after the slot's content).
+**Slot:** `row` — Renders one row: a snippet `row(item, index, remove)` (`item` holds that row's values; `remove()` removes the row, for a row that draws its own button — the list also draws its remove button after the row's content).
+
+**States:** `:state(empty)` — `empty`: the list has no rows.
+
+**Parts:** `[data-part="root"]` — The list's wrapper.; `[data-part="header"]` — The line above the rows: the label and the add button.; `[data-part="label"]` — The list's label, with `label`.; `[data-part="add"]` — An add button, in the header and in the footer.; `[data-part="columns"]` — The column headers.; `[data-part="rows"]` — The box that holds the rows.; `[data-part="row"]` — One row.; `[data-part="cell"]` — One cell: a `pdx-form-field` around its control, or a summary in dialog mode.; `[data-part="actions"]` — A row's buttons: edit (dialog mode) and remove.; `[data-part="empty"]` — The message shown with no rows.; `[data-part="footer"]` — The line under the rows, with its add button.; `[data-part="dialog"]` — The dialog that edits one row, in dialog mode.
 
 **Shapes:** `FieldListItemSchema { name: string; type?: string; label?: string; placeholder?: string; required?: boolean }`
 
@@ -88,21 +92,21 @@ const orderForm = createForm({
 </pdx-form>
 ```
 
-**A row of your own — the row slot** — `itemFields` builds plain controls. A row that needs a component of its own — here a `<pdx-select>` with options — goes in the `row` slot, which receives `item` (that row's values) and `index`. The slot writes back through the form's field at `tasks.{index}.assignee`. The list still draws each row's remove button; a row that wants its own calls `remove()`, which the slot also receives.
+**A row of your own — the row snippet** — `itemFields` builds plain controls. A row that needs a component of its own — here a `<pdx-select>` with options — goes in the `row` snippet, `row(item, index, remove)`: `item` holds that row's values. The snippet writes back through the form's field at `tasks.{index}.assignee`. The list still draws each row's remove button; a row that wants its own calls `remove()`, its third argument.
 
 ```html
 <pdx-field-list name="tasks" :itemFields="taskFields" :itemDefault="taskDefault">
-  <slot name="row" let:item let:index>
-    <pdx-input :value="item.title" @pdx-input="e => setTask(index, 'title', e.detail.value)"></pdx-input>
+  @snippet row(item, index) {
+    <pdx-input :value="item.title" @value-change="e => setTask(index, 'title', e.currentTarget.value)"></pdx-input>
     <pdx-select :options="people" :value="item.assignee"
-      @pdx-change="e => setTask(index, 'assignee', e.detail.value)"></pdx-select>
-  </slot>
+      @value-change="e => setTask(index, 'assignee', e.detail.value)"></pdx-select>
+  }
 </pdx-field-list>
 ```
 
 ```js
 function setTask(index, key, value) {
-  taskForm.fields['tasks.' + index + '.' + key].onChange(value);
+  taskForm['tasks.' + index + '.' + key].onChange(value);
 }
 ```
 

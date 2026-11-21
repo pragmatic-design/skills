@@ -4,12 +4,13 @@ A pressable on/off button.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `pressed` | `pressed` | boolean | `false` | Whether the toggle is pressed/on. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `value` | `value` | string | `''` | The current value. |
-| `variant` | `variant` | string | `'outline'` | Visual variant. |
 | `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `ariaLabel` | `arialabel` | string | `''` | The toggle's name when its content does not say it ("B" is Bold), forwarded to the inner `<button>`: `aria-label` on the host has no role to name. |
+| `radio` | `radio` | boolean | `false` | Set by a `pdx-toggle-group type="single"` on its toggles: the button is a `radio` with `aria-checked` in the group's `radiogroup`, instead of a toggle button with `aria-pressed`. Not for a toggle on its own: a radio belongs in a radiogroup. |
+| `variant` | `variant` | 'outline' \| 'ghost' \| 'solid' | `'outline'` | outline (the default), ghost or solid. |
+| `pressed` | `pressed` | boolean | `false` |  |
 
 **API (via `:ref`)**
 
@@ -19,7 +20,17 @@ A pressable on/off button.
 | `blur()` | Removes focus from it. |
 | `clear()` | Clears the value. |
 
-**Events:** `pdx-change`; `pdx-pressed-change` → `detail: { pressed }` — Fired when the pressed changes.; `pressedchange` → `detail: { pressed }` — Fired on `pressedchange`.
+**Events:** `pressed-change` → `detail: { value: boolean }` — Fired when the component writes `pressed`. Does not bubble.
+
+**Renders:** roles `radio`
+
+**States:** `:state(pressed)` — It is pressed.; `:state(disabled)` — `disabled` is set.
+
+**Parts:** `[data-part="root"]` — The native `<button>`, aria-pressed (aria-checked as a group's radio); the pressed look keys by that attribute.
+
+**Tokens:** `--pdx-toggle-height` (default `1.5rem`); `--pdx-toggle-width` (default `2.75rem`). Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples
@@ -32,15 +43,15 @@ are checked against the manifest above._
 
 ```html
 <!-- aria-label names it by what it does: "B" alone is read as the letter -->
-<pdx-toggle :pressed="bold" @pressedchange="onBold" aria-label="Bold"><strong>B</strong></pdx-toggle>
-<pdx-toggle :pressed="italic" @pressedchange="onItalic" aria-label="Italic"><em>I</em></pdx-toggle>
+<pdx-toggle :pressed="bold" @pressed-change="onBold" aria-label="Bold"><strong>B</strong></pdx-toggle>
+<pdx-toggle :pressed="italic" @pressed-change="onItalic" aria-label="Italic"><em>I</em></pdx-toggle>
 ```
 
 **Toggle Group — Multiple** — Multiple toggles can be active simultaneously. _(from the live demo)_
 
 ```html
 <div class="demo-row">
-  <pdx-toggle-group type="multiple" :value="formatting" @valuechange="onFormatting" label="Formatting">
+  <pdx-toggle-group type="multiple" :value="formatting" @value-change="onFormatting" label="Formatting">
     <pdx-toggle value="bold" aria-label="Bold"><strong>B</strong></pdx-toggle>
     <pdx-toggle value="italic" aria-label="Italic"><em>I</em></pdx-toggle>
     <pdx-toggle value="underline" aria-label="Underline"><u>U</u></pdx-toggle>
@@ -53,7 +64,7 @@ are checked against the manifest above._
 
 ```html
 <div class="demo-row">
-  <pdx-toggle-group type="single" :value="align" @valuechange="onAlign" label="Alignment">
+  <pdx-toggle-group type="single" :value="align" @value-change="onAlign" label="Alignment">
     <pdx-toggle value="left">Left</pdx-toggle>
     <pdx-toggle value="center">Center</pdx-toggle>
     <pdx-toggle value="right">Right</pdx-toggle>

@@ -2,6 +2,8 @@
 
 # Router
 
+> **Formal reference:** [docs/language/routing.md](https://github.com/pragmatic-design/pdxui/blob/main/docs/language/routing.md) defines the grammar of what this page teaches: what each construct accepts, what it generates, which diagnostic it raises.
+
 Routing answers one question: *which UI do I show for this URL?* In PDX the answer is declarative and
 lives next to the component. Add `@page` to a component and it becomes a page — but it stays a normal
 custom element, reusable anywhere. `@page` is **metadata, not a cage**.
@@ -31,9 +33,34 @@ And links that navigate without reloading the page:
 click to navigate client-side. To navigate from code: `navigate('/dashboard')` from
 `@pdxui/router`.
 
-> **Gotcha — dynamic links.** `<pdx-link to="/x">` with a *static* `to` works. If the URL is
-> *dynamic* (inside a `@for`), prefer `<a :href="url" @click="go">` with
-> `function go(e){ e.preventDefault(); navigate(e.currentTarget.getAttribute('href')); }`.
+A link to a page with params names the pattern and binds the values; the `href` is the filled URL:
+
+```pdx
+@for (users as u; track u.id) {
+  <pdx-link to="/users/:id" :params="{ id: u.id }">{{ u.name }}</pdx-link>
+}
+```
+
+### Typed routes
+
+The build and the dev server write `.pdx/routes.d.ts` from your `@page` patterns, and the editor and
+`pdx check --types` read it. From then on a route is a type:
+
+```ts
+import { navigate } from '@pdxui/router';
+
+navigate('/users/:id', { id: 42 });      // ✓ a declared pattern, its params typed
+navigate('/user/:id', { id: 42 });       // ✗ no such route
+navigate('/users/:id', { userId: 42 });  // ✗ the param is `id`
+navigate('/users/42');                   // ✗ a URL, not a pattern…
+navigate.url('/users/42?tab=history');   // ✓ …which goes through navigate.url
+```
+
+`<pdx-link to="/users/:id" :params="…">` is checked the same way. A param is typed by its
+constraint: `:id(number)` is a `number`, anything else a `string`. The file is generated: add `.pdx/`
+to `.gitignore`, and to the `include` of your `tsconfig.json` if your `.ts` modules call `navigate`.
+`pdx migrate` turns an existing `navigate('/users/42')` into `navigate.url('/users/42')`, and lists
+the calls whose path is computed.
 
 ## Params
 
@@ -43,8 +70,29 @@ A dynamic segment is written `:name`, with an optional constraint:
 @page '/users/:id(number)';
 ```
 
-Inside the page you read params as signals (reactive: they change when you go from `/users/1` to
-`/users/2` without remounting):
+The constraints are `number` (digits), `uuid`, `slug` (lowercase words joined by single hyphens, as in
+`/posts/hello-world`) and `string` (any segment, the same as none). Anything else in the parentheses
+is a pattern of your own, `:code([A-Z]{3})`, matched against the whole segment. A URL whose segment
+fails the constraint does not match the route.
+
+Inside the page, declare the params you read with `@params`, each with its type. Each one is a name the
+template and the script read, like a `$derived`, and it follows the URL: going from `/users/1` to
+`/users/2` updates it without remounting the page.
+
+```pdx
+@page '/users/:id';
+@params { id: number };
+
+const next = $derived(id + 1);   // `id` is a number: 1, then 2
+```
+
+When the path already says the type, name the param alone: `@params { id }` with
+`@page '/users/:id(number)'` makes `id` a number, and any other param is a string — the same rule the
+router coerces by. A name the path has no param for is an error.
+
+A `number` param is converted with `Number` (`0` when the URL does not have it), a `boolean` one is
+`true` only for the text `'true'`, and any other type is the string (`''` when absent). Untyped, the
+same values are in `currentParams()`, as strings:
 
 ```pdx
 import { currentParams } from '@pdxui/router';
@@ -89,33 +137,107 @@ is not a missing session**: sending an authenticated visitor to a sign-in form a
 thing they already have, and signing in again lands them back on the same denial. The router cannot
 tell the two apart — it asks a guard checker that answers a boolean — so the application does.
 
-The same value reaches `createRouter({ guardFailRedirect })` for an app that boots the router
-itself. A target outside the origin is refused either way.
+The same value reaches `createRouter(routes, { guardFailRedirect })` and
+`createRouterFromTable(table, { guardFailRedirect })` for an app that boots the router itself, and
+`configureRouter({ guardFailRedirect })` changes it on a router that is already running — once the
+app knows whether there is a session, say. A target outside the origin is refused either way.
 
 ## Data before the page: @loader
 
 Often you want data *ready* when the page appears, not a "loading" flash. `@loader` runs a function
-before entering:
+before entering, and names what it loads:
 
 ```pdx
-@page '/users/:id';
-@loader loadUser;
+<template>
+  @await (user as u) {
+    <h1>{{ u.name }}</h1>
+  }
+</template>
 
-async function loadUser() {
-    const res = await fetch('/api/users/1');
+<script>
+import { notFound, redirect, type LoaderContext } from '@pdxui/router';
+interface User { id: number; name: string }
+
+@page '/users/:id(number)';
+@loader user: loadUser;
+
+async function loadUser({ params, signal }: LoaderContext<{ id: number }>): Promise<User> {
+    const res = await fetch(`/api/users/${params.id}`, { signal });
+    if (res.status === 404) throw notFound();
+    if (res.status === 401) throw redirect('/login');
     return res.json();
+}
+</script>
+```
+
+The loader receives a context: `params`, the route's params coerced by their constraints —
+`:id(number)` gives the number `42`, any other param a string; `query`, the query string with a
+repeated key as an array (`?tab=a&tab=b` → `{ tab: ['a', 'b'] }`); and `signal`, which the router
+aborts when a newer navigation starts before this one finished. Hand it to `fetch` and a superseded
+request stops. A loader that takes no argument is fine too.
+
+`user` is the loader as a source, in the async vocabulary ([data](../../pdxui-data-layer/references/data.md)): `user.data()` is
+what it resolved to, `user.state()` reports `idle → pending → success` (or `error`), `user.error()`
+is why it last failed, and `user.pending()` is true while a navigation runs it. `@await (user as u)`
+reads it like any source. In the editor `user.data()` is typed by what the function returns, so a
+misspelt field is an error. `params` is typed from the page's pattern even when you write no type:
+`:id(number)` is a number, as the router hands it over, and a param the pattern does not declare is
+an error. An annotation you write, `LoaderContext<{ id: number }>`, is kept. The page mounts only once the loader has settled, which is what makes it *blocking* data
+— for declarative fetching inside the page see [Data layer](../../pdxui-data-layer/references/data.md).
+
+What the loader throws decides where the navigation ends:
+
+- `throw redirect('/login')` goes there instead, before the page is shown. The address it left is
+  replaced, so Back does not return to it; `redirect(to, { replace: false })` keeps it.
+- `throw notFound()` shows the not-found page of that level, with the address unchanged. On a child
+  route, the parent stays on screen with its data, and the not-found is where the child would be.
+- Any other error shows the level's error page instead of the page, with a **Try again** button that
+  runs the loader again. Its reason is still in `user.error()`. An app with its own error page calls
+  `retryNavigation()` from `@pdxui/router` for the same retry.
+
+Coming back to a page it has already loaded, the router has its result kept, so going list →
+detail → back does not leave the list blank while it reloads. By default the kept result is shown at
+once, with `user.stale()` true, while the loader runs again and replaces it. Give the loader a
+`staleTime` and, within it, the kept result is used as it is, with no request:
+
+```pdx
+@page '/users';
+@loader users: loadUsers { staleTime: 30_000 };
+
+async function loadUsers({ signal }) {
+    return (await fetch('/api/users', { signal })).json();
 }
 ```
 
-The resolved data is in `currentLoaderData()`, and `currentLoaderState()` reports
-`idle → loading → done` (or `error`). The page mounts only once the loader has settled, which is
-what makes it *blocking* data — for declarative fetching inside the page see
-[Data layer](../../pdxui-data-layer/references/data.md).
+The result is kept per address — `/search?q=alice` and `/search?q=bob` are two — and a level that
+stays on screen, a parent around the children you move between, does not reload at all. An
+`@action` that changes the data says so with `invalidate: ['loader:/users/:id']`: every kept result of
+that route is dropped, and if it is on screen it reloads at once. `staleTime` is a number of
+milliseconds the compiler reads (`30_000`, `5 * 60_000`): anything else is
+`PDX_LOADER_UNKNOWN_OPTION`.
+
+Coming from the alpha: `@loader loadUser;` and `currentLoaderData()` are gone. `pdx migrate` names
+the loader after its function, `@loader loadUser: loadUser;`, and turns the page's
+`currentLoaderData()` into `loadUser.data()`.
 
 The function is declared in the same `<script>`, and the compiler lifts it to module scope so the
 route can call it. It therefore runs **before the component exists**: it cannot read props or
 signals, and takes what it needs from the URL. A `@loader` naming a function that is not declared
-is reported as `PDX_LOADER_NOT_FOUND` rather than silently registering nothing.
+is reported as `PDX_LOADER_NOT_FOUND` rather than silently registering nothing, and a loader that
+reads a prop, a signal or a constant of the script is an error, `PDX_LOADER_READS_SETUP`, rather than
+a ReferenceError on the first visit.
+
+The data does not wait for the page's code. The compiler gives the loader a small module of its
+own, and a navigation starts it together with the page's chunk: on a real network that is one round
+trip for both, not one for the code and then one for the data. The page appears when both are in.
+What the loader needs comes from an import, as it already must: lifted out of the component, it cannot
+read the constants and helpers of the script either. The one exception is the page's `label`
+function: a loader that calls it stays with its page, and then the page's chunk comes first.
+
+A link that prefetches its route on hover or in view starts the loader too, so the data is often in
+before the click. The result waits ten seconds for the navigation, under the route, its params and
+its query — `?a=1&b=2` and `?b=2&a=1` are one call — and a route the visitor may not enter is never
+asked for its data: its guards answer first.
 
 ## Shared layouts: @layout
 
@@ -132,7 +254,7 @@ without those pages knowing about each other:
 
 ```pdx
 <!-- users.pdx -->
-<script setup>
+<script>
 @page '/admin/users';
 @layout 'admin';
 </script>
@@ -150,7 +272,9 @@ The second form is what lets a shell be an ordinary component with a `<slot>`.
 
 The shell is **diffed, not rebuilt**: navigating from `/admin/users` to `/admin/roles` keeps the
 layout element mounted, with whatever state it holds — a collapsed rail stays collapsed. A route
-that declares no layout tears the stack down and renders in the outlet itself.
+that declares no layout renders in the app's default, `pdx({ defaultLayout: 'shell' })`, when there
+is one, and otherwise tears the stack down and renders in the outlet itself; `@layout 'none'` opts a
+page (a login screen, say) out of the default.
 
 One layout per page, not a chain. A frame *inside* a frame is a **nested route**: put a
 `<pdx-router-outlet>` in the parent page and the routes below its path render inside it. That is
@@ -166,19 +290,21 @@ Put a `<pdx-router-outlet>` in a page and every route below its path renders **i
 ```pdx
 <!-- ticket.pdx -->
 <template>
-  <h1>Ticket {{ $params.id }}</h1>
+  <h1>Ticket {{ id }}</h1>
   <nav>…tabs…</nav>
   <pdx-router-outlet />          <!-- the child renders here -->
 </template>
 
-<script setup>
+<script>
 @page '/tickets/:id';
+import { currentParams } from '@pdxui/router';
+const id = $derived(currentParams().id);
 </script>
 ```
 
 ```pdx
 <!-- intervention.pdx -->
-<script setup>
+<script>
 @page '/tickets/:id/interventions/:n';
 </script>
 ```
@@ -215,31 +341,38 @@ the child loads one intervention, and moving between interventions refetches the
 ```pdx
 <!-- ticket.pdx -->
 @page '/tickets/:id';
-@loader loadTicket;
+@loader ticket: loadTicket;
+
+async function loadTicket({ params }) {
+    return (await fetch(`/api/tickets/${params.id}`)).json();
+}
 ```
 
 ```pdx
 <!-- intervention.pdx -->
 @page '/tickets/:id/interventions/:n';
-@loader loadIntervention;
+@loader intervention: loadIntervention;
 
-import { currentLoaderData, loaderData } from '@pdxui/router';
+import { loaderData } from '@pdxui/router';
 
-const intervention = $derived(currentLoaderData());        // this level's
-const ticket = $derived(loaderData('/tickets/:id'));       // the parent's, by its pattern
+async function loadIntervention({ params }) {
+    return (await fetch(`/api/tickets/${params.id}/interventions/${params.n}`)).json();
+}
+
+const parentTicket = $derived(loaderData('/tickets/:id'));   // the parent's, by its pattern
 ```
 
-`currentLoaderData()` still means **the matched route's** data, which is what it has always meant
-and what a flat route still gets. `loaderData(pattern)` reads a named level — that is how a child
-reads its parent's record, and it is reactive, so it updates when that level reloads.
+`intervention` is this level's loader. `loaderData(pattern)` reads another level by its pattern —
+that is how a child reads its parent's record, and it is reactive, so it updates when that level
+reloads.
 
 What decides a refetch is the level's **own** params. `/tickets/7/interventions/1` →
 `…/interventions/2` leaves `:id` alone, so `loadTicket` does not run and the header does not
 flicker; `/tickets/9/interventions/1` changes it, so it does. Leaving the branch entirely forgets
 it: `loaderData('/tickets/:id')` from a page outside is `undefined`, never a stale ticket.
 
-`loaderState(pattern)` is the same for the state, and `currentLoaderState()` remains the matched
-route's.
+`loaderState(pattern)` is the same for the state. `loaderError(pattern)` is why a level last failed — an `Error`, or `null` once it loads
+again.
 
 > **Not named outlets.** `@outlet 'sidebar'` fills a *parallel* region at the same URL — a sidebar
 > and a main area showing different things at once. Nesting is about the path.
@@ -290,14 +423,36 @@ routeTrail();        // RouteCrumb[] — a signal: read it in a template or an e
 empties it. An application calls neither — they are there for a screen that drives its own
 navigation without this router, and for a test that wants a trail without one.
 
+The current path is published the same way, for a component that lights the entry of the page in
+front of you:
+
+```ts
+import { locationPath, setLocationSource } from '@pdxui/core';
+
+locationPath();      // string — the router's path while it runs, a signal like currentPath()
+```
+
+`createRouter` names its path as the source and `destroyRouter` takes it back. With no router,
+`locationPath()` is the address bar's path and follows the back and forward buttons. An app with a
+router of its own calls `setLocationSource(() => itsPath())` once, because a `history.pushState`
+fires no event anybody could listen to.
+
+The other half is following a link. `navigateTo(href)` hands the href to the router and answers
+`true`, or answers `false` when there is none, and the caller lets its link do the browser's work.
+`<pdx-app-shell>` calls it on a choice: where the Navigation API does not give a link's click to the
+router, the link would reload the page. `createRouter` names the router with `setNavigator`, and an
+app with its own router does the same.
+
 ## One chunk per page
 
 A route is a **split point**. `@page` makes the page its own JavaScript chunk, and the browser
 downloads it the first time that route is shown — not before.
 
-You write nothing. The compiler scans the project's `@page` declarations at build time and emits the
-route table into the router, so the router knows every route without loading any page. The outlet
-imports the one it is about to render.
+You write nothing. The compiler scans the project's `@page` declarations and emits the route table
+— data: the paths, the guards, the layouts, a lazy `import()` per page — and the router reads it, so
+it knows every route without loading any page. The outlet imports the one it is about to render.
+There is one router: dev, a build and an app that calls `createRouter(routes)` itself all run the
+same code, and it builds its matcher from the routes once, when it starts.
 
 What that costs you is one line in your entry, and it is a line to **delete**:
 
@@ -318,8 +473,8 @@ Two things worth knowing:
 - a route that splits **stalls the first time it is opened**, which is the cost of not downloading it
   earlier. That is what prefetching is for, and it is the next section.
 
-In dev nothing changes: there is no bundle to split, the glob costs nothing, and the interpreted
-router builds its table from the pages as they are imported.
+In dev the same table reaches the router, from a script the plugin puts in `index.html`, and the dev
+server serves a page the first time it is shown — the shape a build has.
 
 ## The first screen: a splash, then the app
 
@@ -357,9 +512,19 @@ the module is already in the cache.
 You write nothing for the common case. What you can write is the exception:
 
 ```pdx
-@page '/reports' { prefetch: 'eager' };   <!-- fetch it as soon as a link to it is on screen -->
-@page '/admin'   { prefetch: 'never' };   <!-- never speculatively -->
+@page '/reports' { prefetch: 'eager' };     // fetch it as soon as a link to it is on the page
+@page '/assets/:id' { prefetch: 'viewport' }; // fetch it once a link to it scrolls into view
+@page '/admin'   { prefetch: 'never' };     // never speculatively
 ```
+
+With `hover` (the default) and `viewport`, a route with a `@loader` has its data prefetched as well
+(«Data before the page», above); `eager` fetches the code only.
+
+`viewport` sits between the two: a link far down a long page costs nothing until the visitor
+scrolls to it, and then its chunk is on its way before any hover. One `IntersectionObserver` watches
+every such link, and a link stops being watched once its route is fetched. Hover, focus and press
+still fetch it earlier if they come first. A name that is none of the four is a compile error,
+[`PDX_PREFETCH_POLICY`](../../pdxui-setup/references/diagnostics.md).
 
 `never` is the one worth knowing. A route behind a permission the visitor does not have should not
 be fetched to find that out, and a page nobody is expected to open is bytes spent on nothing. A
@@ -371,7 +536,18 @@ Two things happen without being asked:
 - **nothing is prefetched on a connection that is paying for it.** `navigator.connection.saveData`
   is the visitor asking you not to, and `2g`/`slow-2g` is a connection where a speculative download
   competes with the page they are reading. Both turn it off;
-- **once per route, not per link or per URL.** `/tickets/1` and `/tickets/2` are one chunk.
+- **once per route, not per link or per URL.** `/tickets/1` and `/tickets/2` are one chunk;
+- **two at a time, and never in the way.** A prefetch is queued: at most two download at once,
+  and a queued one starts only when the browser is idle and nothing the visitor is waiting for is
+  loading. A navigation's chunk and a `@defer` block on screen are such loads. A navigation takes
+  its own route's prefetch (a queued one starts at once, a running one is awaited) and drops the
+  other queued ones, which a later hover queues again. Fifty `viewport` rows scrolling in are fifty
+  queued fetches, not fifty downloads in front of the click.
+
+The queue is core's, so code of your own can wait in it too. `queuePrefetch(key, load)` queues a
+load, `trackUrgentLoad(promise)` holds the queue back while a load the visitor waits for is in
+flight, `takePrefetch(key)` hands a queued or running load to whoever needs it now, and
+`cancelPrefetches(except)` drops what is still queued. All four are imported from `@pdxui/core`.
 
 The same call is yours when nothing is hovered. An app that holds its outlet back — until a route's
 strings are in, say — would otherwise ask for the route's chunk only once the outlet renders, a
@@ -383,8 +559,9 @@ import { prefetchRoute, currentPath } from '@pdxui/router';
 prefetchRoute(currentPath());   // the route's chunk, in the same wave as whatever the shell awaits
 ```
 
-It follows the same rules as the link — the route's policy, the connection, once per route — and
-answers whether a fetch was started.
+It follows the same rules as the link — the route's policy, the connection, once per route, the
+queue — and answers whether a fetch was queued. The outlet takes it when it shows the route, so a
+queued one starts then at the latest.
 
 > **This is not `<link rel="prefetch">`.** That asks the server for a *document*, and in a
 > single-page app the document for `/tickets/1` is `index.html` — which the router will never
@@ -394,11 +571,16 @@ answers whether a fetch was started.
 ## Transitions
 
 ```pdx
-@transition 'fade';   <!-- or slide-left/right/up/down, scale -->
+<script>
+@page '/reports' { transition: 'fade' };   // or slide-left/right/up/down, scale, collapse, none
+</script>
 ```
 
-On navigation the router applies the transition between the outgoing and incoming page, using
-`@pdxui/core`'s enter/exit classes.
+The transition is an option of `@page`, like every route field. On navigation the router applies the transition between the outgoing and incoming page, using
+`@pdxui/core`'s enter/exit classes. `fade` and `scale` use `fade-in`/`fade-out` and
+`scale-in`/`scale-out`; the slides and `collapse` use their own name for both; `none` animates
+nothing. Any other name is used as the class for both enter and exit, so a transition of your own is
+a name and the CSS that animates it.
 
 ## Destroy or keep: keep-alive
 
@@ -410,10 +592,26 @@ Sometimes you don't want that: a list with filters set, a half-scroll, a partial
 @page '/results' { keepAlive };
 ```
 
-What happens under the hood: the component is moved into a `DocumentFragment` (zero CPU while frozen)
-and, on return, re-appended to the DOM, reconciling with state. Come back and you find everything as
-it was. Use it for views that are expensive to rebuild or hold precious user state; leave the default
-(destroy) for the rest, so you don't accumulate memory.
+What happens under the hood: the component is moved into a `DocumentFragment` and, on return,
+re-appended to the DOM, reconciling with state. Come back and you find everything as it was. Use it
+for views that are expensive to rebuild or hold precious user state; leave the default (destroy) for
+the rest, so you don't accumulate memory.
+
+A frozen page costs no CPU. Its effects are paused — a change made meanwhile runs each one once on
+return — its `useQuery` polling and the framework's timers stop, no request starts, and a dynamic
+`@title` is not written. An `@fetch` or `useQuery` whose value went stale while frozen is refreshed
+on return. The one thing that keeps running is a timer you start yourself in `onMount`: start it in
+an `$effect` instead, and it pauses with the page ([Lifecycle](https://pdxui.com/docs/lifecycle), «The rule»).
+
+The outlet keeps at most **10** frozen pages; past that, the least recently used one is destroyed. Set
+the bound on the outlet itself — `keepAlive: 30000` on a page stays what it is, a timeout in ms:
+
+```html
+<pdx-router-outlet keep-alive-max="3"></pdx-router-outlet>
+```
+
+Child components of a frozen page are frozen with it: `onHide` when it leaves, `onShow` when it comes
+back, `onDestroy` when the page is discarded.
 
 ## The query string
 
@@ -484,21 +682,45 @@ onBeforeNavigate((from, to, hop) => {
 `destroyRouter()` removes the router's own listeners. An application never calls it; a test does, and
 so does an HMR pass that re-creates the router. It is idempotent.
 
-## Other route declarations
+## While a page loads: navigation.pending()
 
-```pdx
-@redirect '/old' -> '/new';      <!-- redirect -->
-@alias '/people';                <!-- alternative path for the same page -->
-@outlet 'sidebar' -> 'pdx-nav';  <!-- named outlet -->
-@params { id: number };          <!-- param types: parsed, not implemented -->
-@prefetch 'hover';               <!-- 'hover' (the default), 'eager', or 'never' -->
+Between a click and the new page, chunks and data load; on a slow network that can be a second in
+which the click seems to have done nothing. `navigation` says a navigation is on its way, and where:
+
+```html
+<template>
+  @if (navigation.pending()) { <div class="route-progress" role="progressbar"></div> }
+  <pdx-router-outlet></pdx-router-outlet>
+</template>
 ```
 
-`@prefetch` is the policy for fetching the page's chunk before the click — see
-[Before the click](#before-the-click-prefetching) above, which is where it is explained.
+No import: the compiler writes `import { navigation } from '@pdxui/router'` in a `.pdx` that reads it
+— and only there. In plain TypeScript, import it yourself.
 
-> Two things `@prefetch` does not do: **`'viewport'`** is not a policy the router
-> knows (it is accepted by the parser and then behaves as `hover`), and nothing emits the browser's
+- **`navigation.pending()`** is `true` from the moment the hooks above accept a navigation until its
+  page is shown — or until it is refused, denied by a guard, or replaced. Not while a hook is still
+  asking "leave this page?": nothing is loading then.
+- **`navigation.to()`** is where it is going, query included, or `null`. Click again before the first
+  page arrives, and it names the second.
+
+## Other route declarations
+
+`@page` holds every field of the route: further paths are aliases, and the options carry the rest.
+
+```pdx
+<script>
+@page '/users', '/people' { prefetch: 'hover', meta: { requiresAuth: true } };  // an alias, a prefetch policy, route data
+@redirect '/old' -> '/new';      // redirect
+@outlet 'sidebar' -> 'pdx-nav';  // named outlet
+</script>
+```
+
+`prefetch` is the policy for fetching the page's chunk before the click — `'hover'` (the default),
+`'eager'`, `'viewport'` or `'never'`; see [Before the click](#before-the-click-prefetching) above,
+which is where it is explained. `meta` is data the router keeps with the route, which `currentMeta()`
+reads while it is matched; `@params { id: number }` types the params (see the top of this page).
+
+> One thing `prefetch` does not do: nothing emits the browser's
 > **Speculation Rules** — `GeneratedRouter.speculationRules` is a type with no producer. Prefetching
 > is done by `<pdx-link>` calling the route's own `import()`, which is a different mechanism and
 > the one that works in a single-page app.
@@ -508,12 +730,12 @@ so does an HMR pass that re-creates the router. It is idempotent.
 | You want… | Declare |
 | --- | --- |
 | a page | `@page '/path'` |
-| a variable segment | `@page '/x/:id'` + `currentParams()` |
+| a variable segment | `@page '/x/:id'` + `@params { id: number }` |
 | to protect it | `@guard 'permission'` |
-| data ready on entry | `@loader fn` |
+| data ready on entry | `@loader user: loadUser` |
 | a shared frame | `@layout 'admin'` — or, for a frame inside a frame, a parent page with a `<pdx-router-outlet>` |
 | to keep state | `@page '/x' { keepAlive }` |
-| to navigate from code | `navigate('/path')` |
+| to navigate from code | `navigate('/users/:id', { id })`, or `navigate.url(url)` for a built URL |
 | the chunk ready before the click | nothing — `<pdx-link>` does it; `@page '/x' { prefetch: 'never' }` opts out |
 | to read or write the query | `currentQuery()` · `setQueryParam(k, v)` |
 | to guard or track every route | `onBeforeNavigate` · `onAfterNavigate` |

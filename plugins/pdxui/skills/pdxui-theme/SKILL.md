@@ -41,21 +41,25 @@ hue** — pass this to decouple them) · `--density compact|normal|comfort` (sca
 see §6) · `--radius sharp|rounded|pill` · `--out` (file; **stdout otherwise, and `--quiet` only
 suppresses the report, not the CSS**).
 
-**Strict mode is ON by default** → exit ≠ 0 when a pair fails the WCAG gate. That is what makes this an
-**agent/CI loop**: generate → gate → non-zero means *fix the input* (brand/language), not the CSS. To
-emit anyway, pass **`--no-strict`** (there is no `--strict` flag to type; it is the default).
+**Strict mode is ON by default** → exit ≠ 0 when a pair is an error, below 3:1; a pair between 3:1 and
+4.5:1 is reported as a warning and does not fail it. That is what makes this an
+**agent/CI loop**: generate → gate → non-zero means *fix the input* (brand/language), not the CSS.
+**`--no-strict`** keeps the exit code at 0 (there is no `--strict` flag to type; it is the default); the
+CSS is written either way, so read the warnings too.
 
 Then apply — the CSS block is scoped to `[pdx-theme="acme"]`:
 
 ```html
 <html pdx-theme="acme" pdx-scheme="light">
 <script type="module">
-  import '@pdxui/design';   // FIRST — base tokens/reset/components/shipped themes
-  import './theme-acme.css';    // then your generated theme (partial override)
+  import '@pdxui/design/base';   // FIRST — tokens, reset, layout and the layer order
+  import './theme-acme.css';     // then your generated theme (partial override)
+  // each component brings its own CSS when the compiler imports it; `import '@pdxui/design'` instead
+  // loads every component's CSS and the 13 shipped themes, for a page with no compiler
 </script>
 ```
 
-> ⚠️ **The generated file is a PARTIAL override — `@pdxui/design` must be imported first.** It sets
+> ⚠️ **The generated file is a PARTIAL override — `@pdxui/design/base` must be imported first.** It sets
 > the palettes, hues, semantic `bg/surface/text/muted/border/primary/danger/success/warning/info(+ -text)`
 > and behavior tokens, but **not** `--pdx-color-secondary*`, `--pdx-color-subtle`, most `*-hover`,
 > `--pdx-text-display`, `--pdx-transition` — those fall back to base `tokens.css`. Consequence:
@@ -131,13 +135,15 @@ the two values with `--pdx-target-min-fine` and `--pdx-target-min-coarse`; do no
 
 ## 5. The token surface you style with
 
-**Semantic colors (30 — the whole surface):**
+**Semantic colors (43 — the whole surface):**
 - Neutrals/structure (10): `--pdx-color-` `bg` · `surface` · `inset` · `overlay` · `text` · `muted` ·
   `subtle` · `border` · `border-strong` · `focus`.
-- Fills (7 families), each with `-hover`, and with `-text` (the label) **except `accent`**:
-  `primary` · `secondary` · `danger` · `success` · `warning` · `info` (base + `-hover` + `-text`) ·
-  `accent` (base + `-hover` only — **there is no `--pdx-color-accent-text`**; label an accent fill with
-  `--pdx-color-text` or use `primary` if you need a guaranteed label token).
+- Fills (7 families), each with `-hover` and `-text` (the label on the fill): `primary` · `secondary`
+  · `accent` · `danger` · `success` · `warning` · `info`. An accent fill is labelled with
+  `--pdx-color-accent-text`, which the WCAG gate checks like the others.
+- Text in a semantic colour, and the tint behind it (12, derived from the fills, so a theme declares
+  none): `--pdx-color-{primary,accent,danger,success,warning,info}-ink` for the text,
+  `…-soft` for the tint. A fill is never a text colour.
 
 **Other families:** `--pdx-space-{2xs,xs,sm,md,lg,xl,2xl,3xl}` · `--pdx-radius-{sm,md,lg,xl,full}` ·
 `--pdx-shadow-{sm,md,lg,xl}` · `--pdx-text-{xs,sm,base,lg,xl,2xl,3xl,display}` · `--pdx-weight-*` ·
@@ -167,14 +173,28 @@ a hardcoded `rgb(255,255,255)` expectation breaks in dark mode.
   1. **Spacing** — `pdx theme --density=compact|normal|comfort` at generation time. Measured: it scales
      **only** the eight `--pdx-space-*` tokens (`md` 0.85rem vs 1.15rem). It emits **no** density factor
      and leaves control heights untouched.
-  2. **Control heights** — the runtime factor, set as an **inline style via JS**:
-     `document.documentElement.style.setProperty('--pdx-density-factor', '0.75')`
-     (`compact 0.75 | normal 1 | comfort 1.25`); heights are `calc(var(--pdx-*-min-height) * var(--pdx-density-factor, 1))`.
-     CSS attribute selectors are **not** reliable here (Vite doesn't propagate them).
+  2. **Control heights** — the runtime factor, set with the **attribute**:
+     `pdx-density="compact|normal|comfort"` on `<html>` (or on any element, for a denser subtree)
+     sets `--pdx-density-factor` to `0.75 | 1 | 1.25`; heights are `calc(var(--pdx-*-min-height) * var(--pdx-density-factor, 1))`.
+     It overrides a theme's own factor (its rules are in the layer `pdx.preferences`, after `pdx.themes`),
+     and it works the same on the dev server and in a build. Remove the attribute to get the theme's own
+     density back. Do not write the factor as an inline style: it works, but it is the workaround for a
+     layer order that is fixed.
 - **Behavior tokens** drive structural variants app-wide: `--pdx-button-radius`, `--pdx-input-style`
-  (`outlined|filled|underlined`), `--pdx-tab-indicator` (`underline|pill|filled`), `--pdx-card-style`,
-  `--pdx-accordion-glyph` + `--pdx-accordion-open-transform`, `--pdx-breadcrumb-separator`,
-  `--pdx-toggle-width/height`.
+  (`outlined|filled|underlined`), `--pdx-input-focus` (`bottom`), `--pdx-tab-indicator`
+  (`underline|pill|filled`), `--pdx-card-style`, `--pdx-accordion-glyph` +
+  `--pdx-accordion-transform-open` (the old `--pdx-accordion-open-transform` still applies),
+  `--pdx-breadcrumb-separator`, `--pdx-toggle-width/height`, and the measure the controls beside a
+  button share, `--pdx-control-min-height` and `--pdx-control-radius` (the input frame, `pdx-toggle`
+  and the tag input read them first, then their own token).
+  Declare them as tokens and set nothing else: under the default target the design CSS reads the
+  structural ones with style queries, so a `pdx-theme` subtree gets its own. Never write
+  `pdx-input-style`/`pdx-card-style`/`pdx-tab-style` attributes on `<html>` by hand — under
+  `baseline-2024` `setTheme` mirrors them.
+- **Component tokens** restyle one component: `--pdx-<component>-<property>[-<state>]`
+  (`--pdx-button-bg`, `--pdx-button-bg-hover`, `--pdx-input-border-color-invalid`), set at `:root`, on a
+  subtree or in one element's `style`. Each component's page in the area skills lists its **Tokens**
+  with their defaults. Prefer them to a selector against the component's internals.
 
 ## 7. Programmatic API (`@pdxui/design/engine`)
 
@@ -197,7 +217,12 @@ Also exported: `getLanguage`/`getLanguageIds` · `hexToOklch`/`oklchToHex`/`delt
 `scoreTheme`/`combineThemeScore` (§8).
 
 `cssOverrides` is appended **inside** the theme block (CSS nesting `&`) — use it for the intrinsically-CSS
-personality (gradients, blur, glyphs) the token system can't express.
+personality (gradients, blur, glyphs) the token system can't express. A rule there that styles a
+library component selects what the component exposes — its host attributes, `:state()` and
+`[data-part]` — never the classes it writes on its own elements, which are not public:
+`& pdx-button[variant="primary"] > [data-part="root"] { … }`,
+`& pdx-input:state(invalid) [data-part="root"] { … }`. The `.pdx-surface-card` above is a design
+system class, applied to native markup by the app, and stays.
 
 ## 8. What the validator actually tells you (observed)
 

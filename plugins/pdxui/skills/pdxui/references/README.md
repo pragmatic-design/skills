@@ -1,6 +1,6 @@
 # Component catalogue — index by area
 
-> 117 components across 8 areas. Each area is a **skill of its own**, `pdxui-<area>`
+> 122 components across 8 areas. Each area is a **skill of its own**, `pdxui-<area>`
 > (with its props/events catalogue). **Look here before building: the component almost always exists already.**
 
 ## Layout & shell — skill `pdxui-layout`
@@ -9,6 +9,13 @@ Page structure and application shell.
 
 - `<pdx-affix>` — Pin an element while scrolling.
 - `<pdx-app-layout>` — App shell: header, left/right sidebars, footer, and everything else as the main area.
+- `<pdx-app-shell>` — An application's chrome, drawn from a navigation model: a rail of the reader's own entries — home,
+favourites, recents — and a catalogue of every entry the app has, grouped and searchable, beside
+it. Entries the reader has no permission for are not drawn. A choice goes through the router when
+one runs. Below 600px the rail is a modal drawer opened from the bar.
+
+The app fills three slots: `brand` (the rail's head), `bar` (the top bar: title, search, the
+profile menu) and `foot` (the rail's foot: environment, version); the page goes in the default slot.
 - `<pdx-aspect-ratio>` — Lock content to a fixed ratio.
 - `<pdx-col>` — A responsive grid column.
 - `<pdx-masonry>` — A staggered, Pinterest-style grid.
@@ -54,8 +61,10 @@ Grids, charts, lists and data sources.
 - `<pdx-entity-grid>` — A CRUD grid: create, edit, delete, bulk.
 - `<pdx-filter-builder>` — Build complex filters visually.
 - `<pdx-infinite-scroll>` — Load more as you scroll.
+- `<pdx-kanban>` — Columns of cards, moved by pointer, keyboard or menu.
 - `<pdx-list>` — Data-driven list with custom rows.
 - `<pdx-relative-time>` — Auto-updating “3 days ago”.
+- `<pdx-scheduler>` — Events in time: day, week, month, year, agenda and timeline views, by resource.
 - `<pdx-sortable-list>` — A list the user can put in another order, by dragging a row's handle or from the keyboard alone.
 
 It emits `pdx-reorder` with the indices and never writes to `items`: the application applies the
@@ -95,12 +104,12 @@ Every input and selection control.
 - `<pdx-date-picker>` — Pick a date from a calendar.
 - `<pdx-file-upload>` — Drag-and-drop or browse to upload.
 - `<pdx-input>` — Text field with sizes, states and addons.
+- `<pdx-localized-input>` — One text in several languages, a tab each.
 - `<pdx-masked-input>` — Input that enforces a fixed format.
 - `<pdx-mention>` — Type @ to mention people.
 - `<pdx-number-input>` — Numeric field with steppers and formatting.
-- `<pdx-otp-input>` — One-time-code entry boxes.
+- `<pdx-otp-input>` — One-time-code entry boxes, masked for a PIN.
 - `<pdx-password-input>` — Password field with reveal and strength.
-- `<pdx-pin-input>` — Segmented PIN entry.
 - `<pdx-radio>` — Pick a single option from a set.
 - `<pdx-radio-group>` — A managed set of radios.
 - `<pdx-rating>` — Star rating with halves and tooltips.
@@ -108,6 +117,7 @@ Every input and selection control.
 - `<pdx-search-input>` — Search box with clear and shortcuts.
 - `<pdx-segmented>` — A compact set of exclusive options.
 - `<pdx-select>` — A searchable dropdown select.
+- `<pdx-signature-pad>` — Draw or type a signature; the form gets a PNG.
 - `<pdx-slider>` — Pick a number by dragging.
 - `<pdx-switch>` — Toggle a setting on or off.
 - `<pdx-tag-input>` — Type to add removable tags.
@@ -149,6 +159,10 @@ Visual primitives and simple containers.
 - `<pdx-carousel>` — A swipeable slideshow.
 - `<pdx-chip>` — Compact, optionally removable tag.
 - `<pdx-divider>` — A plain or labeled separating line.
+- `<pdx-flag>` — A country's or region's flag, 4:3, drawn as an image from its own SVG: a page loads the flags it
+shows, one small module each, not the set. Named by the region in the page's language, or hidden
+from assistive technology when `decorative` (the name is said beside it). A region it has no flag
+for draws nothing. The drawings are flag-icons' (MIT), taken by `scripts/gen-flags.mjs`.
 - `<pdx-icon>` — Crisp SVG icons from a shared set.
 - `<pdx-image>` — Lazy, responsive image with placeholder.
 - `<pdx-kbd>` — Render keyboard keys and shortcuts.

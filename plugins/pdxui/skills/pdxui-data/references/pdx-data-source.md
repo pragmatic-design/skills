@@ -56,21 +56,23 @@ and `sync()` sends it to the transport.
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
 | `url` | `url` | string | `''` | REST endpoint URL. When set, creates a restTransport-backed DataSource. |
-| `data` | — | array | `null` | Static data array. When set, creates an arrayTransport-backed DataSource. |
-| `transport` | — | object | `null` | Custom transport object (IDataTransport). Takes priority over url/data. |
+| `data` | — | unknown[] \| null | `null` | Static data array. When set, creates an arrayTransport-backed DataSource. |
+| `transport` | — | Record<string, unknown> \| null | `null` | Custom transport object (IDataTransport). Takes priority over url/data. |
 | `idField` | `idfield` | string | `'id'` | ID field for identifying items. Default: 'id'. |
 | `pageSize` | `pagesize` | number | `0` | Page size. 0 = no pagination. Default: 0. |
 | `autoLoad` | `autoload` | boolean | `true` | Auto-load on creation. Default: true. |
-| `sort` | — | array | `null` | Initial sort. Array of { field, dir } objects. |
-| `filter` | — | array | `null` | Initial filter. Array of filter descriptors. |
-| `params` | — | object | `null` | Additional params passed to transport.read(). |
-| `name` | `name` | string | `''` | Name for Context Protocol provide. Descendants can inject('ds:{name}'). |
+| `sort` | — | unknown[] \| null | `null` | Initial sort. Array of { field, dir } objects. |
+| `filter` | — | unknown[] \| null | `null` | Initial filter. Array of filter descriptors. |
+| `params` | — | Record<string, unknown> \| null | `null` | Additional params passed to transport.read(). |
+| `token` | — | Record<string, unknown> \| null | `null` | A context token of your own, `context<DataSource<Order>>('orders')`, the source is provided under too: a component below injects that one by it, past a nearer `<pdx-data-source>`. |
 
 **API (via `:ref`)**
 
 | Call | Notes |
 |---|---|
 | `source` | The DataSource itself, as a computed: call it — `el.source()` — and it re-reads when the source is replaced. |
+
+**Provides:** the token in `:token` · `DataSourceContext`
 
 
 #### Examples
@@ -95,7 +97,7 @@ const userDS = createDataSource({
   valueField="id" searchable clearable />
 ```
 
-**`<pdx-data-source>` — Declarative** — Non-rendering component. Pass `:data`, `url`, or `:transport`. Use `:ref` to get the DataSource, or `name` for Context Protocol.
+**`<pdx-data-source>` — Declarative** — Non-rendering component. Pass `:data`, `url`, or `:transport`. Use `:ref` to get the DataSource. It is also provided to the elements inside it, as `DataSourceContext` and, with `:token`, under a context token of your own.
 
 ```html
 <pdx-data-source :data="users" id-field="id" :ref="dsRef" />
@@ -151,7 +153,7 @@ function onCountryPick(e) {
 
 ```html
 <pdx-select :options="countryList" clearable
-  @pdx-change="onCountryPick" />
+  @value-change="onCountryPick" />
 
 <pdx-select :options="filteredCityList" labelField="name"
   valueField="id" :value="pickedCity"

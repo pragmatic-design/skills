@@ -13,7 +13,8 @@ Drag-and-drop or browse to upload.
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
 | `auto` | `auto` | boolean | `false` | Upload immediately on selection. |
 | `action` | `action` | string | `''` | URL to upload files to. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg: the dropzone's size. |
+| `value` | — | File[] | `[]` | The current value. |
 
 **API (via `:ref`)**
 
@@ -24,11 +25,19 @@ Drag-and-drop or browse to upload.
 | `uploadAll()` | Start uploading every file still pending; those uploading, done or failed are left alone. |
 | `clear()` | Clears the value. |
 
-**Events:** `pdx-error` → `detail: { file, error }` — Fired when an error occurs.; `pdx-progress` → `detail: { file, percent }` — Fired on `pdx-progress`.; `pdx-remove` → `detail: { file, index }` — Fired when an item is removed.; `pdx-select` → `detail: { files }` — Fired when an item is selected.; `pdx-success` → `detail: { file, response }` — Fired on `pdx-success`.; `pdx-upload` → `detail: { file }` — Fired on `pdx-upload`.
+**Events:** `pdx-error` → `detail: { file, error }` — Fired when an error occurs.; `pdx-progress` → `detail: { file, percent }` — Fired on `pdx-progress`.; `pdx-remove` → `detail: { file, index }` — Fired when an item is removed.; `pdx-select` → `detail: { files }` — Fired when an item is selected.; `pdx-success` → `detail: { file, response }` — Fired on `pdx-success`.; `pdx-upload` → `detail: { file }` — Fired on `pdx-upload`.; `value-change` → `detail: { value: File[] }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `button` · `list` · `listitem` · `progressbar` · `status`
 
-**Slot:** `file` — Scoped — renders one file in the list. Receives `{ file, status, progress }`.
+**Slot:** `file` — Renders one file in the list: a snippet `file(file, status, progress)`.
+
+**States:** `:state(disabled)` — `disabled` is set.; `:state(dragover)` — A drag is over the drop zone.
+
+**Parts:** `[data-part="root"]` — The frame: the drop zone, the refusals and the list.; `[data-part="dropzone"]` — The `role="button"` area a file is dropped on, or clicked to browse.; `[data-part="list"]` — The `role="list"` of the files it holds; busy while one uploads.; `[data-part="file"]` — A file of the list.; `[data-part="remove"]` — A file's remove button.; `[data-part="progress"]` — A file's `role="progressbar"`, while it uploads.
+
+**Tokens:** `--pdx-file-upload-bg-dragover`; `--pdx-file-upload-border-color-dragover`. Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

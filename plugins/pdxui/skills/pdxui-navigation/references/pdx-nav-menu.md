@@ -4,11 +4,12 @@ A multi-level navigation menu.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `[]` | Menu items |
+| `items` | — | T[] | `[]` | Menu items |
 | `activeKey` | `activekey` | string | `''` | Currently active item key |
 | `collapsed` | `collapsed` | boolean | `false` | Collapsed mode (show only icons, hide labels) |
 | `indent` | `indent` | number | `36` | Indent per nesting level (px) |
 | `iconSet` | `iconset` | string | `''` | Icon set name (for pdx-icon set attribute) |
+| `label` | `label` | string | `''` | The navigation landmark's accessible name. Empty: «Navigation». Two menus on a page need two names, or a screen-reader user cannot tell the landmarks apart (#1023). |
 | `size` | `size` | 'md' \| 'sm' | `'md'` | `sm`: a compact menu — smaller type, icons, chevrons and row padding, for a dense sidebar. |
 | `indicator` | `indicator` | 'fill' \| 'border' | `'fill'` | How the current entry is marked: `fill` tints it; `border` also draws a bar on its start edge. |
 | `chevron` | `chevron` | 'start' \| 'end' | `'start'` | Where a group's chevron sits: before its icon, or at the end of its row. |
@@ -22,11 +23,15 @@ A multi-level navigation menu.
 | `expandAll()` | Expand every group that has children, at any depth. |
 | `collapseAll()` | Collapse every group. |
 
-**Events:** `pdx-select` → `detail: { key, item, href }` — Fired when an item is selected.; `pdx-toggle` → `detail: { key, expanded }` — Fired when toggled open or closed. Does not bubble.
+**Events:** `pdx-select` → `detail: { key: string; item: T; href?: string }` — An entry was chosen; cancellable, so an app under the router navigates itself.; `pdx-toggle` → `detail: { key: string; expanded: boolean }` — A group was folded or unfolded: its `key` and whether it is open now. Does not bubble.
 
 **Renders:** roles `group` · `navigation`
 
-**Slot:** `item` — Scoped — renders one navigation entry, a group's included. Receives `{ item, level, expanded, active }`.; `actions` — Scoped — controls BESIDE a leaf entry (a pin, an «open in a new tab»), in a `.pdx-nav-row` with its link, never inside it: a link may hold no interactive content. Receives `{ item, level, active }`.
+**Slot:** `item` — Renders one navigation entry, a group's included: a snippet `item(item, level, expanded, active)`.; `itemActions` — Controls BESIDE a leaf entry (a pin, an «open in a new tab»), in a `.pdx-nav-row` with its link, never inside it: a link may hold no interactive content. A snippet `itemActions(item, level, active)`, named apart from the `actions` prop.
+
+**States:** `:state(ready)` — Its entries are drawn.; `:state(collapsed)` — `collapsed` is set: icons only, a group in a flyout.
+
+**Parts:** `[data-part="nav"]` — The `role="navigation"` element that holds the entries (`.pdx-nav`).; `[data-part="item"]` — An entry, a link or a button; the current one is `aria-current="page"`, an open group's `aria-expanded="true"`.; `[data-part="group"]` — The entries of an open group, or of a heading that folds (`role="group"`).; `[data-part="heading"]` — A section heading, text or the button that folds its group.; `[data-part="separator"]` — The rule between two sections.; `[data-part="actions"]` — The `actions` slot's controls beside a leaf entry.; `[data-part="flyout"]` — A collapsed menu's group, opened beside its icon (on `<body>`).
 
 **Shapes:** `NavMenuItem { key: string; label: string; icon?: string; badge?: string; badgeVariant?: 'default' | 'primary' | 'danger' | 'success'; children?: NavMenuItem[]; type?: 'item' | 'header' | 'separator'; href?: string; disabled?: boolean; expanded?: boolean; collapsed?: boolean; data?: Record<string, string> }`
 
@@ -118,13 +123,13 @@ are checked against the manifest above._
 <pdx-nav-menu :items="items" activekey="users" size="sm" indicator="border" chevron="end"></pdx-nav-menu>
 ```
 
-**Actions Over the Row** — The `actions` slot puts controls beside an entry's link. With `actions="overlay"` they are laid over the row's end and shown on hover and focus, taking no width from the label at rest.
+**Actions Over the Row** — The `itemActions` snippet puts controls beside an entry's link. With `actions="overlay"` they are laid over the row's end and shown on hover and focus, taking no width from the label at rest.
 
 ```html
 <pdx-nav-menu :items="items" actions="overlay">
-  <slot name="actions" let:item>
+  @snippet itemActions(item) {
     <button type="button" :aria-label="'Pin ' + item.label">☆</button>
-  </slot>
+  }
 </pdx-nav-menu>
 ```
 
@@ -166,7 +171,7 @@ are checked against the manifest above._
 // function go(e) {
 //   if (!e.detail.href) return;
 //   e.preventDefault();       // the menu does not follow the link
-//   navigate(e.detail.href);  // the router does, with no page load
+//   navigate.url(e.detail.href);  // the router does, with no page load
 // }
 ```
 

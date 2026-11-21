@@ -45,11 +45,23 @@ export default {
 };
 ```
 
+The look comes from `@pdxui/design` (`pnpm add @pdxui/design`): import its base and one theme once, in
+the page's entry, and each `<pdx-*>` brings its own CSS when the compiler imports it.
+
+```ts
+import '@pdxui/design/base';
+import '@pdxui/design/themes/neutral';   // applies with no pdx-theme on <html>
+```
+
+That is what `pdx new project` writes. `import '@pdxui/design'` loads every component's CSS and all
+thirteen themes instead — for a page that does not know what it will render
+([Theming](https://pdxui.com/docs/theming#shipping-one-instead-of-thirteen)).
+
 ## Your first component, layer by layer
 
-A `.pdx` file has three blocks: `<template>` (what you see), `<script setup>` (state and logic),
+A `.pdx` file has three blocks: `<template>` (what you see), `<script>` (state and logic),
 `<style scoped>` (styles that apply inside this component). The file name becomes the tag:
-`counter.pdx` → `<pdx-counter>`. All three are optional, and the two extra words are worth knowing
+`counter.pdx` → `<app-counter>`. All three are optional, and the two extra words are worth knowing
 exactly: `setup` is intent — the *runes* are what the compiler reads — and `scoped` decides whether the
 CSS is confined to the component or lands in the page globally.
 [The three blocks, precisely](https://pdxui.com/docs/components#the-three-blocks-precisely) spells both out.
@@ -62,7 +74,7 @@ CSS is confined to the component or lands in the page globally.
   <button @click="inc">+1</button>
 </template>
 
-<script setup>
+<script>
 let count = $signal(0);
 function inc() { count++; }
 </script>
@@ -74,20 +86,20 @@ function inc() { count++; }
 **Layer 2 — a prop coming in.** Make it configurable from the outside:
 
 ```pdx
-<script setup>
+<script>
 @prop start: number = 0;
 let count = $signal(start);
 function inc() { count++; }
 </script>
 ```
 
-Now `<pdx-counter start="10">` starts at 10. Primitive props sync with the HTML attribute
+Now `<app-counter start="10">` starts at 10. Primitive props sync with the HTML attribute
 automatically.
 
 **Layer 3 — an event going out.** Let the parent know when it changes:
 
 ```pdx
-<script setup>
+<script>
 @prop start: number = 0;
 @event changed: number;
 
@@ -96,7 +108,7 @@ function inc() { count++; changed(count); }
 </script>
 ```
 
-From the consumer: `<pdx-counter @changed="onChanged">`. `@event changed: number` generates the emit
+From the consumer: `<app-counter @changed="onChanged">`. `@event changed: number` generates the emit
 function and the typed `CustomEvent`.
 
 You've just seen PDX's central pattern: every feature is a **declaration** (`@prop`, `@event`,
