@@ -16,7 +16,7 @@ to make visible.
 
 ## @pdxui/core
 
-434 value exports.
+498 value exports.
 
 ### `__adoptStyles`
 
@@ -174,7 +174,17 @@ import { AbortError } from '@pdxui/core';
 class AbortError
 ```
 
-Error thrown when a request is aborted (timeout or manual).
+Error thrown when the caller aborts a request — a cancellation, not a failure. A timeout is {@link HttpTimeoutError}.
+
+### `ActionDisabledError`
+
+```ts
+import { ActionDisabledError } from '@pdxui/core';
+
+class ActionDisabledError
+```
+
+The rejection of a call whose `enabled()` was false when its turn came: it did not run.
 
 ### `actions`
 
@@ -269,6 +279,16 @@ Shift an ISO date by whole years, clamping the day the same way {@link addMonths
 
 2024-02-29 plus one year is 2025-02-28: the only date where this is visible, and the only reason
 this is not `addMonths(iso, years * 12)`.
+
+### `adoptedRange`
+
+```ts
+import { adoptedRange } from '@pdxui/core';
+
+function adoptedRange(range: HydrationRange): AdoptedRange
+```
+
+A compiled block's answer once it has taken over `range`.
 
 ### `aggregateColumn`
 
@@ -382,6 +402,17 @@ name.
 The prototype walk runs only while the element has no own property of that name, which after the
 component's setup it always has. The inline build calls this too, for a component's props.
 
+### `attach`
+
+```ts
+import { attach } from '@pdxui/core';
+
+function attach(el: Element, fn: Attachment<V>, value?: () => V): void
+```
+
+Run `fn(el, value)` as an attachment of `el`: now, again when `value()` changes (its previous
+cleanup first), and its cleanup once more when the scope that called `attach` is disposed.
+
 ### `authMiddleware`
 
 ```ts
@@ -401,6 +432,18 @@ login or token-refresh call does not send the credential it is trying to obtain.
 The token is never cached here and never appears in an error or a log — {@link logMiddleware}
 redacts the header by name.
 
+### `autofocus`
+
+```ts
+import { autofocus } from '@pdxui/core';
+
+const autofocus: Attachment
+```
+
+`attach:autofocus` — focus the element once it is in the document. On a component it focuses the
+first focusable element inside the host. Unlike the `autofocus` attribute, it works for an element
+a block renders after the page loaded.
+
 ### `autoUpdate`
 
 ```ts
@@ -412,6 +455,30 @@ function autoUpdate(reference: HTMLElement | VirtualElement, floating: HTMLEleme
 Listen for scroll/resize events and call `update` whenever the position
 may have changed. Returns a Dispose function to remove listeners.
 
+### `awaitBlock`
+
+```ts
+import { awaitBlock } from '@pdxui/core';
+
+function awaitBlock(source: () => unknown, thenFn: (value: () => T) => Node | DocumentFragment, loadingFn: (() => Node | DocumentFragment | null) | null, errorFn: ((error: unknown, retry: () => void) => Node | DocumentFragment) | null, options: AwaitTiming = {}): DocumentFragment
+```
+
+The `@await` block. `source` is read reactively; the block shows:
+  - the body, given a getter for the result, once there is one — and keeps it through a refresh;
+  - `@error`, given the error and a retry, for a failure with no result, or when `maxMs` runs out
+    (an {@link AwaitTimeoutError}); retry calls the source's `refetch()`, or reads the expression
+    again. Without `error`, a failure throws to the enclosing boundary and a timeout leaves
+    `@loading` up;
+  - `@loading` while waiting, after `minMs` when it is set — a result that arrives earlier renders
+    the body with no spinner frame.
+The timers start when the block renders, restart when it starts waiting again (a new promise, a
+source back to pending with no data), and stop when it is removed. With `error`, an exception the
+body throws while it renders reaches `@error` too.
+
+Usage:
+  ${awaitBlock(() => users, (list) => html`<ul>${…list()…}</ul>`, () => html`<p>Loading…</p>`,
+      (err, retry) => html`<button @click=${retry}>Retry</button>`, { maxMs: 5000 })}
+
 ### `awaitReady`
 
 ```ts
@@ -420,15 +487,10 @@ import { awaitReady } from '@pdxui/core';
 function awaitReady(value: unknown): boolean
 ```
 
-The condition `@await` switches on — for a promise, whether it has settled.
+Whether `@await (value)` has a result: `true` for a result, `false` while waiting, and for a
+failure it throws the reason as an Error. The same rules as {@link awaitBlock}, as a condition.
 
-A plain truthiness switch (`when(() => x, …)`) cannot serve `@await (x)`: a Promise object is
-always truthy, and the body would render at once and forever, pending or rejected. So:
-  - a thenable → `false` while pending, `true` once fulfilled, and when it REJECTS this throws the
-    reason (as an Error) — which the error boundary the compiler emits for `@error` catches;
-  - anything else → its truthiness, so `@await (appReady)` is a plain condition.
-
-⚠️ The expression must yield the SAME promise each time it is evaluated. A call that makes a new
+⚠️ The expression must yield the SAME promise each time it is evaluated: a call that makes a new
 promise per evaluation (`@await (fetchUser())`) starts over on every re-run and never settles —
 store the promise, or use a resource.
 
@@ -437,15 +499,24 @@ store the promise, or use a resource.
 ```ts
 import { awaitTimed } from '@pdxui/core';
 
-function awaitTimed(condition: () => boolean, thenFn: () => Node | DocumentFragment, loadingFn: (() => Node | DocumentFragment | null) | null, options: { minMs?: number; maxMs?: number }): DocumentFragment
+function awaitTimed(condition: () => boolean, thenFn: () => Node | DocumentFragment, loadingFn: (() => Node | DocumentFragment | null) | null, options: AwaitTiming): DocumentFragment
 ```
 
-Timed conditional rendering for @await { minMs, maxMs }.
-- minMs: don't show loading until this delay (avoid flash for fast loads)
-- maxMs: force timeout error after this duration
+`@await (condition) { minMs, maxMs }` over a plain condition: {@link awaitBlock} with no value
+bound and no `@error`, so `maxMs` running out leaves `@loading` up.
 
 Usage:
   ${awaitTimed(() => ready(), () => html`<main/>`, () => html`<loading/>`, { minMs: 200 })}
+
+### `AwaitTimeoutError`
+
+```ts
+import { AwaitTimeoutError } from '@pdxui/core';
+
+class AwaitTimeoutError
+```
+
+`@await`'s `maxMs` ran out with no result. The source is not cancelled; a later result replaces it.
 
 ### `badge`
 
@@ -470,11 +541,159 @@ function batch(fn: () => void): void
 
 Group writes so subscribers run once, after all of them.
 
-Mostly unnecessary: synchronous writes are batched automatically, so this is for the cases the
-automatic batching cannot see — writes spread across an `await`, or inside a callback the runtime
-did not schedule. Wrapping ordinary code in it changes nothing.
+Outside it each write flushes at once, so two writes in a row run their subscribers twice, and the
+first run sees the second value not yet written. Use it when several writes are one change.
+A compiled template's event handlers already run inside it (`batchHandler`); code anywhere
+else — a hand-written listener, a timer, a promise callback — flushes per write.
 
 Nested calls flush once, at the outermost exit.
+
+### `batchHandler`
+
+```ts
+import { batchHandler } from '@pdxui/core';
+
+function batchHandler(handler: (...args: A) => R): (...args: A) => R
+```
+
+`handler`, run inside `batch()` on every call: what a compiled template does with each of its
+`@event` handlers (#114), so a handler writing three signals runs an effect reading them once,
+on the finished state. The call keeps its `this` and returns what the handler returns — the
+promise of an async handler, which is batched up to its first `await`.
+
+### `bindAttribute`
+
+```ts
+import { bindAttribute } from '@pdxui/core';
+
+function bindAttribute(el: Element, attr: string, value: () => unknown): void
+```
+
+`:attr` that is an attribute — `aria-*`, `data-*`, a hyphenated name, `role` on SVG.
+
+### `bindAttributeOrProperty`
+
+```ts
+import { bindAttributeOrProperty } from '@pdxui/core';
+
+function bindAttributeOrProperty(el: Element, attr: string, prop: string, value: () => unknown): void
+```
+
+`:attr` on an element that may or may not have the property: asked at each write, as core's
+`bindProperty` asks (`prop in el`). A name the element does not have — `:itemprop`, `:for` on a
+<div> — is its attribute; assigning it would set an expando nothing reads.
+
+### `bindGesture`
+
+```ts
+import { bindGesture } from '@pdxui/core';
+
+function bindGesture(el: Element, name: string, value: unknown): boolean
+```
+
+Wire a gesture directive the compiler emits — `@__swipe` with `[direction, handler]`, `@__longpress`
+and `@__pinch` with a handler — to the pointer gesture it names. `name` is the attribute without
+its `@`. False for any other name, which is an ordinary event. Both render paths call it: the
+template path's `bindAttribute` before its generic event branch, the inline path directly (#99).
+
+### `bindHost`
+
+```ts
+import { bindHost } from '@pdxui/core';
+
+function bindHost(el: HTMLElement, host: HostBindings, ctx: unknown, track: (fn: () => void | (() => void)) => unknown): void
+```
+
+Apply a descriptor's `host` to its element. Static attributes are set unless the element already
+carries them — the page's `role` or `tabindex` wins. Bound ones are written in an effect, and a
+listener is added in one, so both stop when the component disconnects.
+
+### `bindInterpolation`
+
+```ts
+import { bindInterpolation } from '@pdxui/core';
+
+function bindInterpolation(anchor: Text, value: () => unknown, constant = false): void
+```
+
+Render what `value()` returns where `anchor`, an empty text node already in place, stands, and follow
+it: a primitive is the anchor's text (`interpolationText`), a Node, a fragment or an array is put in
+as nodes. Both render paths interpolate through it — the inline path wrote only text, so an array
+read `a,b` in a production build and `ab` in dev (#100).
+
+`constant`: the compiler knows the value cannot change — a literal, or a `@for` row's track key
+(#110). It is written once, by the same rule, outside any tracking: no effect is created, and what
+it reads does not subscribe the render it sits in.
+
+### `bindNativeProperty`
+
+```ts
+import { bindNativeProperty } from '@pdxui/core';
+
+function bindNativeProperty(el: Element, attr: string, prop: string, value: () => unknown): void
+```
+
+`:attr` that the element certainly has as a property (`disabled` on an <input>), bound as `attr`.
+
+### `bindParts`
+
+```ts
+import { bindParts } from '@pdxui/core';
+
+function bindParts(el: Element, value: unknown): void
+```
+
+Add `el` to the array the signal `value` holds, and take it out when the scope that rendered it is
+disposed. A value that is not a signal is ignored, as by `bindRef`.
+
+A row is bound while it is being built, before it is in the document, and an `@for` binds a
+thousand in one turn. So an added element is in the array at once, at its end — what `onMount`
+reads, which runs in the same turn — and one microtask later the array is settled: document
+order, and the elements whose scope was disposed taken out. One copy and one sort per turn, not
+one per row. A row that only moves, as a keyed `@for` moves one, keeps its place in the array
+until an element comes or goes.
+
+### `bindRef`
+
+```ts
+import { bindRef } from '@pdxui/core';
+
+function bindRef(el: Element, value: unknown): void
+```
+
+Put `el` in the ref signal `value`, and take it out again — back to `null` — when the scope that
+rendered it is disposed (#262), unless another element has taken the ref meanwhile, as the other
+branch of an `@if`/`@else` does. A value that is not a signal is ignored. Both render paths bind a
+`:ref` through it.
+
+### `bindStyleText`
+
+```ts
+import { bindStyleText } from '@pdxui/core';
+
+function bindStyleText(el: Element, value: () => unknown): void
+```
+
+`:style="expr"` on a plain element, HTML or SVG (#1240): the string is written to `style.cssText`,
+null or undefined as `''`. Assigning `el.style` relies on the browser forwarding it to `cssText`
+([PutForwards=cssText]), and throws where `style` is a bare getter — happy-dom, for SVG.
+
+### `bindTwoWay`
+
+```ts
+import { bindTwoWay } from '@pdxui/core';
+
+function bindTwoWay(el: Element, descriptor: string, value: TemplateValue): void
+```
+
+Two-way binding: `::value`, `::checked`, with the modifiers `.lazy`, `.trim`, `.number` and
+`.debounce(ms)`, of a signal or of the general form `{ get, set }` (#126, see ./two-way-value).
+
+The inline build calls this too, so the two builds listen the same way: a component through its
+model's event (#124) — with `.lazy`, the native `change` its inner input bubbles to the host, the
+commit (#479); a prop that is not a model, one way (#125) — a `<select>` and a checkbox through
+`change`. The inline path had its own copy that listened to `input` on
+everything, and `::value` was one-way on a component in a production build (#97).
 
 ### `booleanIcon`
 
@@ -488,6 +707,17 @@ Render a boolean as a check or a cross, with an accessible label for each.
 
 The labels are not decoration: an icon alone tells a screen reader nothing, so `trueLabel` /
 `falseLabel` are what the cell actually announces.
+
+### `cancelPrefetches`
+
+```ts
+import { cancelPrefetches } from '@pdxui/core';
+
+function cancelPrefetches(except?: string): string[]
+```
+
+Drop every queued prefetch except `except`'s. What is running finishes. Returns the keys dropped,
+so their owner can forget them and queue them again later.
 
 ### `captureRect`
 
@@ -514,6 +744,16 @@ function catchError(handler: (error: unknown) => T): SignalOperator<T, T>
 ```
 
 Catch errors in the pipeline and recover with a fallback value.
+
+### `checkNode`
+
+```ts
+import { checkNode } from '@pdxui/core';
+
+function checkNode(node: Node | null, tag: string): Element
+```
+
+`node`, which must be the element `tag`: what the walk reaches is what the template binds.
 
 ### `clampDate`
 
@@ -680,6 +920,17 @@ function click(element: HTMLElement): Promise<void>
 
 Simulate a click.
 
+### `clickOutside`
+
+```ts
+import { clickOutside } from '@pdxui/core';
+
+const clickOutside: Attachment<((event: Event) => void) | undefined>
+```
+
+`attach:clickOutside="close"` — call the handler for a press (`pointerdown`) anywhere outside the
+element, with the event. Inside it, nothing happens.
+
 ### `clientGroup`
 
 ```ts
@@ -753,18 +1004,18 @@ which parses, allocates and drags a timezone in.
 ```ts
 import { component } from '@pdxui/core';
 
-function component(tag: string, options: ComponentOptions<P>): void
+function component(tag: string, options: ComponentOptions<P, E, M, V>): void
 ```
 
 Define a function-based Web Component.
 
 Usage:
-  component('pdx-counter', {
+  component('app-counter', {
     props: {
-      initial: { type: Number, default: 0 },
+      initial: prop(0),
     },
     setup(ctx) {
-      const count = signal((ctx.initial as Signal<number>)());
+      const count = signal(ctx.initial());
       return { count, increment: () => count.set(v => v + 1) };
     },
     render: (ctx) => html`
@@ -800,6 +1051,10 @@ function computed(fn: () => T, options?: ComputedOptions<T>): ReadonlySignal<T>
 ```
 
 Derived signal — lazy recomputation with dirty flag + optional equality.
+
+A source change makes it dirty and tells its readers «maybe»: an effect that read it is checked
+before it runs, and runs only if this computed — recomputed then — gives another value
+(`Object.is`). With `equals` it recomputes at once and tells its readers only of a change.
 
 ### `computeDiff`
 
@@ -849,6 +1104,17 @@ function configureClient(config: HttpClientConfig): HttpClient
 
 Configure and set the default HTTP client from config.
 
+### `context`
+
+```ts
+import { context } from '@pdxui/core';
+
+function context(name: string): Context<T>
+```
+
+A context token named `name`, for a value of type `T`. Declare it once, in a module, and import it
+where the value is provided and where it is injected: `export const CurrentUser = context<User>('current-user');`.
+
 ### `createAuthStore`
 
 ```ts
@@ -889,31 +1155,6 @@ function createBottomSheet(content: Node, options?: BottomSheetOptions): BottomS
 Create a bottom sheet (mobile-optimized overlay).
 Fixed to bottom, draggable between detent points, swipe-down to dismiss.
 
-### `createBus`
-
-```ts
-import { createBus } from '@pdxui/core';
-
-function createBus(options?: BusOptions): EventBus<T>
-```
-
-Creates a typed event bus for inter-component communication.
-
-Usage:
-  interface AppEvents {
-      'cart:add': { productId: number; qty: number };
-      'cart:remove': { productId: number };
-      'auth:logout': void;
-  }
-  const bus = createBus<AppEvents>();
-  bus.emit('cart:add', { productId: 123, qty: 1 });
-  const unsub = bus.on('cart:add', (item) => console.log(item));
-
-With store (for debugging/replay):
-  const bus = createBus<AppEvents>({ store: true });
-  bus.history();   // → all emitted events
-  bus.replay();    // → re-emits to current handlers
-
 ### `createCache`
 
 ```ts
@@ -932,57 +1173,6 @@ cached value is still returned immediately and refreshed in the background.
 Most apps never call this — {@link getDefaultCache} is created on first use. Make your own to
 isolate a subsystem, or in a test that must not share state with another.
 
-### `createChannel`
-
-```ts
-import { createChannel } from '@pdxui/core';
-
-function createChannel(): Channel<T>
-```
-
-Create a typed bidirectional channel.
-Messages are validated by TypeScript at compile time.
-At runtime, listeners are stored per-event, frozen for security.
-
-CONSTRAINT: send (down) and emit (up) share one listener map, keyed by event
-NAME — give `down` and `up` distinct names in the contract ('refresh' vs 'refreshed', say), or
-the listeners receive the messages of both directions.
-
-### `createCommands`
-
-```ts
-import { createCommands } from '@pdxui/core';
-
-function createCommands(): Commands<T>
-```
-
-Create a typed command dispatcher (parent→child direction only).
-Simpler than a full channel when bidirectional is not needed.
-
-### `createCompoundParent`
-
-```ts
-import { createCompoundParent } from '@pdxui/core';
-
-function createCompoundParent(options?: CompoundOptions<TChild>): CompoundParentContext<TChild>
-```
-
-Create a compound parent context.
-The parent creates this and provides it to children via provide/inject.
-
-@example
-// In parent component (e.g. pdx-tabs):
-const compound = createCompoundParent<TabChild>({
-    onChildAdded: (child, i) => { ... },
-    onNotify: (event, payload) => { ... },
-});
-provide('pdx-tabs', compound);
-
-// In child component (e.g. pdx-tab):
-const parent = inject<CompoundParentContext<TabChild>>('pdx-tabs');
-const dispose = parent.register({ label: 'Tab 1', panel: panelEl });
-onDestroy(() => dispose());
-
 ### `createDataSource`
 
 ```ts
@@ -997,7 +1187,7 @@ Pass an array and it uses {@link arrayTransport} — everything client-side; pas
 the same API sends the descriptors to a server instead. That symmetry is the point: a grid built
 against an array does not change when the data outgrows the browser.
 
-`data()`, `total()`, `loading()` and `error()` are signals, so a template re-renders on a page or
+`data()`, `total()`, `isLoading()` and `error()` are signals, so a template re-renders on a page or
 sort change without being told to.
 
 ### `createDialogQueue`
@@ -1083,14 +1273,16 @@ object and a set of validators.
 
 Nested initial values are FLATTENED into dotted paths — `{ customer: { name } }` becomes
 `'customer.name'` — so a field addresses itself the same way however deep it sits, and validators
-are declared against one flat key space.
+are declared against one flat key space. The types follow it: `fields`, `errors` and `warnings` are
+keyed by those names (a row's by its index, `'lines.0.qty'`), each field typed by the value it holds.
 
 `validateOn` decides when errors appear: `onBlur` by default, because validating while someone is
 still typing shows them an error for a value they have not finished writing. Async validators are
 debounced (300ms) for the same reason.
 
-In a `.pdx` file `@form UserDto` compiles to this, and `<pdx-form :form>` shares it with the
-fields below it — which is what `provideForm`/`useForm` are for.
+In a `.pdx` file `@form user: { … }` (or `@form user: UserSchema`) compiles to this, and
+`<pdx-form :form>` shares it with the fields below it — which is what `provideForm`/`useForm` are
+for.
 
 ### `createFormCoordinator`
 
@@ -1176,9 +1368,9 @@ function createHttpClient(config: HttpClientConfig = {}): HttpClient
 Build an HTTP client: a base URL, headers, a middleware chain and the request methods.
 
 Two defaults are ON, because their absence is not a feature: a **30s timeout** (a request with no
-deadline never settles — `loading` stays true forever and no error is produced) and **retry** for
-idempotent methods. Both are overridable: `timeout: 0` disables the deadline, `retry: false` the
-replay.
+deadline never settles — the source stays `pending()` forever and no error is produced) and
+**retry** for idempotent methods. Both are overridable: `timeout: 0` disables the deadline,
+`retry: false` the replay.
 
 The chain order is deliberate and is the part worth knowing: retry sits OUTSIDE the caller's
 middleware, so a retried attempt re-runs the whole chain (a refreshed token is picked up), and
@@ -1340,8 +1532,10 @@ function createVirtualizer(options: VirtualizerOptions): VirtualizerReturn
 Render only the rows that are on screen: given a count and a size estimate, it returns the window
 to draw and the total height to reserve.
 
-`estimateSize` may be wrong — `measureElement` corrects it from the DOM as rows render, which is
-what makes variable-height content work without measuring everything up front.
+`estimateSize` may be wrong — `measureElement` corrects it from the DOM as rows render, and keeps
+observing each row it measured, which is what makes variable-height content work without
+measuring everything up front. A row above the viewport that changes size moves the scroll
+position with it, and `scrollTo` corrects itself once the rows it lands on are measured.
 
 `overscan` (3) is how many rows to draw beyond the viewport: too few and fast scrolling shows
 blank space, too many and the saving disappears.
@@ -1486,6 +1680,19 @@ Usage:
   const debouncedSearch = debounced(() => search(), 300);
   effect(() => fetchResults(debouncedSearch()));
 
+### `declaredSnippet`
+
+```ts
+import { declaredSnippet } from '@pdxui/core';
+
+function declaredSnippet(ctx: object, name: string, args: (scope: Record<string, unknown>) => readonly unknown[]): SlotFunction | undefined
+```
+
+The parent's snippet for the declared slot `name`, as the `SlotFunction` the component calls with a
+scope object, the arguments taken from it by `args` (#492). Undefined when the parent gave none.
+Every component of the library reads its snippets with it. Read where the component draws, so a
+snippet set after mount is the one drawn.
+
 ### `defer`
 
 ```ts
@@ -1508,6 +1715,16 @@ Simple usage (no dynamic import):
     null,
     () => html`<div class="heavy">Loaded!</div>`)}
 
+### `deferCode`
+
+```ts
+import { deferCode } from '@pdxui/core';
+
+function deferCode(load: () => Promise<unknown>): DeferCode
+```
+
+`load`, run at most once until it fails, and known to have arrived once it has.
+
 ### `define`
 
 ```ts
@@ -1518,6 +1735,23 @@ function define(tag: string, ctor: PdxElementConstructor): void
 
 Register a Custom Element. If already defined, swaps prototype for HMR.
 
+Where there is no custom element registry (Node: a build tool, a test, static generation) it
+registers nothing. Every compiled `.pdx` and every `@pdxui/ui` module calls `component()` when it is
+imported, so throwing here would make the whole module graph unimportable.
+
+### `defineComponent`
+
+```ts
+import { defineComponent } from '@pdxui/core';
+
+function defineComponent(tag: string, options: ComponentOptions<P, E, M, V>, features: ComponentFeatures = {}): void
+```
+
+Define a component with the features given and no other (#1246): the definition a compiled `.pdx`
+emits, naming the features its declarations use. A descriptor written by hand is defined with
+{@link component}, which carries every feature; given a declaration whose feature it was not given,
+this throws in development.
+
 ### `delayTransport`
 
 ```ts
@@ -1527,6 +1761,18 @@ function delayTransport(options: DelayTransportOptions<T>): IDataTransport<T>
 ```
 
 Wrap any transport with artificial delay for loading state demos/testing.
+
+### `delegate`
+
+```ts
+import { delegate } from '@pdxui/core';
+
+function delegate(host: Element, el: Element, type: string, handler: (event: Event, scope?: unknown) => void, scope?: unknown): void
+```
+
+Store `handler` for events of `type` on `el`, an element `host` rendered, and make sure `host`
+listens to `type` once. With a `scope`, the handler is called with it after the event: a row's
+handler, shared by every row, reads the row from it (#375).
 
 ### `destroyAnnouncer`
 
@@ -1551,6 +1797,17 @@ True in a development build, false in a production one — a constant, folded by
 Guard a message that teaches the author something with it, and the branch leaves the production
 bundle with its string: `if (DEV) console.warn('…')`. Never guard BEHAVIOUR with it — behaviour
 that only happens in dev is a difference between what you tested and what you shipped.
+
+### `devAction`
+
+```ts
+import { devAction } from '@pdxui/core';
+
+function devAction(target: object, name: string, schema: unknown): void
+```
+
+A compiled `@action` (#298): the mutation it made, its name, and its parameter's schema. Emitted by
+the compiler after the action's line in a development build.
 
 ### `device`
 
@@ -1676,12 +1933,24 @@ Usage:
   ${each(() => items(), 'id', (item) => html`<div>${item.name}</div>`)}
   ${each(() => items(), (item) => item.id, (item) => html`<div>${item.name}</div>`)}
 
+### `eachDestructured`
+
+```ts
+import { eachDestructured } from '@pdxui/core';
+
+function eachDestructured(items: () => T[], key: string | ((item: T, index: number) => unknown), renderFn: (item: T, index: number) => Node, options?: TransitionOptions, empty?: ListEmpty): DocumentFragment
+```
+
+{@link each}, as a destructured `@for` — `@for (rows as { id, label }; track id)` — compiles to:
+a large append renders in slices, as a plain `@for`'s `eachRow` does (#242, #398). A hand-written
+`each()` keeps the single pass, because its caller may read the DOM right after the write.
+
 ### `eachRow`
 
 ```ts
 import { eachRow } from '@pdxui/core';
 
-function eachRow(items: () => T[], key: string | ((item: T, index: number) => unknown), renderFn: (item: () => T, index: () => number) => Node, options?: TransitionOptions): DocumentFragment
+function eachRow(items: () => T[], key: string | ((item: T, index: number) => unknown), renderFn: (item: () => T, index: () => number) => Node, options?: TransitionOptions, empty?: ListEmpty): DocumentFragment
 ```
 
 Keyed list whose rows see their CURRENT item — what `@for` compiles to.
@@ -1691,6 +1960,31 @@ same key keeps its DOM node, and its getters move to the new object and position
 update (`rows.map(r => r.id === id ? { ...r, done: true } : r)`) reaches the row's bindings. With
 `each()` the row's closures keep the object it was created with. Read the getters
 inside a binding (`${() => item().name}`) — a read while the row is built is a snapshot.
+
+### `eachStatic`
+
+```ts
+import { eachStatic } from '@pdxui/core';
+
+function eachStatic(items: () => T[], key: string | ((item: T, index: number) => unknown), renderFn: (item: () => T, index: () => number) => Node, options?: TransitionOptions, empty?: ListEmpty): DocumentFragment
+```
+
+{@link eachRow} with static rows (#1233) and value rows (#1237): what `@for` compiles to when the row
+reads its item as a value — never its index, no two-way binding. Each row's getter answers the item
+it holds, with no item signal. A value row keeps its effects: a kept key whose item is replaced has
+the new item written to the row and those effects run again on it, its nodes kept. A static row, its
+bindings written once, or a row with a block inside, is built again in its place instead.
+
+### `eachVirtual`
+
+```ts
+import { eachVirtual } from '@pdxui/core';
+
+function eachVirtual(items: () => T[] | PagedSource<T> | null | undefined, key: string | ((item: T, index: number) => unknown), render: ((item: T, index: number) => Node) | ((item: () => T, index: () => number) => Node), options: VirtualListOptions = {}): DocumentFragment
+```
+
+Render a keyed list virtually inside the element it is placed in. Returns the nodes to place: two
+markers, and between them the spacers and the rows of the window.
 
 ### `easings`
 
@@ -1790,6 +2084,29 @@ function evaluateVisibility(condition: VisibilityCondition, values: Record<strin
 
 Evaluate a visibility condition against current form values.
 
+### `event`
+
+```ts
+import { event } from '@pdxui/core';
+
+function event(options?: { bubbles?: boolean; cancelable?: boolean }): EventSpec<D>
+```
+
+Declare an event: `event<number>()`; `event<void>({ bubbles: true })` for one ancestors hear;
+`event<Move>({ cancelable: true })` for one a listener can refuse, which `ctx.emit` answers false.
+
+### `eventHandler`
+
+```ts
+import { eventHandler } from '@pdxui/core';
+
+function eventHandler(fn: Parameters<typeof safeHandler>[0], host: Element | undefined, event: string): ReturnType<typeof safeHandler>
+```
+
+A template's `@event` handler, as the compiler emits it (#1207): `fn` run inside `batch()`
+(`batchHandler`, #114) and its errors routed (`safeHandler`), naming the component `host` and the
+event. One call where each handler spelled out both wrappers and the host's tag name.
+
 ### `exhaustSignal`
 
 ```ts
@@ -1827,7 +2144,8 @@ function exposeOnElement(element: HTMLElement, api: Record<string, unknown>): vo
 ```
 
 Expose methods/signals on the host element for parent access via ref.
-Each entry becomes a read-only, non-configurable own property (external code can't reassign).
+Each entry becomes an own property external code cannot reassign — unless it is an accessor with a
+setter, which external code writes through.
 
 Copies property DESCRIPTORS (not a spread), so a live `get x()` accessor stays live instead of
 being snapshotted to its value at expose time — e.g. a component whose `get form()` is filled in
@@ -1975,8 +2293,10 @@ function focusRestore(): FocusRestoreReturn
 ```
 
 Create a save/restore focus pair with automatic fallback.
-If the saved element is removed from the DOM before restore(),
-focus is moved to the nearest focusable ancestor.
+If the saved element is removed from the DOM before restore(), focus moves to the nearest ancestor
+still in the document: the ancestor itself if it takes focus, else the first focusable inside it,
+else on up (#1159). The case it exists for: a dialog opened from a row's menu button, whose own
+action deletes the row — focus goes to the list, not to <body>.
 
 ### `focusTrap`
 
@@ -2024,6 +2344,38 @@ function formatWithCalendar(iso: string, locale: string = 'en', calendar: Calend
 
 Format a date using a specific calendar system.
 
+### `formField`
+
+```ts
+import { formField } from '@pdxui/core';
+
+function formField(form: Form<Record<string, unknown>>, name: string): FormField<unknown> | undefined
+```
+
+The field named `name`, when the name is known only at run time: a `name` attribute, a column, a
+schema entry. Undefined when the form has no such field — and for the name of one of the form's
+own members, which `form[name]` would return instead (`formField(form, 'reset')` is undefined).
+
+### `formFieldNames`
+
+```ts
+import { formFieldNames } from '@pdxui/core';
+
+function formFieldNames(form: Form<Record<string, unknown>>): string[]
+```
+
+The names of a form's fields as they are now, rows a field list added included.
+
+### `FormPdxElement`
+
+```ts
+import { FormPdxElement } from '@pdxui/core';
+
+class FormPdxElement
+```
+
+Base class of a form-associated component: `defineComponent` gives it to one with a form model.
+
 ### `forwardSlots`
 
 ```ts
@@ -2036,7 +2388,7 @@ Forward slots from outer host to inner component.
 Used when a compound component wraps another compound component.
 
 @example
-// <pdx-fancy-dialog> wraps <pdx-dialog>
+// <app-fancy-dialog> wraps <pdx-dialog>
 // Forward 'header' and 'footer' slots to inner dialog
 forwardSlots(outerHost, innerHost, ['header', 'footer']);
 
@@ -2079,13 +2431,16 @@ Usage:
 ```ts
 import { fromEvents } from '@pdxui/core';
 
-function fromEvents(target: EventTarget, eventNames: string[], options?: FromEventOptions<T>): DisposableSignal<T>
+function fromEvents(target: EventTarget | (() => EventTarget | null), eventNames: string[], options?: FromEventOptions<T>): DisposableSignal<T>
 ```
 
-Listen to multiple events on the same target, merged into one signal.
+Listen to multiple events on the same target, merged into one signal. The target is the element or,
+as for `fromEvent`, a getter for it that is followed: a `:ref` still empty in setup is listened to
+once it fills (#1158).
 
 Usage:
   const interaction = fromEvents(el, ['mousedown', 'touchstart', 'pointerdown']);
+  const focus = fromEvents(() => field, ['focus', 'blur'], { transform: e => e.type });
 
 ### `fromIntersection`
 
@@ -2125,14 +2480,14 @@ import { fromPromise } from '@pdxui/core';
 function fromPromise(promise: Promise<T>, initialValue?: T): PromiseSignal<T>
 ```
 
-Convert a Promise into a reactive signal with loading/error states.
+Convert a Promise into a reactive signal that speaks the async vocabulary.
 
 Usage:
   const user = fromPromise(fetchUser(42));
   effect(() => {
-    if (user.loading()) showSpinner();
+    if (user.state() === 'pending') showSpinner();
     else if (user.error()) showError(user.error());
-    else renderUser(user());
+    else renderUser(user.data());
   });
 
 ### `fromResize`
@@ -2169,6 +2524,17 @@ function fromTC39State(tc39: TC39State<T>): Signal<T>
 
 Create a Pragmatic signal from a TC39-compatible State signal.
 Useful for consuming signals from other frameworks.
+
+### `generatedId`
+
+```ts
+import { generatedId } from '@pdxui/core';
+
+function generatedId(prefix: string): string
+```
+
+A new id `<prefix>-<n>`, where `n` counts the ids made with this prefix: `generatedId('pdx-ff')`
+gives `pdx-ff-1`, then `pdx-ff-2`. An id built from it — `${id}-input` — is generated as well.
 
 ### `generateMonthGrid`
 
@@ -2284,8 +2650,9 @@ function getDefaultCache(): Cache
 The process-wide cache every {@link resource} uses unless given its own, created on first use.
 
 Being a singleton is the point: two components asking for the same key share one request and one
-value. It is also why a test that leaves entries behind can change the next test's behaviour —
-see {@link setDefaultCache}.
+value — concurrent reads join the request in flight, and a value one resource writes (its answer,
+its `mutate`) reaches the others on the key. It is also why a test that leaves entries behind can
+change the next test's behaviour — see {@link setDefaultCache}.
 
 ### `getDefaultClient`
 
@@ -2605,6 +2972,33 @@ function hideSkeleton(el: HTMLElement): void
 
 Restore original content from skeleton.
 
+### `hostClass`
+
+```ts
+import { hostClass } from '@pdxui/core';
+
+function hostClass(read: (ctx: C) => unknown): HostBinder
+```
+
+`:class` on the host: the object form toggles each class it names, a string adds its classes. A class
+it named last time and names no more is removed; one it never named — the author's `class="toolbar"`
+— stays. Writing the attribute replaced them all, and wrote an object as `[object Object]`.
+
+It runs at every mount of every host that binds it: one toggle per key, and a split only for a key
+that holds several classes (#1210, pdx-button-group).
+
+### `hostStyle`
+
+```ts
+import { hostStyle } from '@pdxui/core';
+
+function hostStyle(read: (ctx: C) => unknown): HostBinder
+```
+
+`:style` on the host: the object form sets each property it names (`String(value ?? '')`, so null
+clears it) and removes one it named last time and names no more, keeping the author's inline style;
+a string is written to `style.cssText`, null as '' (#1240).
+
 ### `html`
 
 ```ts
@@ -2613,7 +3007,9 @@ import { html } from '@pdxui/core';
 function html(strings: TemplateStringsArray, ...values: TemplateValue[]): DocumentFragment
 ```
 
-Tagged template literal that produces reactive DOM. SSR-safe: returns empty fragment.
+Tagged template literal that produces reactive DOM. It needs a DOM: where there is none it throws,
+naming the call, instead of returning something that is not a fragment. Module evaluation never
+calls it, so a module that uses it still imports.
 
 ### `HttpError`
 
@@ -2629,9 +3025,9 @@ It carries the status, so calling code branches on `err.status === 404` rather t
 message, and the parsed body, so a validation error from the server is available without a second
 read of a stream that has already been consumed.
 
-Distinct from {@link AbortError} (the request never got an answer — timeout or cancellation) and
-{@link OfflineError} (it was never sent). {@link retryMiddleware} tells them apart for exactly
-this reason: a 503 is worth repeating, an abort is not.
+Distinct from {@link HttpTimeoutError} (the server did not answer in time), {@link AbortError}
+(the caller cancelled) and {@link OfflineError} (it was never sent). {@link retryMiddleware} tells
+them apart for exactly this reason: a 503 is worth repeating, a cancellation is not.
 
 ### `httpResource`
 
@@ -2652,6 +3048,18 @@ Usage:
       body: () => ({ query: searchQuery() }),
   });
 
+### `HttpTimeoutError`
+
+```ts
+import { HttpTimeoutError } from '@pdxui/core';
+
+class HttpTimeoutError
+```
+
+Error thrown when a request outlives the client's `timeout`: the server did not answer in time. A
+failure, not a cancellation — an `AbortError` is what the caller's own abort produces — and not
+replayed by the retry middleware.
+
 ### `humanizeField`
 
 ```ts
@@ -2661,6 +3069,40 @@ function humanizeField(field: string): string
 ```
 
 Humanize a field name: 'firstName' → 'First Name', 'address.city' → 'City'.
+
+### `hydrateOn`
+
+```ts
+import { hydrateOn } from '@pdxui/core';
+
+function hydrateOn(options: HydrateOnOptions, renderFn: () => Node | DocumentFragment): DocumentFragment
+```
+
+The content `renderFn` makes, taken over when a trigger in `options` fires if the page was generated.
+
+### `hydrationRange`
+
+```ts
+import { hydrationRange } from '@pdxui/core';
+
+function hydrationRange(): HydrationRange | null
+```
+
+The range a compiled block is to take over, or null when it builds its markup: outside a hydration,
+or inside one where nothing handed it a range (a block the client renders afresh).
+
+### `inheritedForm`
+
+```ts
+import { inheritedForm } from '@pdxui/core';
+
+function inheritedForm(el: HTMLElement): Form<T>
+```
+
+The form the element `el` sits under, read lazily: what a section's `@form f: Schema from parent;`
+compiles to (#613). Each `f.x` is a stand-in made once — the same object every read, so a binding
+holds it — that reads the inherited form's member `x` when asked, and follows the form from the
+moment `<pdx-form>` provides it. Outside any form, it reads nothing and writes nowhere.
 
 ### `initDevTools`
 
@@ -2691,11 +3133,13 @@ Initialize i18n with configuration. Called once (typically from app root).
 ```ts
 import { inject } from '@pdxui/core';
 
-function inject(key: string | symbol, from?: HTMLElement): T
+function inject(token: Context<T>, host?: HTMLElement, ...fallback: [F] | []): T | F
 ```
 
-Inject a value by walking up the DOM tree (nearest provider wins).
-Falls back to global registry. Throws if not found.
+The value the nearest provider above `host` provides under `token`: a PDX provider, then any
+provider that speaks the context protocol (a Lit one answers a request carrying the same token),
+then the global one. With no provider it throws, naming the token and the component — unless a
+`fallback` is passed, `undefined` included, which is returned instead.
 
 ### `injectSafeAreaCSS`
 
@@ -2761,7 +3205,29 @@ function installContextProtocol(): void
 ```
 
 Install global Context Protocol listener (for global providers).
-Responds to context-request events with values from the global registry.
+Responds to context-request events with values from the global registry. The first global
+{@link provide} installs it; calling it again does nothing.
+
+### `installHydration`
+
+```ts
+import { installHydration } from '@pdxui/core/hydrate';
+
+function installHydration(): void
+```
+
+Hydrate pre-rendered components from now on, instead of rendering them over their markup.
+
+### `installServerDom`
+
+```ts
+import { installServerDom } from '@pdxui/core/server-dom';
+
+function installServerDom(): void
+```
+
+Install the server DOM as globals, each only where the environment has none: Node's own `Event`,
+`EventTarget` and `CustomEvent` are kept. Call it before importing the app's modules. Idempotent.
 
 ### `integer`
 
@@ -2886,6 +3352,19 @@ ISO weeks start on Monday and week 1 is the one containing the first Thursday of
 first days of January can belong to week 52 or 53 of the PREVIOUS year. That rule is why this is
 not `Math.ceil(dayOfYear / 7)`.
 
+### `isRequiredValidator`
+
+```ts
+import { isRequiredValidator } from '@pdxui/core';
+
+function isRequiredValidator(validator: unknown): boolean
+```
+
+Whether `validator` is one {@link required} returned.
+
+Only the built-in rule counts: a hand-written function that rejects empty values is
+indistinguishable from any other check, so a field validated by one is not reported as required.
+
 ### `isRTL`
 
 ```ts
@@ -3006,6 +3485,26 @@ function linkedSignal(optionsOrFn: LinkedSignalOptions<S, T> | (() => T)): Signa
 Create a writable derived signal.
  Shorthand: computation IS the source. Value recomputes on any dependency change.
 
+### `listAnimation`
+
+```ts
+import { listAnimation } from '@pdxui/core';
+
+const listAnimation: ListAnimation
+```
+
+The animation a list with transitions is given.
+
+### `listEmpty`
+
+```ts
+import { listEmpty } from '@pdxui/core';
+
+function listEmpty(render: () => Node): ListEmpty
+```
+
+The `@empty` a compiled `@for … @empty` hands its list: `render` shown while the list has no row.
+
 ### `loadTranslations`
 
 ```ts
@@ -3016,6 +3515,17 @@ function loadTranslations(loc: string, messages: Record<string, unknown>): void
 
 Load translations for a locale. Flattens nested objects to dot notation.
 Can be called multiple times to merge translations.
+
+### `locationPath`
+
+```ts
+import { locationPath } from '@pdxui/core';
+
+function locationPath(): string
+```
+
+The current path: the router's when it runs, else the address bar's. Reactive: a reader re-runs on
+every navigation, and when a source is named after it first read.
 
 ### `logMiddleware`
 
@@ -3186,6 +3696,16 @@ Length in JavaScript code units, so an emoji or an accented character composed o
 counts as two. For a "must be filled in" rule use {@link required} — this one passes on a value
 that is not a string at all.
 
+### `model`
+
+```ts
+import { model } from '@pdxui/core';
+
+function model(defaultValue?: T | (() => T), options?: ModelOptions): ModelSpec<T>
+```
+
+Declare a model: `model<string>('')`, `model<Item[]>(() => [])`, `model<string>('', { form: true })`.
+
 ### `mount`
 
 ```ts
@@ -3227,12 +3747,38 @@ function mutation(options: MutationOptions<TData, TInput>): Mutation<TData, TInp
 A write as reactive state: `execute(input)` plus the `pending`, `data` and `error` a form needs to
 disable its submit button and show what happened.
 
-Concurrent executions are refused, not queued: calling `execute` while one is in flight rejects
-with "Mutation already in progress". That is the double-submit guard — a user double-clicking
-Save must not create two records — and it is why this is not just an async function.
+By default calls are queued, not run at once: `execute` while one is in flight waits for it, so two
+writes of the same record never race, and an autosave and a save both land, in order. `concurrency`
+chooses otherwise — drop, coalesce, or run in parallel. A user double-clicking Save must still not
+create two records — that guard is the button's: `<pdx-button :action="save">` is busy and refuses
+clicks while `pending()`, under the policies that wait.
 
-`invalidates` names the cache tags to drop on success, which is how a list refreshes itself after
+`invalidate` names the cache tags to drop on success, which is how a list refreshes itself after
 an item is created without the caller wiring the two together.
+
+### `navigateTo`
+
+```ts
+import { navigateTo } from '@pdxui/core';
+
+function navigateTo(href: string): boolean
+```
+
+Follow `href` with the router, when one has named itself; `false` when none has, and the caller lets
+its link do the browser's work. A component that draws links (`<pdx-app-shell>`) calls it on a
+click: where the Navigation API does not hand the click to the router, the link would reload the page.
+
+### `offerPart`
+
+```ts
+import { offerPart } from '@pdxui/core';
+
+function offerPart(marker: Node): void
+```
+
+Offer what the server wrote in the value's place `marker` to the next compiled block that starts: a
+block built before the helper that places it is called — `show()`'s content — takes it over. Outside a
+hydration, or for a marker that is no value's place, nothing.
 
 ### `OfflineError`
 
@@ -3415,6 +3961,19 @@ awaited and is not a cleanup: return a function from a synchronous callback for 
 an `onDestroy()` before the first `await`, since the scope is restored only while the callback runs
 synchronously.
 
+### `onNextFrame`
+
+```ts
+import { onNextFrame } from '@pdxui/core';
+
+function onNextFrame(fn: () => void): void
+```
+
+Run `fn` in the next animation frame, only if this mount is still alive then (#1231): what
+`ctx.frame` does, for a script that has no `ctx` — a `.pdx` component's. For DOM work that has to
+wait for the page to have laid out what this frame added — the element after the host, a size.
+Called from setup() or from inside onMount(); a component disconnected before the frame runs nothing.
+
 ### `onPinch`
 
 ```ts
@@ -3583,6 +4142,18 @@ function parseISO(iso: string): CalendarDate
 
 Parse ISO date string (YYYY-MM-DD) to CalendarDate.
 
+### `partText`
+
+```ts
+import { partText } from '@pdxui/core';
+
+function partText(open: Node | null): Text
+```
+
+An interpolation's place, `open`, as the text node the client binds: the text the server wrote, or
+an empty one where it wrote none. The markers go. A place that holds more than a text — a template
+the value returned — is emptied: the binding renders it, as a mount does.
+
 ### `pattern`
 
 ```ts
@@ -3623,6 +4194,17 @@ Usage:
     map(q => q.trim().toLowerCase()),
     filter(q => q.length > 2)
   );
+
+### `placePart`
+
+```ts
+import { placePart } from '@pdxui/core';
+
+function placePart(marker: ChildNode, block: Node): void
+```
+
+Put a block where its anchor `marker` is: in a mount, in its place; while hydrating, `marker` is the
+open of the value's place the server wrote, and the block takes over what is in it (hydrate/adopt.ts).
 
 ### `playKeyframes`
 
@@ -3677,17 +4259,57 @@ Usage:
   const prev = previous(count);
   effect(() => console.log(`${prev()} → ${count()}`));
 
+### `processInSlices`
+
+```ts
+import { processInSlices } from '@pdxui/core';
+
+function processInSlices(items: ArrayLike<T>, work: (item: T, index: number) => void, options: SliceOptions = {}): Promise<void>
+```
+
+Call `work(item, index)` for every item, in order, yielding to input after each slice of about
+5 ms. Resolves when every item has been processed; rejects with the signal's reason when
+`options.signal` aborts (no later item is processed), or with the error `work` throws.
+
+### `projectedNode`
+
+```ts
+import { projectedNode } from '@pdxui/core';
+
+function projectedNode(host: Element, slot: string, inGroup: number, inAll: number): Node | null
+```
+
+A child the template gives the component `host`: where its slot put it in the server's markup — the
+`inGroup`-th node of the region of slot `slot`, or the `inAll`-th of the light DOM of a component the
+server could not render. A host that is not a pre-rendered component has its children in place.
+
+### `prop`
+
+```ts
+import { prop } from '@pdxui/core';
+
+const prop: typeof propBuilder & { required: typeof requiredProp; optional: typeof optionalProp }
+```
+
+Declare a prop: `prop<T>(default, { type?, iconName? })`, `prop.required<T>({ type?, iconName? })` or `prop.optional<T>({ type?, iconName? })`. `iconName: true` marks a prop whose value names an icon: the compiler imports the icon a literal value names, as it does for `pdx-icon`'s `name`.
+
 ### `provide`
 
 ```ts
 import { provide } from '@pdxui/core';
 
-function provide(key: string | symbol, value: T, element?: HTMLElement): void
+function provide(token: Context<T>, value: T, host?: HTMLElement): void
 ```
 
-Provide a value on a specific element (DOM-scoped).
-Descendants can inject it via context-request event.
-If no element is specified, provides globally (app-wide).
+Provide a value under `token` on an element (DOM-scoped): descendants inject it. Without an
+element it is provided globally (app-wide).
+
+It answers the Web Components context protocol's `context-request`, from any library: the
+request's `context` is compared with the token by identity. A request with `subscribe: true` is
+answered with the current value of a provided signal, and again on each change until it calls
+the `unsubscribe` it was given, or the host component is destroyed; a plain value is answered
+once, which the protocol allows. A request without `subscribe` gets the value as provided. A
+provided signal is writable by whoever injects it.
 
 ### `provideFieldGroupPath`
 
@@ -3721,18 +4343,6 @@ function provideFormCoordinator(coordinator: FormCoordinator, element?: HTMLElem
 
 Provide a FormCoordinator for nested form orchestration.
 
-### `provideWritable`
-
-```ts
-import { provideWritable } from '@pdxui/core';
-
-function provideWritable(key: string | symbol, value: Signal<T>, element?: HTMLElement): void
-```
-
-Provide a writable signal for bidirectional context.
-Children can read AND write the value via useWritable().
-Semantic sugar over provide() — clarifies bidirectional intent.
-
 ### `pushErrorHandler`
 
 ```ts
@@ -3762,6 +4372,17 @@ function queryByText(container: HTMLElement, text: string | RegExp): HTMLElement
 ```
 
 Find element by text content. Returns null if not found.
+
+### `queuePrefetch`
+
+```ts
+import { queuePrefetch } from '@pdxui/core';
+
+function queuePrefetch(key: string, load: () => Promise<unknown>): boolean
+```
+
+Queue a prefetch under `key` (a route pattern, a deferred block). Returns whether it was queued:
+false when the same key is already queued or running.
 
 ### `recordDevtoolsNavigation`
 
@@ -3837,8 +4458,8 @@ function registerFormControl(tagName: string, config?: FormControlConfig): void
 ```
 
 Register a custom element as a form control.
-Once registered, the compiler auto-wires it inside <pdx-form>,
-and pdx-form-template can render it via JSON schema.
+Once registered, pdx-form-template can render it via JSON schema. Inside <pdx-form :form> a
+control binds its field through its model (`::value="f.x"`, #128).
 
 ### `registerFormFieldType`
 
@@ -3874,6 +4495,17 @@ registerIconSet('heroicons', async (name) =>
 );
 ```
 
+### `registerServerElement`
+
+```ts
+import { registerServerElement } from '@pdxui/core/server';
+
+function registerServerElement(tag: string, render: (attributes: ReadonlyMap<string, string | null>) => ServerRender): void
+```
+
+Render `tag` — a custom element that is not a component — to a string with `render`, given the
+attributes its template wrote. Without one, it renders as a plain element with its template's children.
+
 ### `RELATIVE_DATE_OPS`
 
 ```ts
@@ -3894,16 +4526,38 @@ function remove(node: Node): void
 
 Remove a node from its parent.
 
-### `renderSlot`
+### `renderSnippet`
 
 ```ts
-import { renderSlot } from '@pdxui/core';
+import { renderSnippet } from '@pdxui/core';
 
-function renderSlot(slots: Record<string, SlotFunction> | undefined, name: string, scopeFn: (() => Record<string, unknown>) | null, defaultFn: () => Node | DocumentFragment): DocumentFragment
+function renderSnippet(source: () => unknown, args: () => readonly unknown[], fallback?: (() => Node | null) | null): DocumentFragment
 ```
 
-Render a scoped slot. If the parent provided a slot function, call it with scope data.
-Otherwise, render the default content.
+Render the snippet `source()` returns, called with `args()`, between two markers: again whenever the
+function or an argument changes, and `fallback` (the optional slot's `@else`) or nothing while there
+is no function. The snippet's own effects and bindings belong to this render, not to the code that
+wrote the snippet: they are disposed when it renders again and when the block around it goes.
+
+### `renderToString`
+
+```ts
+import { renderToString } from '@pdxui/core/server';
+
+function renderToString(fn: () => unknown): string
+```
+
+Render what `fn` returns — an html`` template, typically — to a string.
+
+### `renderToStringWithReport`
+
+```ts
+import { renderToStringWithReport } from '@pdxui/core/server';
+
+function renderToStringWithReport(fn: () => unknown): { html: string; skipped: SkippedComponent[]; head: ServerHead }
+```
+
+The same, with the components that rendered as empty hosts and why.
 
 ### `repeat`
 
@@ -3937,23 +4591,11 @@ it does NOT create a separate effect per item.
 
 @param items - Signal or getter returning the array
 @param keyFn - Unique key extractor per item
-@param slotFn - Parent-provided scoped slot (from ctx.__slots)
+@param slotFn - The parent's snippet, as `declaredSnippet` gives it
 @param renderFn - Imperative render callback prop (backward compat)
 @param defaultFn - Built-in default renderer
 @param scopeMapper - Converts (item, index) to the slot scope object
 @param options - Transition options for enter/exit/move animations
-
-### `requestContext`
-
-```ts
-import { requestContext } from '@pdxui/core';
-
-function requestContext(element: HTMLElement, key: string | symbol): T | undefined
-```
-
-Request a context value via W3C Context Protocol.
-Dispatches a context-request event and returns the value from the nearest provider.
-Works with any Web Component (including non-Pragmatic ones like Lit).
 
 ### `required`
 
@@ -3969,6 +4611,9 @@ or an empty array.
 Note what it does NOT reject: `0` and `false` are values, and a required numeric or checkbox field
 is satisfied by them. Pass `msg` to override the message; without it the text comes from the
 active validation locale.
+
+The function it returns is branded, so a form can tell a required field from an optional one
+(`FormField.required`, {@link isRequiredValidator}) and mark its control `aria-required`.
 
 ### `requirePermission`
 
@@ -4021,15 +4666,16 @@ Handles both plain strings and structured ValidationMessage objects.
 ```ts
 import { resource } from '@pdxui/core';
 
-function resource(fetcher: () => Promise<T>, options?: ResourceOptions<T>): Resource<T>
+function resource(fetcher: ResourceFetcher<T>, options?: ResourceOptions<T>): Resource<T>
 ```
 
-An async value as reactive state: `data`, `error` and `state` you read like signals, with the
-fetch, the cache, the retries and the cancellation already handled.
+An async value as reactive state: `data`, `error`, `state`, `pending` and `stale` you read like
+signals, with the fetch, the cache, the retries and the cancellation already handled.
 
-The four states are `idle | loading | success | error`, and the point of having them is that a
+The four states are `idle | pending | success | error`, the words every async source uses: a
 template branches on `state()` instead of juggling a loading boolean against a possibly-stale
-`data`. {@link resourceWhen} renders that branch for you.
+`data`, `pending()` says a request is in flight, and `stale()` that the value shown may be out of
+date. {@link resourceWhen} renders the branch for you.
 
 A stale response can never overwrite a fresh one: each fetch takes a generation number and an
 AbortController, so a slow request that returns after a newer one is discarded rather than
@@ -4039,7 +4685,7 @@ flickering the old value back in.
 `tags` are what {@link invalidate} matches on after a {@link mutation}. `staleTime` (30s by
 default) is how long a cached value is served without a refetch.
 
-In a `.pdx` file `@fetch users: '/api/users'` compiles to this.
+In a `.pdx` file `@fetch users: 'GET /api/users'` compiles to this.
 
 ### `resourceWhen`
 
@@ -4051,13 +4697,14 @@ function resourceWhen(res: Resource<T>, handlers: ResourceHandlers<T>): Document
 
 Render one branch per resource state, and swap it when the state changes.
 
-Takes `{ loading, error, success, empty?, reloading? }` and returns a fragment that keeps itself
-in step with the resource. The branches it renders are OWNED: the effects created by the previous
-branch are disposed when the state changes, so a loading spinner's timer does not survive the
-success it was replaced by.
+Takes `{ loading, success, error }` and returns a fragment that keeps itself in step with the
+resource. The branches it renders are OWNED: the effects created by the previous branch are
+disposed when the state changes, so a loading spinner's timer does not survive the success it was
+replaced by.
 
-`empty` is the branch that stops "loaded, and there is nothing" from looking like "still loading";
-`reloading` lets a background refresh show the old data instead of blanking the screen.
+`loading` is the first load. A result stays on `success` while it refreshes and after a refresh
+that failed (E4: the data is kept; the error is `res.error()` beside it); `error` is a failure with
+no data. A success is rendered whatever its value — `null`, `0`, `false`, and `undefined` too (E5).
 
 ### `responsive`
 
@@ -4071,7 +4718,7 @@ Creates a responsive signal that updates when viewport breakpoints change.
 
 Usage:
   const cols = responsive({ sm: 1, md: 2, lg: 3, xl: 4 });
-  html`<pdx-grid :cols=${cols}>...</pdx-grid>`
+  html`<app-grid :cols=${cols}>...</app-grid>`
 
 @param map - Breakpoint → value mapping
 @param base - Fallback value when no breakpoint matches (below smallest defined)
@@ -4150,15 +4797,13 @@ function retryMiddleware(options: RetryMiddlewareOptions = {}): HttpMiddleware
 Retries a failed request with exponential backoff and jitter.
 
 Retries only what retrying can fix: 5xx, 408 and 429, plus network errors. A 4xx is the server
-saying the request itself is wrong, and repeating it changes nothing.
+saying the request itself is wrong, and repeating it changes nothing; a cancel or a timeout is not
+retried either. A read source's own `retry` (`resource()`, `useQuery`) follows the same rule.
 
-By default it also retries only IDEMPOTENT methods (GET, HEAD, OPTIONS, PUT, DELETE), because a
-POST that timed out may well have succeeded — replaying it can charge a card twice. Set
-`idempotentOnly: false` only when the endpoint is idempotent by its own design (an idempotency
-key, say).
-
-The jitter is not decoration: without it every client that failed together retries together, and
-the recovering server is hit by the same spike that took it down.
+By default it retries only the methods that READ (GET, HEAD, OPTIONS): a write that failed may well
+have been applied — replaying a POST can charge a card twice, and a PUT or DELETE is idempotent only
+if the server made it so. A request that should be retried says so itself, `retry: 2` in its
+options; `retry: false` turns the retry off for one request (a read source does, owning its own).
 
 On by default in {@link createHttpClient}; pass `retry: false` there to turn it off.
 
@@ -4374,7 +5019,7 @@ import { screen } from '@pdxui/core';
 const screen
 ```
 
-Centralized screen/device signals. One matchMedia listener per query.
+Centralized screen/device signals. One matchMedia listener per query, set up on its first read.
 
 ### `scrollTo`
 
@@ -4385,6 +5030,26 @@ function scrollTo(target: string | number | Element, options?: { behavior?: Scro
 ```
 
 Scroll to a target: CSS selector, element, or Y position.
+
+### `selector`
+
+```ts
+import { selector } from '@pdxui/core';
+
+function selector(source: () => T): Selector<T>
+```
+
+A selector over `source`, compared with `Object.is`.
+
+### `serverElement`
+
+```ts
+import { serverElement } from '@pdxui/core/server';
+
+function serverElement(tag: string, attributes: Readonly<Record<string, string>> = {}, props: Readonly<Record<string, unknown>> = {}, inner: unknown = null): ServerElement
+```
+
+An element by its tag, rendered to a string: what a helper, or an element's server render, creates.
 
 ### `setComponentStrings`
 
@@ -4437,6 +5102,26 @@ function setDefaultIconSet(name: string): void
 
 Set the default icon set by name.
 
+### `setDevtoolsLoaderSource`
+
+```ts
+import { setDevtoolsLoaderSource } from '@pdxui/core';
+
+function setDevtoolsLoaderSource(source: DevtoolsLoaderSource | null): void
+```
+
+The router says where to read its route loaders from, for `sources()` (#298); null removes it.
+
+### `setDevtoolsMapSource`
+
+```ts
+import { setDevtoolsMapSource } from '@pdxui/core';
+
+function setDevtoolsMapSource(source: (() => DevtoolsMapRoute[]) | null): void
+```
+
+The router says where to read the route graph from; null removes it. One router at a time.
+
 ### `setDevtoolsRouteSource`
 
 ```ts
@@ -4452,7 +5137,7 @@ The router says where to read the current route from. One router at a time: the 
 ```ts
 import { setDirection } from '@pdxui/core';
 
-function setDirection(dir: 'ltr' | 'rtl'): void
+function setDirection(value: 'ltr' | 'rtl'): void
 ```
 
 Force set direction (e.g. for testing or user override).
@@ -4493,6 +5178,27 @@ setLocaleStrings({
     datepicker: { today: 'Oggi', clear: 'Cancella' },
     dialog: { close: 'Chiudi' },
 });
+
+### `setLocationSource`
+
+```ts
+import { setLocationSource } from '@pdxui/core';
+
+function setLocationSource(source: (() => string) | null): void
+```
+
+Name where the current path comes from: `@pdxui/router` does, when it loads. An application with a
+router of its own passes its path signal; `null` goes back to the address bar.
+
+### `setNavigator`
+
+```ts
+import { setNavigator } from '@pdxui/core';
+
+function setNavigator(navigator: ((href: string) => void) | null): void
+```
+
+Name what follows a link: `@pdxui/router` does, in `createRouter`; `null` takes it back.
 
 ### `setNestedValue`
 
@@ -4559,7 +5265,9 @@ import { setTelemetryLevel } from '@pdxui/core';
 function setTelemetryLevel(level: TelemetryLevel): void
 ```
 
-Set telemetry level. 0=off, 1=errors only (prod-safe), 2=full trace (dev).
+Set telemetry level. 0=off, 1=errors only (prod-safe), 2=full trace (dev). From level 1 the flushes,
+the effects that threw and the cycles broken are counted for `__pdx_debug.perf()`, in production too;
+level 2's registries and trace record in a development build only.
 
 ### `setTheme`
 
@@ -4570,8 +5278,8 @@ function setTheme(name: string): void
 ```
 
 Set the brand theme (e.g. 'material', 'fluent', 'cupertino').
-Sets `pdx-theme` attribute on <html>, persists to localStorage,
-and syncs behavior attributes (input-style, tab-style, card-style)
+Sets `pdx-theme` attribute on <html>, persists to localStorage, and — under baseline-2024 or
+without the pdx() plugin — syncs behavior attributes (input-style, tab-style, card-style)
 from the theme's CSS custom properties.
 
 ### `setValidationLocale`
@@ -4660,9 +5368,9 @@ Reading is calling it: `count()`. Writing is `count.set(next)` or `count.set(v =
 {@link effect} or `computed` that read it during its last run re-runs when it changes; nothing
 else does, so there is no diffing and no dependency array to keep correct.
 
-Writes are auto-batched: several mutations in the same synchronous turn produce ONE flush, so a
-subscriber never observes a half-updated state. {@link batch} is for the cases where you need to
-say so explicitly.
+Each write outside {@link batch} flushes at once: its subscribers run before `set` returns. Writes
+that must be seen together — two fields of one state — go inside `batch()`, so a subscriber never
+observes the state half-updated.
 
 In a `.pdx` file you rarely call this — `let count = $signal(0)` compiles to it, and `count++`
 compiles to the `.set`.
@@ -4694,6 +5402,17 @@ function skip(count: number): SignalOperator<T, T>
 
 Skip the first N changes after initial value.
 
+### `skipNode`
+
+```ts
+import { skipNode } from '@pdxui/core';
+
+function skipNode(node: Node | null): Node | null
+```
+
+The node after `node` in the client's static markup: a value's place counts as one node, and so does
+what a `<slot>` received, which the server wrote in the slot's place.
+
 ### `skipUntil`
 
 ```ts
@@ -4707,17 +5426,25 @@ Ignore source emissions until the gate signal becomes truthy.
 Usage:
   const gated = skipUntil(() => data(), () => isReady());
 
-### `slotCarrier`
+### `slot`
 
 ```ts
-import { slotCarrier } from '@pdxui/core';
+import { slot } from '@pdxui/core';
 
-function slotCarrier(name: string, fn: SlotFunction): HTMLElement
+function slot(): SlotSpec<F>
 ```
 
-Create a carrier element that transports a slot function from parent to child.
-The child's _projectSlots() extracts this during mount.
-Generated by the compiler for @slot(name, { vars }) { body } directives.
+Declare a slot: `slot<(o: Option) => Node>()`.
+
+### `slotProjection`
+
+```ts
+import { slotProjection } from '@pdxui/core';
+
+const slotProjection: SlotProjection
+```
+
+The projection a component whose template renders a <slot> is defined with.
 
 ### `SPLASH_ID`
 
@@ -4759,6 +5486,38 @@ Usage:
   // → "linear(0, 0.042, 0.158, 0.336, ...)"
 
 @returns CSS easing string for use in transition-timing-function
+
+### `staticBlock`
+
+```ts
+import { staticBlock } from '@pdxui/core';
+
+function staticBlock(build: (frag: DocumentFragment, doc: Document) => void): () => DocumentFragment
+```
+
+The static markup of one block of a compiled template — the root, an `@if` branch, an `@for` row —
+built once and copied per render. Emitted by the compiler: `build` appends the block's static nodes
+to the fragment it is handed, creating them with the document it is handed.
+
+The markup is built on the first call, not at import (#93), into a `<template>`'s content: that
+document has no custom-element registry and loads nothing, so no component constructor runs and no
+image is fetched while it is built. Each call returns `importNode` of it, which brings the copy into
+the page and upgrades its components, as `createElement` did.
+
+### `staticMarkup`
+
+```ts
+import { staticMarkup } from '@pdxui/core';
+
+function staticMarkup(html: string): (frag: DocumentFragment, doc: Document) => void
+```
+
+A block's static markup written as HTML (#369): the builder `staticBlock` runs. Far shorter than
+one DOM call per node, and the compiler emits it only for a block the HTML parser keeps exactly as
+its own tree. Parsed once, in the inert document `staticBlock` builds in.
+
+An empty comment `<!---->` stands for an empty text node — an anchor the render binds, which no
+parse can produce — and is replaced by one. A comment the markup really holds is never empty.
 
 ### `status`
 
@@ -4817,8 +5576,8 @@ Usage:
     (query) => fetch(`/api/search?q=${query}`).then(r => r.json())
   );
   effect(() => {
-    if (results.loading()) showSpinner();
-    else renderResults(results());
+    if (results.state() === 'pending') showSpinner();
+    else renderResults(results.data());
   });
 
 ### `take`
@@ -4830,6 +5589,18 @@ function take(count: number): SignalOperator<T, T>
 ```
 
 Take only the first N emissions (changes), then freeze. Initial value doesn't count.
+
+### `takePrefetch`
+
+```ts
+import { takePrefetch } from '@pdxui/core';
+
+function takePrefetch(key: string): Promise<unknown> | undefined
+```
+
+The prefetch a navigation needs, handed over: a queued one starts at once, as an urgent load; a
+running one is returned as it is, for the navigation to await rather than start a second load.
+Undefined when there is none, and the navigation loads on its own.
 
 ### `takeUntil`
 
@@ -4929,9 +5700,9 @@ Prefer `createHttpClient({ timeout })`, which is the same deadline expressed whe
 looks for it — this exists for the case where different middleware layers need different
 deadlines. It does NOT override a request that already carries one.
 
-A request with no deadline never settles: `loading` stays true and no error is ever produced, so
-the component shows its skeleton for as long as the tab is open. That is why the default client
-sets 30s.
+A request with no deadline never settles: the source stays `pending()` and no error is ever
+produced, so the component shows its skeleton for as long as the tab is open. That is why the
+default client sets 30s.
 
 ### `toAsync`
 
@@ -5101,15 +5872,28 @@ as the column's `format` shows it.
 Which rows is the caller's, as for `toCsv`: the selection when there is one, otherwise what the
 filter selects.
 
-### `tryInject`
+### `trackUrgentLoad`
 
 ```ts
-import { tryInject } from '@pdxui/core';
+import { trackUrgentLoad } from '@pdxui/core';
 
-function tryInject(key: string | symbol, from?: HTMLElement): T | undefined
+function trackUrgentLoad(load: Promise<T>): Promise<T>
 ```
 
-Try to inject a value. Returns undefined if not found.
+A load the visitor is waiting for: while it is in flight, no queued prefetch starts. It is never
+queued itself. Returns the same promise.
+
+### `trapFocus`
+
+```ts
+import { trapFocus } from '@pdxui/core';
+
+const trapFocus: Attachment
+```
+
+`attach:trapFocus` — keep Tab inside the element and hide what is beside it from screen readers
+(core's `focusTrap`), from the moment it is in the document until its scope is disposed, which
+gives focus back to where it was.
 
 ### `tryUseForm`
 
@@ -5127,28 +5911,6 @@ With `from`, it looks up from that element whenever it is called, in setup or no
 nothing, an effect that called it runs again as soon as a form is provided — so a component that
 may be set up before its form reads it through `tryUseForm(ctx.el)` inside the code that uses it,
 and keeps it once found.
-
-### `tryUseProvided`
-
-```ts
-import { tryUseProvided } from '@pdxui/core';
-
-function tryUseProvided(key: string | symbol): T | undefined
-```
-
-Composable: try to inject a provided value. Returns undefined if not found.
-Must be called during setup().
-
-### `tryUseWritable`
-
-```ts
-import { tryUseWritable } from '@pdxui/core';
-
-function tryUseWritable(key: string | symbol): Signal<T> | undefined
-```
-
-Composable: try to inject a writable signal. Returns undefined if not found.
-Must be called during setup().
 
 ### `tween`
 
@@ -5532,23 +6294,11 @@ Usage:
   const pop = usePopover({ trigger: 'click', placement: 'bottom-start' });
   // In template:
   <button :ref="pop.setTrigger" :aria-expanded="pop.isOpen">Open</button>
-  <div :ref="pop.setContent" :show="pop.isOpen" :style="popoverStyle(pop.position)">
-    Content here
-  </div>
-
-### `useProvided`
-
-```ts
-import { useProvided } from '@pdxui/core';
-
-function useProvided(key: string | symbol): T
-```
-
-Composable: inject a provided value using the current component's element.
-Must be called during setup(). Throws if not found.
-
-Usage in setup():
-  const theme = useProvided<ThemeSignal>('theme');
+  @show (pop.isOpen) {
+    <div :ref="pop.setContent" :style="popoverStyle(pop.position)">
+      Content here
+    </div>
+  }
 
 ### `usePullToRefresh`
 
@@ -5569,7 +6319,7 @@ an effort rather than an accident. Only fires when the container is already scro
 ```ts
 import { useQuery } from '@pdxui/core';
 
-function useQuery(queryFn: () => Promise<T>, options?: UseQueryOptions<T>): QueryResult<T>
+function useQuery(queryFn: ResourceFetcher<T>, options?: UseQueryOptions<T>): QueryResult<T>
 ```
 
 Declarative data fetching with caching, retry, and auto-refetch.
@@ -5580,11 +6330,11 @@ be called as the fetcher.)
 
 Usage:
   const users = useQuery(
-    () => fetch(`/api/users?page=${page()}`).then(r => r.json()),
+    ({ signal }) => fetch(`/api/users?page=${page()}`, { signal }).then(r => r.json()),
     { key: () => `users:${page()}`, staleTime: 60_000, refetchOnFocus: true },
   );
   users.data();      // the value, or undefined
-  users.isLoading(); // reactive
+  users.pending();   // a request in flight, reactive
 
 A wrapper over {@link resource}: same cache, same `key`, same `tags`. What it adds is the
 refetching a screen left open needs — on focus, on reconnect, on an interval — and `mutate()` for
@@ -5733,22 +6483,6 @@ Reactively set document.title. Updates whenever signal dependencies change.
 Usage:
   useTitle(() => `${count()} items — My App`);
 
-### `useWritable`
-
-```ts
-import { useWritable } from '@pdxui/core';
-
-function useWritable(key: string | symbol): Signal<T>
-```
-
-Composable: inject a writable signal from an ancestor.
-Returns the full signal object (read + write), not just the value.
-Must be called during setup().
-
-Usage: const theme = useWritable<string>('theme');
-       theme()      // read
-       theme.set()  // write — propagates to provider
-
 ### `validateIcu`
 
 ```ts
@@ -5805,10 +6539,10 @@ Use this in custom validators for i18n support.
 ```ts
 import { viewport } from '@pdxui/core';
 
-const viewport
+const viewport: Readonly<ViewportSignals>
 ```
 
-Centralized viewport signals. One resize listener, many readers.
+Centralized viewport signals. One resize listener, many readers; set up on the first read.
 
 ### `waitFor`
 
@@ -5851,9 +6585,48 @@ Usage:
   ${when(() => isOpen(), () => html`<span>Yes</span>`, () => html`<span>No</span>`,
          { enter: 'fade-in', exit: 'fade-out' })}
 
+### `whenChain`
+
+```ts
+import { whenChain } from '@pdxui/core';
+
+function whenChain(select: () => number, branches: ReadonlyArray<(() => Node | DocumentFragment | null) | null>): DocumentFragment
+```
+
+Render the branch `select()` picks — `branches[select()]`, or nothing for an index without one —
+between two markers, and rebuild it only when the pick changes. What a transition-less
+`@if` / `@else if` / `@else` chain compiles to.
+
+### `wireFormModel`
+
+```ts
+import { wireFormModel } from '@pdxui/core';
+
+function wireFormModel(el: FormModelElement, track: (fn: () => void) => void, ctx: Record<string, unknown>, model: string, props: readonly string[], tag: string): FormModelCallbacks
+```
+
+Wire one instance's model to its form: value, validity, and the lifecycle callbacks. `ctx` is the
+component's context once its props are signals; `model` the model declared `{ form }`; `props` the
+names the component declares, of which `value` (a boolean model's checked value), `required`,
+`error` and `disabled` are read when present. Lives here, not in `component()`, so an app with no
+form model carries none of it (#135).
+
 ## @pdxui/router
 
-24 value exports.
+37 value exports.
+
+### `configureRouter`
+
+```ts
+import { configureRouter } from '@pdxui/router';
+
+function configureRouter(options?: RouterOptions): void
+```
+
+Options the routes cannot carry: a base path, extra redirects, where a denied guard goes.
+
+Merged into the running router. A base path that changes while it is running re-resolves the
+current URL, which until then was matched with the old prefix.
 
 ### `createRouter`
 
@@ -5863,29 +6636,26 @@ import { createRouter } from '@pdxui/router';
 function createRouter(routes: RouteConfig[], options?: string | RouterOptions): void
 ```
 
-Create a runtime router from route configs.
+Create the router from route configs, and start it: listen for navigations and resolve the URL
+the page was opened at.
+
+The matcher is built here, once, from `routes` — `compileMatcher` — so a navigation does no
+parsing. A static route is tried before any dynamic one, and among dynamic routes the declared
+order holds: matching `/customers/:id` first would let it catch `/customers/import`.
+
 @param routes - Array of route configurations
 @param options - Router options or basePath string (backward compat)
 
-### `currentLoaderData`
+### `createRouterFromTable`
 
 ```ts
-import { currentLoaderData } from '@pdxui/router';
+import { createRouterFromTable } from '@pdxui/router';
 
-const currentLoaderData: ReadonlySignal<unknown>
+function createRouterFromTable(table: RouteTable, options?: RouterOptions): void
 ```
 
-Data returned by the MATCHED route's @loader function. For a parent's, see {@link loaderData}.
-
-### `currentLoaderState`
-
-```ts
-import { currentLoaderState } from '@pdxui/router';
-
-const currentLoaderState: ReadonlySignal<LoaderState>
-```
-
-Loader execution state of the matched route: idle → loading → done/error.
+Install a build's route table and start the router on it — what an app with no
+`<pdx-router-outlet>` calls. The outlet does the same from `routeTable()`.
 
 ### `currentMeta`
 
@@ -5900,12 +6670,12 @@ const currentMeta: ReadonlySignal<Record<string, unknown> | undefined>
 ```ts
 import { currentNavError } from '@pdxui/router';
 
-const currentNavError: ReadonlySignal<'403' | '404' | null>
+const currentNavError: ReadonlySignal<'403' | '404' | '500' | null>
 ```
 
-Last navigation error kind: '403' (guard denied, no redirect), '404' (no match),
-or null (last navigation resolved a route). The outlet reads this to pick which
-error page to render when currentRoute() is null.
+Last navigation error kind: '403' (guard denied, no redirect), '404' (no match, or a loader threw
+`notFound()`), '500' (a loader failed, #147), or null (last navigation resolved a route). The
+outlet at `currentNavErrorDepth()` reads this to pick which error page to render.
 
 ### `currentParams`
 
@@ -5967,6 +6737,21 @@ import { destroyRouter } from '@pdxui/router';
 function destroyRouter(): void
 ```
 
+Tear down the active router: removes the popstate/navigation listener.
+Call on app teardown or before re-creating the router (HMR). Idempotent.
+
+### `installRouteAdoption`
+
+```ts
+import { installRouteAdoption } from '@pdxui/router/hydrate';
+
+function installRouteAdoption(): void
+```
+
+Have every outlet keep the route a generated page holds, instead of building it again; and keep the
+loader results the page carries as its levels' results (#239), so the first navigation renders the
+data the server rendered instead of asking for it.
+
 ### `loaderData`
 
 ```ts
@@ -5984,6 +6769,28 @@ computed or a template and it updates when that level reloads.
 `undefined` when the level declared no loader, has not loaded yet, failed, or is not in the
 current chain at all — a page cannot read the data of a branch it has left.
 
+### `loaderError`
+
+```ts
+import { loaderError } from '@pdxui/router';
+
+function loaderError(routePath: string): Error | null
+```
+
+Why a level's @loader last failed, by its route pattern — `loaderError('/tickets/:id')` (#505).
+Null when it has not failed, after it succeeds again, and once the router clears its loaders.
+A rejection that is not an Error is wrapped in one, so the reason is always an Error.
+
+### `loaderSource`
+
+```ts
+import { loaderSource } from '@pdxui/router';
+
+function loaderSource(routePath: string): LoaderSource<T>
+```
+
+The loader of the route `routePath` (its pattern) as a source: the router's per-level state, read.
+
 ### `loaderState`
 
 ```ts
@@ -5994,18 +6801,60 @@ function loaderState(routePath: string): LoaderState
 
 The same, for the state. 'idle' for a level that is not loading and has nothing.
 
+### `loadServerPages`
+
+```ts
+import { loadServerPages } from '@pdxui/router/server';
+
+function loadServerPages(): Promise<void>
+```
+
+Import every lazy page's module, so each page is a component the server can render: in the
+browser a page loads when it is first shown, and on the server it would be an empty host.
+
 ### `navigate`
 
 ```ts
 import { navigate } from '@pdxui/router';
 
-function navigate(path: string, params?: Record<string, string>, state?: Record<string, unknown>): void
+const navigate: Navigate
 ```
 
-Navigate programmatically.
-@param path — route path (can include :param placeholders)
-@param params — URL path params to replace :param segments
+Navigate to a route by its pattern (#150): `navigate('/users/:id', { id: 42 })`. With the app's
+generated `.pdx/routes.d.ts`, the pattern must be one the app declares and the params are typed
+from its constraints; a concrete URL goes through {@link navigate.url}.
+@param path — the route pattern (its `:param` placeholders are filled from `params`)
+@param params — the values of its params
 @param state — ephemeral navigation state (not in URL, accessible via currentState)
+
+### `navigation`
+
+```ts
+import { navigation } from '@pdxui/router';
+
+const navigation: {
+    readonly pending: ReadonlySignal<boolean>;
+    readonly to: ReadonlySignal<string | null>;
+}
+```
+
+The navigation in progress, for a progress bar or a dimmed page while chunks and data load:
+`@if (navigation.pending()) { … }`. Auto-imported in a `.pdx` that reads it.
+
+`pending()` is true from the moment the before-hooks accept a navigation — not while one of them
+is still asking "leave this page?" — until its route is published, or it is refused, denied or
+abandoned. `to()` is its target, query included, while pending; a newer navigation replaces it.
+
+### `notFound`
+
+```ts
+import { notFound } from '@pdxui/router';
+
+function notFound(): LoaderNotFound
+```
+
+`throw notFound()` in a route loader: the level renders its not-found page — the levels above it
+stay — and the address is unchanged.
 
 ### `onAfterNavigate`
 
@@ -6047,12 +6896,24 @@ import { prefetchRoute } from '@pdxui/router';
 function prefetchRoute(url: string | null | undefined): boolean
 ```
 
-Fetch the chunk this URL will need, if there is one and it is wanted.
+Queue a fetch of the chunk this URL will need, if there is one and it is wanted.
 
-Returns whether a fetch was STARTED, which is what a test can assert on; a caller has nothing to
+Returns whether a fetch was QUEUED, which is what a test can assert on; a caller has nothing to
 do with the answer. Failure is swallowed on purpose: a prefetch that cannot reach the network is
 a click that will load normally, not an error the visitor should be shown — the outlet reports
 the real one when the navigation happens.
+
+### `redirect`
+
+```ts
+import { redirect } from '@pdxui/router';
+
+function redirect(to: string, options: { replace?: boolean } = {}): LoaderRedirect
+```
+
+`throw redirect('/login')` in a route loader: the router navigates to `to` before the current
+navigation is published, and the route that redirected never renders. With `replace` (the default)
+the abandoned target leaves no history entry; `{ replace: false }` keeps it.
 
 ### `registerGuardChecker`
 
@@ -6064,6 +6925,18 @@ function registerGuardChecker(checker: GuardChecker): void
 
 Register a guard checker. Called with the guard name from @guard declarations.
 
+### `retryNavigation`
+
+```ts
+import { retryNavigation } from '@pdxui/router';
+
+function retryNavigation(): void
+```
+
+Resolve the address on screen again: the retry of a level's error page (#147). A level whose loader
+failed holds no data, so its loader runs again; a level above it that loaded is kept, as on any
+navigation that leaves its own params alone. No history entry is written: the address is the same.
+
 ### `routeParams`
 
 ```ts
@@ -6073,6 +6946,39 @@ const routeParams
 ```
 
 Signal for current route params — provided to descendants via Context Protocol.
+
+### `RouteParams`
+
+```ts
+import { RouteParams } from '@pdxui/router';
+
+const RouteParams: Context<Signal<Record<string, string>>>
+```
+
+The context token the router outlet provides the current route's params under (#495): a signal of
+the raw params, read below the outlet with `inject(RouteParams, el, null)`. The same name as the type
+above, as a value: `RouteParams<'/users/:id'>` is a route's typed params, `RouteParams` the token.
+
+### `serverRoute`
+
+```ts
+import { serverRoute } from '@pdxui/router/server';
+
+function serverRoute(path: string): Promise<ServerRoute>
+```
+
+The URL the outlets render, prepared and set before `renderToString`. The route table is read
+here, so the table — or the pages' registrations — must be in place first.
+
+### `serverRoutes`
+
+```ts
+import { serverRoutes } from '@pdxui/router/server';
+
+function serverRoutes(): string[]
+```
+
+The patterns of the registered routes, in the order they were declared.
 
 ### `setQuery`
 
@@ -6093,3 +6999,24 @@ function setQueryParam(key: string, value: string | null): void
 ```
 
 Set or remove a single query param. Pass null to remove.
+
+### `SSG_DATA_ID`
+
+```ts
+import { SSG_DATA_ID } from '@pdxui/router/server';
+
+const SSG_DATA_ID
+```
+
+The id of the script that carries the data.
+
+### `ssgDataScript`
+
+```ts
+import { ssgDataScript } from '@pdxui/router/server';
+
+function ssgDataScript(results: readonly SsgLoaderResult[], builtAt: number): string
+```
+
+The script for `results`, fetched at `builtAt` (ms since the epoch). `<` is written as `<`, so
+nothing in the data — a `</script>` in a text — ends the script early; JSON reads it back the same.

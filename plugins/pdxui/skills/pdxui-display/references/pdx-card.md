@@ -4,7 +4,6 @@ A surface for grouped content.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `variant` | `variant` | string | `''` | Card variant: default, outline, elevated, flat |
 | `loading` | `loading` | boolean | `false` | Show loading skeleton state |
 | `clickable` | `clickable` | boolean | `false` | Make entire card clickable (emits pdx-click) |
 | `hoverable` | `hoverable` | boolean | `false` | Hoverable elevation effect |
@@ -14,10 +13,17 @@ A surface for grouped content.
 | `disabled` | `disabled` | boolean | `false` | Disabled state |
 | `href` | `href` | string | `''` | Makes the card a link: it renders an `<a>` overlay across the card, so middle-click, open-in-a-new-tab, copy-link-address and the status bar all work, and the address is in the DOM. An interactive element inside the card stays clickable (it sits above the overlay). The URL is sanitised before it is written. |
 | `elevation` | `elevation` | number | `-1` | Shadow elevation: 0 (none), 1 (sm), 2 (md), 3 (lg), 4 (xl) |
+| `variant` | `variant` | 'default' \| 'outline' \| 'elevated' \| 'flat' | `'default'` | default, outline, elevated or flat. |
 
-**Events:** `pdx-click` — Fired on `pdx-click`.
+**Events:** `pdx-click` — The card was clicked, or pressed with Enter or Space, as `clickable`.
 
 **Renders:** roles `button` · `link`
+
+**States:** `:state(horizontal)` — `horizontal` is set: media beside the body.; `:state(compact)` — `compact` is set: tighter sections.; `:state(hoverable)` — It lifts on hover: `hoverable`, `clickable` or an `href`.; `:state(clickable)` — It is pressed or followed as a whole: `clickable` or an `href`.; `:state(selected)` — `selected` is set.; `:state(disabled)` — `disabled` is set.; `:state(loading)` — `loading` is set: a skeleton in place of the content, and `aria-busy`.
+
+**Parts:** `[data-part="root"]` — The card's box (`.pdx-surface-card`); the header, body and footer inside it are your markup.; `[data-part="link"]` — The `<a>` laid across the card when it has an `href`.
+
+**Tokens:** `--pdx-card-border-color` (default `var(--pdx-color-border)`); `--pdx-card-radius` (default `var(--pdx-radius-lg)`); `--pdx-card-shadow` (default `var(--pdx-shadow-sm)`). Set one at `:root`, on a subtree, or on the element itself.
 
 
 #### Examples

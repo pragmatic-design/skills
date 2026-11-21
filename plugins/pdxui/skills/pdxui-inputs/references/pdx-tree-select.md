@@ -15,14 +15,12 @@ toggles only the node clicked).
   not found unless its branch matches.
 - Nodes have a fixed shape, `{ value, label, children?, disabled?, isLeaf? }`: no `idField` / `labelField` as on
   `pdx-tree`.
-- The compiler does not wire it inside `<pdx-form>`: bind `:value` and `@pdx-change` yourself.
 
 **Composes with** — it shares the `loadChildren` shape with `pdx-tree` and `pdx-cascader`.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `options` | — | array | `[]` | Tree of options |
-| `value` | — | object | `null` | Selected value(s) — string for single, string[] for multiple |
+| `options` | — | T[] | `[]` | Tree of options |
 | `multiple` | `multiple` | boolean | `false` | Allow multiple selection |
 | `placeholder` | `placeholder` | string | `''` | Placeholder |
 | `label` | `label` | string | `''` | Accessible name (aria-label) for the trigger; falls back to placeholder |
@@ -30,23 +28,34 @@ toggles only the node clicked).
 | `clearable` | `clearable` | boolean | `true` | Clearable |
 | `disabled` | `disabled` | boolean | `false` | Disabled |
 | `expandAll` | `expandall` | boolean | `false` | Expand all nodes initially |
-| `loadChildren` | — | function | `null` | Lazy load: (node) => Promise<TreeSelectNode[]> |
-| `size` | `size` | string | `''` | Size |
+| `loadChildren` | — | ((...args: unknown[]) => unknown) \| null | `null` | Lazy load: (node) => Promise<TreeSelectNode[]> |
 | `name` | `name` | string | `''` | Form field name |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl — the same scale as pdx-input. |
+| `value` | — | string \| string[] \| null | `null` | The selected node's value, or the values when `multiple`. A form submits one entry per value under the name (#135). |
 
 **API (via `:ref`)**
 
 | Call | Notes |
 |---|---|
-| `getValue()` | The current selection: one key, the array of keys when `multiple`, or null. |
-| `setValue(v)` | Set the selection and emit `pdx-change`, as a click on the tree would. |
+| `getLabel()` | The label of the selected node, or the labels joined with ', ' when `multiple`. |
 | `clear()` | Clears the value. |
+| `show()` | Open the popup. |
+| `close()` | Close the popup. |
+| `toggle()` | Open the popup when closed, close it when open. |
 
-**Events:** `pdx-change` → `detail: { value } | { value, label }` — Fired when the value changes.; `pdx-clear` — Fired when the value is cleared.; `pdx-close` — Fired when it closes. Does not bubble.; `pdx-load-error` → `detail: { node, error }` — Fired when `loadChildren` rejects; the branch stays askable and can be reopened.; `pdx-open` — Fired when it opens. Does not bubble.
+**Events:** `open-change` → `detail: { value: boolean }` — The popup opened (`true`) or closed (`false`): its open state, read-only, as an overlay's (#287).; `pdx-clear` — Fired when the clear button or `clear()` empties the selection, after its `value-change`.; `pdx-load-error` → `detail: { node: TreeSelectNode; error: unknown }` — Fired when `loadChildren` rejects; the branch stays askable and can be reopened.; `value-change` → `detail: { value: string | string[] | null }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `combobox` · `tree` · `treeitem`
 
-**Slot:** `node` — Scoped — renders one node's label. Receives `{ node, level, expanded }`.
+**Slot:** `node` — Renders one node's label: a snippet `node(node, level, expanded)`.
+
+**States:** `:state(open)` — The popup is open.; `:state(disabled)` — `disabled` is set.; `:state(loading)` — A branch's children are being fetched by `loadChildren`.
+
+**Parts:** `[data-part="root"]` — The trigger, the combobox: the frame, its border and background.; `[data-part="clear"]` — The clear button, while `clearable`, something is chosen and not `disabled`.; `[data-part="popup"]` — The floating panel that holds the tree.; `[data-part="search"]` — The search field atop the panel, while `searchable`.; `[data-part="tree"]` — The `role="tree"`.; `[data-part="node"]` — A node of the tree, a `role="treeitem"` row.; `[data-part="toggle"]` — A node's expand button; a leaf's is there, hidden, to keep the labels aligned.
+
+**Tokens:** `--pdx-input-border-color` — The trigger is the text input's frame, `.pdx-input-wrap`, and reads pdx-input's tokens (#761): its border at rest (the outlined input style).; `--pdx-input-border-color-focus` — The frame's border while focused (the outlined input style).; `--pdx-input-border-width` — The frame's bottom border, in the filled input style.; `--pdx-input-focus-ring` — The ring around the frame while focused.; `--pdx-input-min-height` — The frame's height, at the md size.. Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 **Shapes:** `TreeSelectNode { value: string; label: string; children?: TreeSelectNode[]; disabled?: boolean; isLeaf?: boolean }`
 

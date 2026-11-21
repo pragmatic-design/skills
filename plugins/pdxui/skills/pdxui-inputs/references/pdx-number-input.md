@@ -7,10 +7,14 @@ Numeric field with steppers and formatting.
 - `value` `null`, `undefined`, `''` or `NaN` shows an empty field with its `placeholder`, and `el.value`
   reads `null`. With no `value` at all it starts empty, even with a `min`: a number nobody entered is
   not shown as data.
-- Clearing the text and leaving the field (blur or Enter) makes it empty and emits
-  `pdx-change {value: null}`; it does not snap back to 0 or to `min`.
+- Clearing the text makes it empty and announces `value-change {value: null}`; leaving the field
+  (blur or Enter) keeps it empty: it does not snap back to 0 or to `min`.
+- `value-change` is live, on every keystroke and step. The commit is the native `change` on the host:
+  the browser's after typing, the component's own after a stepper, an arrow key or the wheel. `@change`
+  and `::value.lazy` hear it.
 - `min` and `max` bound numbers only; empty stays empty. A stepper press or ArrowUp/ArrowDown on an
-  empty field starts from `min` if there is one, else from 0.
+  empty field steps from 0, and the result is clamped into `min`/`max` (with `min="5"` the first step
+  lands on 5; with `min="-10"`, ArrowUp gives 1).
 - The form value is `null` when empty, so a `required` rule reports it missing; `0` is a number and
   passes.
 
@@ -18,7 +22,6 @@ Test for empty with `el.value === null`, never with a falsy check: `0` is a valu
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `value` | `value` | number \| null | `null` | The number, or `null` when the field is empty. |
 | `min` | `min` | number | `-Infinity` | Minimum allowed value. |
 | `max` | `max` | number | `Infinity` | Maximum allowed value. |
 | `step` | `step` | number | `1` | Increment step. |
@@ -26,7 +29,6 @@ Test for empty with `el.value === null`, never with a falsy check: `0` is a valu
 | `trimZeros` | `trimzeros` | boolean | `false` | Show only the decimals the value has, up to `precision`: 29.5 at `precision="3"` is "29.5", not "29.500". The value is still rounded to `precision`, and what the field emits does not change. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `readonly` | `readonly` | boolean | `false` | Makes the value read-only — visible but not editable. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `error` | `error` | boolean | `false` | Marks the control as invalid. |
 | `placeholder` | `placeholder` | string | `''` | Placeholder text shown while empty. |
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
@@ -39,6 +41,8 @@ Test for empty with `el.value === null`, never with a falsy check: `0` is a valu
 | `currency` | `currency` | string | `''` | ISO currency code for currency formatting (e.g. EUR). |
 | `colorBySign` | `colorbysign` | boolean | `false` | Color the number green (positive) / red (negative) |
 | `loading` | `loading` | boolean | `false` | Show loading state |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl — the same scale as pdx-input. |
+| `value` | `value` | number \| null | `null` | The number, or `null` when the field is empty. A form submits it clamped, and resets it (#135). |
 
 **API (via `:ref`)**
 
@@ -49,9 +53,15 @@ Test for empty with `el.value === null`, never with a falsy check: `0` is a valu
 | `clear()` | Clears the value. |
 | `selectText()` | Select the whole text, so the next keystroke replaces it. Does not focus first. |
 
-**Events:** `pdx-blur` — Fired when it loses focus.; `pdx-change` → `detail: { value }` — Fired when the value changes.; `pdx-focus` — Fired when it receives focus.; `pdx-input` → `detail: { value }` — Fired on each input as the user types.
+**Events:** `pdx-blur` — The textbox lost focus.; `pdx-focus` — The textbox received focus.; `value-change` → `detail: { value: number | null }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `spinbutton`
+
+**States:** `:state(invalid)` — `error` is set.; `:state(disabled)` — `disabled` is set.; `:state(loading)` — `loading` is set.; `:state(negative)` — With `color-by-sign`, the number is below zero.; `:state(positive)` — With `color-by-sign`, the number is above zero.
+
+**Parts:** `[data-part="root"]` — The group: the field and its stepper buttons.; `[data-part="field"]` — The frame around the text: border, background and the states' colours.; `[data-part="input"]` — The native `<input>` that shows the formatted number.; `[data-part="decrement"]` — The button that steps down.; `[data-part="increment"]` — The button that steps up.; `[data-part="sign"]` — The sign button, with `allow-negative`.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

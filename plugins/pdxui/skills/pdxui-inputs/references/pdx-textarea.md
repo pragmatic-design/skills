@@ -4,7 +4,6 @@ Multi-line text input that can auto-grow.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `value` | `value` | string | `''` | The current value. |
 | `placeholder` | `placeholder` | string | `''` | Placeholder text shown while empty. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `readonly` | `readonly` | boolean | `false` | Makes the value read-only — visible but not editable. |
@@ -16,13 +15,14 @@ Multi-line text input that can auto-grow.
 | `showCount` | `showcount` | boolean | `false` | Shows a live character counter. |
 | `wordCount` | `wordcount` | boolean | `false` | Counts words instead of characters. |
 | `resize` | `resize` | string | `'vertical'` | Resize behaviour: 'none', 'vertical', 'auto', …. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `error` | `error` | boolean | `false` | Marks the control as invalid. |
 | `success` | `success` | boolean | `false` | Applies the success state styling. |
 | `warning` | `warning` | boolean | `false` | Applies the warning state styling. |
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
 | `ariaLabel` | `arialabel` | string | `''` | Accessible name when there is no visible label. |
 | `loading` | `loading` | boolean | `false` | Show loading state |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl — the same scale as pdx-input. |
+| `value` | `value` | string | `''` | The current value. |
 
 **API (via `:ref`)**
 
@@ -33,7 +33,13 @@ Multi-line text input that can auto-grow.
 | `clear()` | Clears the value. |
 | `selectText()` | Select the whole text, so the next keystroke replaces it. Does not focus first. |
 
-**Events:** `pdx-blur` — Fired when it loses focus.; `pdx-change` → `detail: { value }` — Fired when the value changes.; `pdx-focus` — Fired when it receives focus.; `pdx-input` → `detail: { value }` — Fired on each input as the user types.
+**Events:** `pdx-blur` — The textbox lost focus.; `pdx-focus` — The textbox received focus.; `value-change` → `detail: { value: string }` — Fired when the component writes `value`. Does not bubble.
+
+**States:** `:state(invalid)` — `error` is set.; `:state(success)` — `success` is set.; `:state(warning)` — `warning` is set.; `:state(disabled)` — `disabled` is set.; `:state(readonly)` — `readonly` is set.; `:state(loading)` — `loading` is set.; `:state(over-limit)` — The text is longer than `maxlength`; the character count shows it.
+
+**Parts:** `[data-part="root"]` — The frame: border, background and the states' colours.; `[data-part="input"]` — The native `<textarea>`, the textbox a form submits.; `[data-part="footer"]` — The row under the frame that holds the counts, with `show-count` or `word-count`.; `[data-part="count"]` — The character count, with `show-count`.; `[data-part="word-count"]` — The word count, with `word-count`.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

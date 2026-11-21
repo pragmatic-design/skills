@@ -1,6 +1,6 @@
 # Component strings — every key, its English default, where it is declared
 
-> Generated from the sources. 428 keys in 78 components.
+> Generated from the sources. 554 keys in 82 components.
 
 Override any of them with **one** call, **before the app mounts** — see the recipe "An app that is not in
 English":
@@ -23,6 +23,17 @@ placeholders, filled at render: keep them in the translation.
 | `alert-dialog` | `typeToConfirm` | `Type {text} to confirm:` | `@pdxui/ui/src/shared/i18n.ts` |
 | `app-layout` | `aside` | `Secondary` | `@pdxui/ui/src/shared/i18n.ts` |
 | `app-layout` | `mainNav` | `Main navigation` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `all` | `All` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `close` | `Close` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `collapse` | `Collapse navigation` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `expand` | `Expand navigation` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `favourites` | `Favourites` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `menu` | `Menu` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `nav` | `Main navigation` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `noMatch` | `Nothing matches “{query}”` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `pin` | `Pin {name}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `recent` | `Recent` | `@pdxui/ui/src/shared/i18n.ts` |
+| `app-shell` | `search` | `Search` | `@pdxui/ui/src/shared/i18n.ts` |
 | `auto-form` | `reset` | `Reset` | `@pdxui/ui/src/shared/i18n.ts` |
 | `auto-form` | `submit` | `Save` | `@pdxui/ui/src/shared/i18n.ts` |
 | `autocomplete` | `clear` | `Clear` | `@pdxui/ui/src/shared/i18n.ts` |
@@ -32,7 +43,7 @@ placeholders, filled at render: keep them in the translation.
 | `avatar-group` | `more` | `{count} more` | `@pdxui/ui/src/shared/i18n.ts` |
 | `badge` | `indicator` | `{variant} indicator` | `@pdxui/ui/src/shared/i18n.ts` |
 | `banner` | `close` | `Close` | `@pdxui/ui/src/shared/i18n.ts` |
-| `bottom-nav` | `badge` | `{label}, {badge} new` | `@pdxui/ui/src/shared/i18n.ts` |
+| `bottom-nav` | `badge` | `{badge} {label}` | `@pdxui/ui/src/shared/i18n.ts` |
 | `bottom-nav` | `label` | `Bottom navigation` | `@pdxui/ui/src/shared/i18n.ts` |
 | `bottom-sheet` | `close` | `Close` | `@pdxui/ui/src/shared/i18n.ts` |
 | `bottom-sheet` | `handle` | `Sheet height` | `@pdxui/ui/src/shared/i18n.ts` |
@@ -243,17 +254,13 @@ placeholders, filled at render: keep them in the translation.
 | `filter-builder` | `editFilter` | `Edit filter: {filter}` | `@pdxui/ui/src/shared/i18n.ts` |
 | `filter-builder` | `removeFilter` | `Remove filter: {filter}` | `@pdxui/ui/src/shared/i18n.ts` |
 | `filter-builder` | `selectField` | `Select field...` | `@pdxui/ui/src/shared/i18n.ts` |
-| `form-actions` | `reset` | `Reset` | `@pdxui/ui/src/form-actions/pdx-form-actions.ts` |
-| `form-actions` | `submit` | `Submit` | `@pdxui/ui/src/form-actions/pdx-form-actions.ts` |
+| `form-actions` | `reset` | `Reset` | `@pdxui/ui/src/shared/i18n.ts` |
+| `form-actions` | `submit` | `Submit` | `@pdxui/ui/src/shared/i18n.ts` |
 | `form-template` | `list.add` | `+ Add` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
 | `form-template` | `list.cell` | `{label}, line {n}` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
 | `form-template` | `list.empty` | `No items yet` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
 | `form-template` | `list.remove` | `Remove` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
 | `form-template` | `list.removeLine` | `Remove line {n}` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
-| `form-template` | `steps` | `Form steps` | `@pdxui/ui/src/shared/i18n.ts` |
-| `form-template` | `wizard.back` | `← Back` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
-| `form-template` | `wizard.next` | `Next →` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
-| `form-template` | `wizard.submit` | `Submit` | `@pdxui/ui/src/form-template/pdx-form-template.ts` |
 | `image` | `close` | `Close` | `@pdxui/ui/src/shared/i18n.ts` |
 | `image` | `image` | `image` | `@pdxui/ui/src/shared/i18n.ts` |
 | `image` | `view` | `View {alt}` | `@pdxui/ui/src/shared/i18n.ts` |
@@ -275,7 +282,30 @@ placeholders, filled at render: keep them in the translation.
 | `json-editor` | `edit` | `Edit…` | `@pdxui/ui/src/shared/i18n.ts` |
 | `json-editor` | `empty` | `No items — use "＋ Add item" below.` | `@pdxui/ui/src/shared/i18n.ts` |
 | `json-editor` | `removeItem` | `Remove item {n}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `bottom` | `Move to bottom` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `cancelled` | `Move cancelled. {title} is back in {column}.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `count` | `{count}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `countLimit` | `{count} of {limit}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `down` | `Move down` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `dropped` | `{title} dropped. {column}, position {position} of {total}.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `empty` | `No cards` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `instructions` | `Press Space or Enter to pick the card up, the arrow keys to move it, Space or Enter to drop it, and Escape to cancel. The Move menu does the same.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `label` | `Board` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `lifted` | `{title} lifted. {column}, position {position} of {total}.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `move` | `Move {title}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `moved` | `{column}, position {position} of {total}.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `moveTo` | `Move to {column}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `refused` | `Move refused. {title} is back in {column}.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `roleDescription` | `movable card` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `top` | `Move to top` | `@pdxui/ui/src/shared/i18n.ts` |
+| `kanban` | `up` | `Move up` | `@pdxui/ui/src/shared/i18n.ts` |
 | `list` | `empty` | `No items` | `@pdxui/ui/src/shared/i18n.ts` |
+| `localized-input` | `allLanguages` | `All languages` | `@pdxui/ui/src/shared/i18n.ts` |
+| `localized-input` | `field` | `{label} ({language})` | `@pdxui/ui/src/shared/i18n.ts` |
+| `localized-input` | `label` | `Text` | `@pdxui/ui/src/shared/i18n.ts` |
+| `localized-input` | `language` | `Language: {language}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `localized-input` | `languages` | `Languages` | `@pdxui/ui/src/shared/i18n.ts` |
+| `localized-input` | `missing` | `missing` | `@pdxui/ui/src/shared/i18n.ts` |
 | `mention` | `label` | `Mentions` | `@pdxui/ui/src/shared/i18n.ts` |
 | `mention` | `loading` | `Loading...` | `@pdxui/ui/src/mention/pdx-mention.ts` |
 | `mention` | `noResults` | `No results` | `@pdxui/ui/src/mention/pdx-mention.ts` |
@@ -292,6 +322,7 @@ placeholders, filled at render: keep them in the translation.
 | `number-input` | `negative` | `Negative` | `@pdxui/ui/src/shared/i18n.ts` |
 | `otp-input` | `digit` | `Digit {n} of {total}` | `@pdxui/ui/src/shared/i18n.ts` |
 | `otp-input` | `label` | `Verification code` | `@pdxui/ui/src/shared/i18n.ts` |
+| `otp-input` | `maskedLabel` | `PIN` | `@pdxui/ui/src/shared/i18n.ts` |
 | `overlay` | `close` | `Close` | `@pdxui/ui/src/shared/i18n.ts` |
 | `overlay` | `ok` | `OK` | `@pdxui/ui/src/shared/i18n.ts` |
 | `page-header` | `breadcrumb` | `Breadcrumb` | `@pdxui/ui/src/shared/i18n.ts` |
@@ -310,7 +341,6 @@ placeholders, filled at render: keep them in the translation.
 | `password-input` | `show` | `Show password` | `@pdxui/ui/src/shared/i18n.ts` |
 | `password-input` | `strong` | `Strong` | `@pdxui/ui/src/shared/i18n.ts` |
 | `password-input` | `weak` | `Weak` | `@pdxui/ui/src/shared/i18n.ts` |
-| `pin-input` | `label` | `PIN` | `@pdxui/ui/src/shared/i18n.ts` |
 | `popover` | `label` | `Popover` | `@pdxui/ui/src/shared/i18n.ts` |
 | `progress` | `label` | `Progress` | `@pdxui/ui/src/shared/i18n.ts` |
 | `rating` | `label` | `Rating` | `@pdxui/ui/src/shared/i18n.ts` |
@@ -350,9 +380,95 @@ placeholders, filled at render: keep them in the translation.
 | `rich-text` | `undo` | `Undo` | `@pdxui/ui/src/shared/i18n.ts` |
 | `router` | `backHome` | `← Back to home` | `@pdxui/router/src/outlet.ts` |
 | `router` | `error` | `Error {code}` | `@pdxui/router/src/outlet.ts` |
+| `router` | `loaderFailed` | `This page could not load its data` | `@pdxui/router/src/outlet.ts` |
 | `router` | `loadFailed` | `Failed to load page: {message}` | `@pdxui/router/src/outlet.ts` |
 | `router` | `loading` | `Loading...` | `@pdxui/router/src/outlet.ts` |
 | `router` | `notFound` | `Page not found` | `@pdxui/router/src/outlet.ts` |
+| `router` | `retry` | `Try again` | `@pdxui/router/src/outlet.ts` |
+| `scheduler` | `agenda` | `Agenda` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `allDay` | `All day` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `applyTo` | `Apply to` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `cancel` | `Cancel` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `cancelled` | `Move cancelled. {title} is back.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `created` | `{title} created` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `createInstructions` | `Shift and the arrow keys select empty slots, Enter creates an event over them, and Escape cancels.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `customRule` | `Custom rule` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `day` | `Day` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `dayName` | `{date}, {count, plural, =0 {no events} one {# event} other {# events}}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `daysView` | `{count} days` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `delete` | `Delete` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `deleted` | `{title} deleted` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `editEvent` | `Edit event` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `endBeforeStart` | `The end must come after the start.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `endColumn` | `End` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `endDate` | `End date` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `endsAfter` | `After` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `endsField` | `Ends` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `endsOn` | `On` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `endTime` | `End time` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `eventName` | `{title}, {when}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `eventNameTimeFirst` | `{time} {title}, {when}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `every` | `Every` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `everyDay` | `Every day` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `everyMonth` | `Every month` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `everyWeek` | `Every week` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `everyYear` | `Every year` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `export` | `Export` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `exportCsv` | `CSV (.csv)` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `exportIcs` | `iCalendar (.ics)` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `exportXlsx` | `Excel (.xlsx)` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `instructions` | `Press Space to pick the event up, the arrow keys to move it, Shift and the arrow keys to move its end, Alt, Shift and the arrow keys to move its start, Space or Enter to drop it, and Escape to cancel.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `label` | `Scheduler` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `lifted` | `{title} lifted. {when}.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `menu` | `Change {title}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `month` | `Month` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `more` | `+{count} more` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `moreName` | `{count, plural, one {# more event} other {# more events}}, {date}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `moved` | `{title} moved` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `moveItem` | `Move` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `newEvent` | `New event` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `next` | `Next period` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `noEvents` | `No events in this period` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `notesField` | `Notes` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `onDays` | `On` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `overlapRefused` | `{title} not changed: it would overlap {count, plural, one {# event} other {# events}}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `picked` | `{title} picked up. Choose the slot to move it to, or press Escape.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `pickedResize` | `{title} picked up. Choose the slot it should end in, or press Escape.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `previous` | `Previous period` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `print` | `Print` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `refused` | `{title} not changed` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `repeatEnds` | `Ends` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `repeatNever` | `Never` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `repeats` | `Repeats` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `repeatUntil` | `End repeat` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `resized` | `{title} resized` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `resizeItem` | `Resize` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `resource` | `Resource` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `save` | `Save` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `saved` | `{title} saved` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `selectCancelled` | `Selection cancelled.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `selected` | `{when} selected.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `startColumn` | `Start` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `startDate` | `Start date` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `startsField` | `Starts` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `startTime` | `Start time` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `thisOccurrence` | `This occurrence` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `time` | `Time` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `timeline` | `Timeline` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `times` | `Times` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `titleField` | `Title` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `titleRequired` | `Give the event a title.` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `today` | `Today` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `toolbar` | `Calendar` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `unitDays` | `days` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `unitMonths` | `months` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `unitWeeks` | `weeks` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `unitYears` | `years` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `viewMenu` | `View: {view}` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `views` | `View` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `week` | `Week` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `wholeSeries` | `The whole series` | `@pdxui/ui/src/shared/i18n.ts` |
+| `scheduler` | `year` | `Year` | `@pdxui/ui/src/shared/i18n.ts` |
 | `search-input` | `clear` | `Clear search` | `@pdxui/ui/src/shared/i18n.ts` |
 | `search-input` | `placeholder` | `Search...` | `@pdxui/ui/src/shared/i18n.ts` |
 | `search-input` | `searching` | `Searching` | `@pdxui/ui/src/shared/i18n.ts` |
@@ -382,6 +498,16 @@ placeholders, filled at render: keep them in the translation.
 | `shared` | `to` | `To…` | `@pdxui/ui/src/shared/i18n.ts` |
 | `shared` | `value` | `Value...` | `@pdxui/ui/src/shared/i18n.ts` |
 | `sidebar` | `label` | `Sidebar` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `clear` | `Clear` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `cleared` | `Signature cleared` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `draw` | `Draw` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `empty` | `{label}, empty` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `label` | `Signature` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `placeholder` | `Sign here` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `signed` | `{label}, signed` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `type` | `Type` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `typeLabel` | `Type your name` | `@pdxui/ui/src/shared/i18n.ts` |
+| `signature-pad` | `undo` | `Undo` | `@pdxui/ui/src/shared/i18n.ts` |
 | `slider` | `maximum` | `Maximum` | `@pdxui/ui/src/shared/i18n.ts` |
 | `slider` | `maximumOf` | `{label}, maximum` | `@pdxui/ui/src/shared/i18n.ts` |
 | `slider` | `minimum` | `Minimum` | `@pdxui/ui/src/shared/i18n.ts` |

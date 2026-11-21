@@ -15,7 +15,16 @@ to a full enterprise build. You pick the level that fits.
 | **4** | Enterprise | sub-path imports, tree-shaking, the `pdx` CLI, .NET source generation |
 
 The rest of these docs assume the compiler (`.pdx` files). This page is about the **no-compiler** and
-**interop** paths.
+**interop** paths. Level 2 is for code that imports `@pdxui/framework` itself: a compiled `.pdx`
+imports `@pdxui/core`, `@pdxui/ui` and `@pdxui/router` by name, so a project of `.pdx` files declares
+those, as `pdx new project` does — a strict installer such as pnpm does not resolve them through
+`@pdxui/framework`.
+
+What a Level 2 import costs depends on the entry. `@pdxui/framework` registers every component when
+it is imported, so code that takes one `signal` from it ships the whole library — about 340 KB gzip in
+a production build, against about 4 KB from `@pdxui/framework/core`. Code that needs the API imports
+`@pdxui/framework/core` (or `/router`); the root is for a page that wants every `<pdx-*>` registered.
+`packages/framework/tests/entry-cost.test.ts` holds these numbers.
 
 ## Level 1 — drop-in, no build (like jQuery)
 
@@ -28,13 +37,14 @@ define components by hand with the runtime API (the same API the compiler target
 <my-counter start="3"></my-counter>
 
 <script>
-  const { component, html, signal } = Pragmatic;
+  const { component, html, signal, prop, event } = Pragmatic;
 
   component('my-counter', {
-    props: { start: { type: Number, default: 0 } },
+    props: { start: prop(0) },
+    events: { changed: event() },
     setup(ctx) {
       const count = signal(ctx.start());
-      return { count, inc: () => count.set(v => v + 1) };
+      return { count, inc: () => { count.set(v => v + 1); ctx.emit('changed', count()); } };
     },
     render: (ctx) => html`
       <button @click=${ctx.inc}>Clicked ${ctx.count} times</button>
@@ -45,6 +55,16 @@ define components by hand with the runtime API (the same API the compiler target
 
 That registers a real custom element `<my-counter>` you can use anywhere on the page.
 
+`prop(default)` declares a prop — an attribute is read as the type its default has, so `start="3"`
+is the number 3 — and `event()` an event the element dispatches. They are the same declarations a
+`.pdx` file compiles into. In TypeScript they also type the context: with
+`props: { size: prop<'sm' | 'md'>('md'), options: prop.required<Option[]>() }` and
+`events: { changed: event<number>() }`, `ctx.size()` is `'sm' | 'md'`, `ctx.emit('changed', 'x')` is a
+type error, and so is emitting an event the component does not declare. A required prop the page
+does not set, and an undeclared event emitted anyway, are reported in development. The alpha form,
+`props: { start: { type: Number, default: 0 } }`, is removed: TypeScript refuses it, and in development
+`component()` throws naming the prop.
+
 **The trade-off, honestly:** without the compiler you don't get the sugar. You write the runtime API
 explicitly — `signal()` instead of `$signal`, `count.set(v => v + 1)` instead of `count++`,
 `ctx.start()` instead of reading `start` directly. It's more verbose, but it's zero-setup and fully
@@ -53,20 +73,43 @@ production optimizations.
 
 ## Prebuilt components from a CDN
 
-The `<pdx-*>` component library ships as ES modules. Pull it in as a module and the custom elements
-register themselves — then use them as plain HTML:
+`@pdxui/ui` ships a browser build beside its library build: core bundled in, nothing left for a
+bundler to resolve. Link the design system's stylesheet, import the library as a module, and the
+custom elements register themselves — then use them as plain HTML:
 
 ```html
+<link rel="stylesheet" href="https://unpkg.com/@pdxui/design">
 <script type="module">
-  import 'https://unpkg.com/@pdxui/ui';
-  import 'https://unpkg.com/@pdxui/design';   // the CSS (tokens + themes)
+  // Registers every <pdx-*>, and gives core's API from the same module: one core on the page.
+  import { signal, effect } from 'https://unpkg.com/@pdxui/ui';
+
+  const clicks = signal(0);
+  document.querySelector('pdx-button').addEventListener('click', () => clicks.set(n => n + 1));
+  effect(() => { document.querySelector('pdx-badge').value = clicks(); });
 </script>
 
 <pdx-button variant="primary">Click me</pdx-button>
-<pdx-badge value="5"></pdx-badge>
+<pdx-badge value="0"></pdx-badge>
 ```
 
-No build needed for the components either — they're standard custom elements.
+`https://unpkg.com/@pdxui/ui` is `dist/browser/pdx-ui.js`, every component at once. A page that uses a
+few loads them one by one from the same folder, at the path the library build uses, and takes core's
+API by the part it needs:
+
+```html
+<script type="module">
+  import 'https://unpkg.com/@pdxui/ui/dist/browser/button/pdx-button.js';
+  import { signal, effect } from 'https://unpkg.com/@pdxui/ui/dist/browser/core/reactivity.js';
+</script>
+```
+
+Pick the file by what the page calls: `core/reactivity.js` for signals, effects and resources,
+`core/i18n.js` for the locale the components speak, `core.js` for anything else. `core.js` is all of
+core's API at once, about 100 KB gzip more than a button; a sub-path costs what it holds. Every file
+shares one copy of core. `https://unpkg.com/@pdxui/design` is the flattened stylesheet, every
+component's styles and the 13 themes. Pin the version in the URL (`@pdxui/ui@1.0.0-beta.1`) for a
+page that must not change under you. The browser build carries no development diagnostics, as core's
+script does not.
 
 ## In any framework (Angular, React, Vue)
 
@@ -75,7 +118,7 @@ templates with no adapter:
 
 ```html
 <!-- Angular / Vue templates -->
-<pdx-button variant="primary" (pdx-click)="save()">Save</pdx-button>
+<pdx-button variant="primary" (click)="save()">Save</pdx-button>
 ```
 
 ```jsx
@@ -90,7 +133,7 @@ attributes and does not wire hyphenated events, so both go through a `ref`; Vue 
 
 **See it running.** The [Integration](https://pdxui.com/integrations) page embeds three real apps — React, Vue 3 and
 Angular — each installing `@pdxui/*` from a registry the way an external consumer does, and each
-wiring the same four components: `pdx-button`, `pdx-select` (object `options` plus the `pdx-change`
+wiring the same four components: `pdx-button`, `pdx-select` (object `options` plus the `value-change`
 event), `pdx-data-grid` (`columns` + `data`), and `pdx-dialog` opened through its imperative
 `.show()`. The sources live in `integrations/{react,vue,angular}` and the page shows the wiring code
 beside each demo.

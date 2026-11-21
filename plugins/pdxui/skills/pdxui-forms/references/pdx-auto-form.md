@@ -22,9 +22,9 @@ all three) · `pdx-data-source` (`:source` load and save).
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `fields` | — | array | `null` | Field definitions (FieldDefinition[]). Converted to FormSchema internally. |
-| `schema` | — | object | `null` | FormSchema JSON (alternative to fields). |
-| `source` | — | object | `null` | DataSource for auto-load/save. |
+| `fields` | — | unknown[] \| null | `null` | Field definitions (FieldDefinition[]). Converted to FormSchema internally. |
+| `schema` | — | Record<string, unknown> \| null | `null` | FormSchema JSON (alternative to fields). |
+| `source` | — | Record<string, unknown> \| null | `null` | DataSource for auto-load/save. |
 | `recordId` | `recordid` | string | `''` | Record ID to load from DataSource. |
 | `layout` | `layout` | string | `'stack'` | Form layout. |
 | `columns` | `columns` | number | `12` | Grid columns (when layout='grid'). |
@@ -41,7 +41,9 @@ all three) · `pdx-data-source` (`:source` load and save).
 | `reset(values?)` | Resets to the initial state. |
 | `validate()` | Runs validation and returns the result. |
 
-**Events:** `pdx-submit` → `detail: { values, valid }` — Fired when the form is submitted.
+**Events:** `pdx-submit` → `detail: { values: Record<string, unknown>; valid: true }` — Save passed validation: the values (stored in the `source` when there is one).
+
+**Parts:** `[data-part="root"]` — The wrapper that holds the generated form and its actions.; `[data-part="actions"]` — The bar of the two buttons, with `show-actions`.; `[data-part="reset"]` — The reset button.; `[data-part="submit"]` — The save button.
 
 
 #### Examples

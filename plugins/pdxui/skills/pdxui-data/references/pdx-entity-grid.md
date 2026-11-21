@@ -22,15 +22,15 @@ and `pdx-alert-dialog`; extra bulk actions go in `bulkActions` and come back as 
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `columns` | — | array | `[]` | Grid columns (ColumnDef[]). An edit/delete actions column is appended unless readonly. |
-| `data` | — | array | `[]` | Entity rows. |
-| `schema` | — | object | `null` | FormSchema for the create/edit drawer. Without it the CRUD affordances are hidden. |
+| `columns` | — | unknown[] | `[]` | Grid columns (ColumnDef[]). An edit/delete actions column is appended unless readonly. |
+| `data` | — | unknown[] | `[]` | Entity rows. |
+| `schema` | — | Record<string, unknown> \| null | `null` | FormSchema for the create/edit drawer. Without it the CRUD affordances are hidden. |
 | `idField` | `idfield` | string | `'id'` |  |
 | `title` | `title` | string | `''` |  |
 | `addLabel` | `addlabel` | string | `''` | The create button's text. Empty: the entity-grid.add component string, «New». |
 | `selection` | `selection` | 'none' \| 'single' \| 'multiple' | `'multiple'` |  |
 | `rowActions` | `rowactions` | boolean | `true` | Show the per-row edit/delete actions column. |
-| `bulkActions` | — | array | `[]` | Extra bulk actions (besides the built-in Delete). |
+| `bulkActions` | — | unknown[] | `[]` | Extra bulk actions (besides the built-in Delete). |
 | `readonly` | `readonly` | boolean | `false` | Hide all mutating affordances (view-only grid). |
 | `confirmDelete` | `confirmdelete` | boolean | `true` | Ask before deleting ("Delete Alice Johnson?", "Delete 3 records?"). `false` for an app that confirms, or offers undo, in its pdx-delete handler: the rows go at once. |
 | `rowLabel` | `rowlabel` | string | `''` | The field that names a row in its action buttons and in the delete confirmation. Empty: the first text column, else the id. |
@@ -43,7 +43,9 @@ and `pdx-alert-dialog`; extra bulk actions go in `bulkActions` and come back as 
 | `openEdit(row)` | Open the drawer on this row. |
 | `getSelectedIds()` | The ids currently checked. |
 
-**Events:** `pdx-bulk` → `detail: { key, ids }` — Fired on `pdx-bulk`.; `pdx-create` → `detail: { values, clientId }` — Fired when a new item is created.; `pdx-delete` → `detail: { ids, rows } | { ids }` — Fired on `pdx-delete`.; `pdx-update` → `detail: { id, values }` — Fired on `pdx-update`.
+**Events:** `pdx-bulk` → `detail: { key: string; ids: unknown[] }` — One of `bulkActions` was pressed, over the selection.; `pdx-create` → `detail: { values: Record<string, unknown>; clientId: unknown }` — A record was created in the drawer. `clientId` names its optimistic row until the app's id replaces it.; `pdx-delete` → `detail: { ids: unknown[]; rows?: Record<string, unknown>[] }` — Rows were deleted: one from its row's button (with the row), or the selection from the bulk bar.; `pdx-update` → `detail: { id: unknown; values: Record<string, unknown> }` — A record was edited in the drawer.
+
+**Parts:** `[data-part="toolbar"]` — The row above the grid: the title and the create button.; `[data-part="title"]` — The title, from `title`.; `[data-part="add"]` — The create button, while there is a `schema` and the grid is not `readonly`.
 
 
 #### Examples

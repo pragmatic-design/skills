@@ -5,20 +5,20 @@ Click text to edit it in place.
 **`type="number"` and `type="currency"` keep the decimals the display can show.** The editor keeps
 `precision` decimals: by default the currency's own (2 for EUR, 0 for JPY) or, for a plain number,
 up to 3 — 29.5 edited to «30.2» saves 30.2. Set `precision` to fix it (`precision="0"` saves whole
-numbers). The number editor shows the value with that many decimals while you edit («29.500»).
+numbers). The number editor opens on the value's own decimals (29.5, not «29.500»): `precision` caps
+and rounds them, and draws no trailing zeros.
 
 ```html
-<pdx-inline-edit type="number" :value="weight" @pdx-change="e => weight = e.detail.value"></pdx-inline-edit>
+<pdx-inline-edit type="number" ::value="weight"></pdx-inline-edit>
 <pdx-inline-edit type="currency" currency="EUR" precision="2" :value="price"></pdx-inline-edit>
 ```
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
 | `type` | `type` | string | `'text'` | Data type — determines which editor to show |
-| `value` | — | object | `null` | Current value |
-| `options` | — | array | `[]` | Options for select/multiselect: [{ value, label }] |
+| `options` | — | unknown[] | `[]` | Options for select/multiselect: [{ value, label }] |
 | `placeholder` | `placeholder` | string | `''` | Placeholder when value is empty |
-| `editOn` | `editon` | string | `'click'` | When to enter edit mode: 'click' \| 'dblclick' \| 'icon' |
+| `editOn` | `editon` | 'click' \| 'dblclick' \| 'icon' | `'click'` | What opens the editor: a click on the value, a double click, or only the pencil button ('icon'). |
 | `saveOn` | `saveon` | string | `'blur'` | When to save: 'blur' (auto-save on blur/Enter) \| 'action' (confirm/cancel buttons) |
 | `disabled` | `disabled` | boolean | `false` | Disabled |
 | `readonly` | `readonly` | boolean | `false` | Readonly |
@@ -29,10 +29,27 @@ numbers). The number editor shows the value with that many decimals while you ed
 | `name` | `name` | string | `''` | Form field name |
 | `showIcon` | `showicon` | boolean | `true` | Show edit icon on hover |
 | `label` | `label` | string | `''` | The field's name, for the editor's accessible name. Empty: the inline-edit.edit component string, «Edit {value}». |
+| `value` | — | unknown | `null` | Current value |
 
-**Events:** `pdx-cancel` — Fired when cancelled.; `pdx-change` → `detail: { value }` — Fired when the value changes.
+**API (via `:ref`)**
+
+| Call | Notes |
+|---|---|
+| `startEdit()` | Open the editor, as a click on the value does. Nothing while `disabled` or `readonly`. |
+| `confirmEdit()` | Save the edited value and close the editor. |
+| `cancelEdit()` | Close the editor and keep the value; emits `pdx-cancel`. |
+| `focus()` | Focus what opens the editor: the value, or with `edit-on="icon"` the pencil button. |
+| `blur()` | Removes focus from it. |
+
+**Events:** `pdx-cancel` — The edit was cancelled: Escape, or the cancel button. The value is unchanged.; `value-change` → `detail: { value: unknown }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `button`
+
+**States:** `:state(disabled)` — `disabled` is set.; `:state(readonly)` — `readonly` is set.; `:state(editing)` — The editor is open.
+
+**Parts:** `[data-part="root"]` — The frame around the display and the editor.; `[data-part="display"]` — The value at rest, a `role="button"` that opens the editor; with `edit-on="icon"` it only shows the value.; `[data-part="edit"]` — With `edit-on="icon"`, the pencil button that opens the editor, and the only thing that does.; `[data-part="editor"]` — The editor's container, shown while editing.; `[data-part="save"]` — The save button, with `save-on="action"`, while editing.; `[data-part="cancel"]` — The cancel button, with `save-on="action"`, while editing.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

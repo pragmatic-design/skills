@@ -7,18 +7,22 @@ move, so the array it owns stays the one source of truth.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `[]` | The data items to render. |
+| `items` | — | T[] | `[]` | The data items to render. |
 | `idField` | `idfield` | string | `'id'` | How a row is identified. Empty: the row's index. |
 | `labelField` | `labelfield` | string | `'label'` | What a row shows without an `item` slot, and what names its handle either way. |
-| `axis` | `axis` | string | `'vertical'` | 'vertical' \| 'horizontal' — decides which arrows move, and which way rows shift. |
 | `handle` | `handle` | string | `''` | A selector inside the row that the POINTER may grab. Empty: the rendered handle. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
+| `axis` | `axis` | 'vertical' \| 'horizontal' | `'vertical'` | vertical (the default) or horizontal. |
 
 **Events:** `pdx-reorder` → `detail: { from, to, id }` — Fired on `pdx-reorder`.
 
 **Renders:** roles `list`
 
-**Slot:** `item` — Scoped — renders one row's content. Receives `{ item, index }`. Without it the row shows the item's `label-field`.
+**Slot:** `item` — Renders one row's content: a snippet `item(item, index)`. Without it the row shows the item's `label-field`.
+
+**States:** `:state(disabled)` — `disabled` is set: nothing can be moved, and the handles are `aria-disabled`.
+
+**Parts:** `[data-part="list"]` — The `role="list"` `<ul>`, framed.; `[data-part="item"]` — A row, `<li>`. The row lifted from the keyboard carries `pdx-sortable-item-lifted`.; `[data-part="handle"]` — A row's handle, the button the pointer grabs and the keyboard moves.; `[data-part="body"]` — A row's content.
 
 
 #### Examples
@@ -43,12 +47,12 @@ function onReorder(e) {
 }
 ```
 
-**Rows you render yourself** — The `item` slot takes over the row's content. The handle stays the component's, so the keyboard path keeps working whatever you put in the row. _(from the live demo)_
+**Rows you render yourself** — The `item` snippet, `item(item, index)`, takes over the row's content. The handle stays the component's, so the keyboard path keeps working whatever you put in the row. _(from the live demo)_
 
 ```html
 <div class="demo-stack narrow">
   <pdx-sortable-list :items="steps" @pdx-reorder="onStepReorder">
-    <slot name="item" let:item let:index>
+    @snippet item(item, index) {
       <div class="step-row">
         <pdx-badge :value="index + 1"></pdx-badge>
         <div>
@@ -56,7 +60,7 @@ function onReorder(e) {
           <div class="pdx-txt-small pdx-ink-muted">{{ item.owner }}</div>
         </div>
       </div>
-    </slot>
+    }
   </pdx-sortable-list>
 </div>
 ```

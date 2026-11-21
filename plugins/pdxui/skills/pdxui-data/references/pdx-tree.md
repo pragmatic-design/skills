@@ -12,21 +12,23 @@ hierarchy → `pdx-tree-select`; a path is chosen through columns → `pdx-casca
 - Ids come out as strings: `pdx-select` and `pdx-check` carry `String(node[idField])`, so `7` arrives as `"7"`.
 - `pdx-check` lists the leaves and the fully-checked branches; a mixed parent is not in it.
 - No prop holds the selection or the checks: you learn them from the events.
-- It is not virtualized, and every expand, select or check rebuilds the visible rows, by design.
+- It is not virtualized, and every expand or collapse rebuilds the visible rows; a select or a check
+  only marks again the rows on screen.
 
-**Composes with** — its `node` slot (`{ node, level, expanded }`) for a custom row. It shares the
+**Composes with** — its `node` snippet, `@snippet node(node, level, expanded) { … }`, for a custom
+row. It shares the
 `loadChildren(node) => Promise<Node[]>` shape with `pdx-tree-select` and `pdx-cascader`.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `nodes` | — | array | `() => []` | The roots. Children are read from `childrenField`. |
+| `nodes` | — | T[] | `[]` | The roots. Children are read from `childrenField`. |
 | `idField` | `idfield` | string | `'id'` | The field that identifies a node. |
 | `labelField` | `labelfield` | string | `'label'` | The field rendered as the node's text, when there is no `node` slot. |
 | `childrenField` | `childrenfield` | string | `'children'` | The field holding a node's children. |
 | `selectionMode` | `selectionmode` | 'none' \| 'single' \| 'multiple' | `'none'` | 'none' \| 'single' \| 'multiple'. |
 | `checkable` | `checkable` | boolean | `false` | Show a checkbox per node, tri-state over a branch's subtree. |
 | `defaultExpandAll` | `defaultexpandall` | boolean | `false` | Open every branch on first render. |
-| `loadChildren` | — | function | `null` | Fetch a branch's children the first time it opens. |
+| `loadChildren` | — | ((...args: unknown[]) => unknown) \| null | `null` | Fetch a branch's children the first time it opens. |
 | `label` | `label` | string | `''` | Accessible name for the tree. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 
@@ -34,7 +36,13 @@ hierarchy → `pdx-tree-select`; a path is chosen through columns → `pdx-casca
 
 **Renders:** roles `group` · `tree` · `treeitem`
 
-**Slot:** `node` — Scoped — renders one node's label. Receives `{ node, level, expanded }`.
+**Slot:** `node` — Renders one node's label: a snippet `node(node, level, expanded)`.
+
+**States:** `:state(loading)` — A lazy branch is loading: the tree is `aria-busy` too (A4).; `:state(disabled)` — `disabled` is set: a click opens and selects nothing.
+
+**Parts:** `[data-part="root"]` — The `role="tree"`: one click and one keydown listener serve every row.; `[data-part="item"]` — A row, `role="treeitem"`, with its `aria-level`, `aria-posinset` and `aria-setsize` (A3).; `[data-part="group"]` — The `role="group"` of an open branch's children.; `[data-part="twisty"]` — A branch's open/closed marker.; `[data-part="check"]` — A row's checkbox, with `checkable`.; `[data-part="label"]` — A row's label.
+
+**Tokens:** `--pdx-tree-level`. Set one at `:root`, on a subtree, or on the element itself.
 
 **Shapes:** `TreeNode { isBranch?: boolean }`
 

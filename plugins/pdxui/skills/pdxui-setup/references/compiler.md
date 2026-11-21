@@ -19,7 +19,7 @@ reasonably hold:
 ```pdx
 <template><div>{{ label }} {{ count }} {{ doubled }}</div></template>
 
-<script setup>
+<script>
 @prop label: string = 'Hello';
 @event changed: number;
 
@@ -37,45 +37,107 @@ function reset() { count = 5; }
 and here is what the compiler emits for it — not a paraphrase, the actual output:
 
 ```js
-import { component, computed, html, signal, store } from '@pdxui/core';
+import { bindInterpolation, computed, defineComponent, exposeOnElement, prop, signal, staticBlock, staticMarkup, store } from '@pdxui/core';
 
-component('pdx-counter', {
+// the template's static markup, as HTML → parsed once, on first render, then copied;
+// each <!----> is an empty text node the render binds
+const __blk0=staticBlock(staticMarkup('<div><!----> <!----> <!----></div>'));
+// the walk → from the copy to the nodes the render binds, computed at compile time;
+// a block whose nodes sit at the same places shares it
+const __walk0=(r)=>{const n0=r.firstChild;const n1=n0.firstChild;const n2=n1.nextSibling.nextSibling;const n3=n2.nextSibling.nextSibling;return [n1,n2,n3];};
+defineComponent('app-counter', {
   props: {
-    label: { type: String, default: 'Hello' }        // @prop → declared prop + attribute sync
+    label: prop('Hello')                             // @prop → declared prop + attribute sync;
+                                                     //         its type, String, is the default's
   },
+  events: { 'changed': {} },                         // @event → declared in the descriptor
   setup(ctx) {
     const changed = (detail) => ctx.emit('changed', detail);   // @event → the emit function
     const __count = signal(0, { name: 'counter:count' });      // $signal → signal + debug name
-    const prefs = store({ theme: 'dark' });                    // $store → reactive proxy, keys
+    let prefs = store({ theme: 'dark' });                      // $store → reactive proxy, keys
                                                                //          are not signals
     function bump() { __count.set(__v => __v + 1); changed(__count()); }
                                     // count++ became .set(), and `count` as an argument became a read
-    function reset() { __count.set(5); }                       // count = 5 → .set(5)
+    function reset() { __count.setRaw(5); }                    // count = 5 → .setRaw(5): stored as is
 
     const doubled = computed(() => __count() * 2, { name: 'counter:doubled' });  // $derived → computed
     ctx.expose({ bump, reset });                               // @expose → the imperative API
 
     return { count: __count, doubled, prefs, bump, reset, changed };
   },
-  render: (ctx) => html`<div>${ctx.label} ${ctx.count} ${ctx.doubled}</div>`,
-});
+  render: (ctx) => (() => {                                    // the template → a copy of its markup
+    const __frag=__blk0();
+    const [__t1,__t2,__t3]=__walk0(__frag);
+    bindInterpolation(__t1,()=>ctx.label());                   // {{ label }} → a text node that follows it
+    bindInterpolation(__t2,()=>ctx.count());
+    bindInterpolation(__t3,()=>ctx.doubled());
+    return __frag;
+  })(),
+}, { expose: exposeOnElement });                               // the features it uses: @expose's
 ```
 
 Three things to read off it. The variable you declared is now `__count` and every **read** of it —
-including the one you wrote as a bare argument — became a call; the **template** reads through `ctx`,
-which is why you never write `count()` in markup; and `$store` is the one that is *not* rewritten,
-because a store is a proxy and its keys are properties, not signals.
+including the one you wrote as a bare argument — became a call; the **template** became markup
+parsed once and copied per render (a block the HTML parser would not keep exactly, a `<select>` or a
+`<tr>` written straight in a `<table>` for two, is built with one DOM call per node instead), and the render does only what changes — binds what reads through
+`ctx`, which is why you never write `count()` in markup; and `$store` is the one
+that is *not* rewritten, because a store is a proxy and its keys are properties, not signals.
+
+What the compiler decides stays in the module, and what is the same in every component is a call to
+core. A bound attribute on an element compiles to `bindAttribute(el, 'aria-label', () => …)`; a
+property the element certainly has, `:disabled` on an `<input>`, to `bindNativeProperty`; a name the
+element may or may not have to `bindAttributeOrProperty`, which asks it; and `:style="…"`, a string, to
+`bindStyleText`, which writes `style.cssText`. The compiler picks which from the element and the name; core holds the effect, the value written last, and what `null`
+does. A handler is `eventHandler(fn, ctx.el, 'click')`, which runs it in one batch and routes what it
+throws; the `@state` runes are one `ctx.states({ … })`. Written out in every component, each of these
+weighed more than the component's own markup.
+
+A module can also be compiled to take over markup that static generation wrote for it, instead of
+building its own: that is hydration. Then each block's render starts with `hydrationRange()`, the
+part of the page it is handed, if any. With one, it walks those nodes by the same paths as its copy —
+`skipNode` steps over a value's place as one node, `checkNode` checks that an element is the one the
+template has, `partText` makes a value's place the text node the binding follows, and
+`projectedNode` finds a child in the slot of the component it was given to — and it answers
+`adoptedRange(range)` instead of a fragment. `placePart` puts a block where its marker is, or has it
+take over what the server wrote there; `offerPart` hands that place to content built before its block
+is, as `@show`'s is. Without a range it copies its markup as above. The option is
+off unless the app is built to hydrate, and then the module is otherwise the same.
+
+`pdx({ hydrate: true })` builds the app that way, in dev as in a build, so the two render alike. The
+page then runs `installHydration()` from `@pdxui/core/hydrate` before the app's own script, so that a
+pre-rendered component takes over its markup instead of rendering over it. With `@page` routes it
+also runs the outlet's `installRouteAdoption()`, described below. A page with no generated markup
+renders as it would without the option. An app built without the plugin calls `installHydration()`
+itself, before anything else.
+
+That markup comes from `@pdxui/core/server`, kept out of the barrel so a client bundle carries none
+of it. In Node, `installServerDom()` from `@pdxui/core/server-dom` goes first, before anything of
+core or of the app is imported: a component's class extends the `HTMLElement` it finds when its
+module is evaluated, so the server DOM has to be there by then. Then `renderToString(fn)` renders what `fn` returns, and `renderToStringWithReport(fn)` also lists the
+components that could only be written as empty hosts, with the reason. A custom element that is not
+a component writes itself through `registerServerElement(tag, render)`, building what it holds with
+`serverElement(tag, attributes, props, inner)`. The router's outlet is one: import
+`@pdxui/router/server`, call `serverRoute(path)` with the URL being generated, and the outlet writes
+that route's layouts and page. `serverRoutes()` lists the registered patterns, and
+`loadServerPages()` imports every lazy page first, so that none is written as an empty host.
+`pdx build --ssg` does all of this for you (see the CLI page). In the browser, `installRouteAdoption()` from `@pdxui/router/hydrate`
+has every outlet keep what the server wrote at boot instead of building it again; an app that is not
+generated does not import it, and carries none of it.
 
 The same holds for the higher-level runes: `@page` generates the route entry and the lazy import,
 `@fetch` a typed `resource()`, `@form` a validated form from the schema. In every case the pattern is
 identical: *you declare the intent, the compiler writes the wiring.*
 
-## Dual mode: dev interpreted, prod compiled
+## Dual mode: dev on the fly, prod with the whole project
 
-PDX runs in two modes, and the difference is deliberate.
+PDX runs in two modes, and the difference is deliberate — but a component renders the same way in
+both: one render path, the inline one above, so nothing the dev server shows can be missing from the
+shipped app.
 
-- **Dev** — everything is **interpreted**. No build to wait for: `pdx dev` loads `.pdx` on the fly with
-  HMR. Optimized for the feedback loop.
+- **Dev** — no build to wait for: `pdx dev` compiles each `.pdx` when it is requested, with HMR.
+  Optimized for the feedback loop: a save reaches the open page in tens of milliseconds, the
+  component's signals kept. A save that changes only a `<style>` block rewrites the style in place
+  and re-renders nothing, so focus, scroll and what is typed in an input stay as they were.
 - **Prod** — the compiler has **global knowledge** of the project (all routes, components, bindings,
   communication) and generates code to measure.
 
@@ -84,13 +146,12 @@ What actually changes between the two:
 Every row below is measured, and `packages/showcase/tests/compiler-claims.spec.ts` holds one
 assertion per row against a real production build.
 
-| Aspect | Dev (interpreted) | Prod (compiled) | |
+| Aspect | Dev | Prod | |
 | --- | --- | --- | --- |
-| Binding | `setProp()` with dispatch | direct inline assignment | **yes** — the default; 19 ms → 5.5 ms on a 1500-row mount |
-| Router | regex matching | generated switch | **yes**, while no route declares a constraint |
+| Render | the DOM built directly, one assignment per binding | the same | **one path** — 19 ms → 5.5 ms on a 1500-row mount against the tagged template it replaced |
+| Router | one router, the table from the dev server | the same router, the table compiled from `@page` | **one implementation** — a build emits the route table as data, and the router builds its matcher once at start-up: a navigation runs no regex for a whole-segment pattern (a constraint is the only one) |
 | CSS | injected at runtime | extracted to a stylesheet | **yes** — a route carries its CSS in a `.css`, not in its JS chunk |
 | Unread signal | present | removed | **yes** — semantic dead-code elimination, measured on the bundle |
-| Template | runtime with placeholders | pre-compiled DOM factory | only for a template with **no interpolation at all** |
 | Validation | runtime checks + warnings | stripped | **yes** — the diagnostics that teach the author sit behind `DEV`, a constant the bundler folds, so each leaves with its message: 209.5 → 206.2 KB gzip on the showcase. The failures an app reports about itself stay. Measured by `packages/showcase/tests/diagnostics.spec.ts` on the bundle and `packages/core/tests/diagnostics-behind-dev.test.ts` on the sources |
 
 Route pre-linking ships: the built `index.html` preloads the landing route's chunks — see *The first
@@ -99,35 +160,47 @@ screen, in one round-trip less* below.
 The flattening of single-use components is **not implemented**: it measures at ~1.2% of the bundle in exchange for the element leaving
 the DOM, which is not worth it.
 
-### Turning the inline path off
+`pdx({ inlineBindings })`, which used to select the tagged template instead, no longer selects
+anything: a build or a dev server given it says so once, as `PDX_INLINE_BINDINGS_IGNORED`. Remove it.
+It has left the type of the options, so a typed `vite.config.ts` that still sets it does not compile,
+and `pdx migrate` lists it ([CLI](cli.md)). The tagged template, `html`, stays in `@pdxui/core`
+for components written by hand in TypeScript, where a bound value still goes through `setProp()`'s
+dispatch.
 
-A production build inlines its bindings. The way back to the tagged template is one option:
-
-```ts
-// vite.config.ts
-export default defineConfig({ plugins: [pdx({ inlineBindings: false })] });
-```
-
-It is kept because a second render path that nothing can select is a cost with no way to pay it: if
-the inlining is ever wrong for a case, this is the switch. In dev it makes no difference — there is
-no build, and the template path is what HMR reloads.
+`pdx({ target })` names the browsers the output may rely on: `'baseline-2026'`, the default, or
+`'baseline-2024'` for an app whose users run older browsers, where the beta's output needs a 2026
+feature. Under the default a `<style scoped>` block is a donut `@scope` that stops at nested
+components, and the stylesheets of `@pdxui/design` read a theme's behaviours (filled inputs, pill
+tabs, elevated cards) through container style queries — which is why `pdx()` is two Vite plugins,
+the second rewriting those stylesheets between Vite's CSS steps. `'baseline-2024'` keeps the ancestor
+selector and the behaviour attributes `setTheme` writes on `<html>`. It is maintained frozen — fixed,
+not developed — and retired when `@scope` is Baseline widely available, in September 2028.
 
 ## The first screen, in one round-trip less
 
-A built `index.html` names the landing route's chunk, and the chunks that chunk imports statically:
+A built `index.html` names the landing route's chunk, the chunks that chunk imports statically, and
+the stylesheets they import:
 
 ```html
 <link rel="modulepreload" crossorigin href="/assets/dashboard-CMcP70OD.js">
 <link rel="modulepreload" crossorigin href="/assets/pdx-icon-CXs78fgR.js">
+<link rel="preload" as="style" crossorigin href="/assets/dashboard-BJbnitW9.css">
 ```
 
-Vite emits those for what it can SEE — and a route is a dynamic import the generated router
-resolves, so it sees none of them. The compiler does: the route table is built at compile time,
-which is the same table the production router compiles in.
+Vite emits those for what it can SEE — and a route is a dynamic import the router resolves, so it
+sees none of them. The compiler does: the route table is built at compile time, and it is the same
+table the router reads.
 
 Measured on the showcase: without the preload, a cold first screen fetches its JavaScript in **three
 waves** — the entry, then the route's chunk once the browser has run the entry and learnt of it, then
 what that chunk imports. With it, **two**, and the round-trip saved is paid by every first-time visitor.
+
+The stylesheets matter as much as the scripts: Vite's loader waits for a chunk's CSS before the
+import resolves, so the page cannot mount until it is in. Found only once the entry has run, the
+route's stylesheets were the last wave of a cold load; announced, they download beside the entry.
+On the showcase, under slow 4G, that took the first page from ~1180 ms to ~885 ms. `as="style"`
+downloads them without blocking the first paint, and the link Vite inserts later finds them in the
+cache.
 
 `/` by default, because that is the URL an app is usually entered at. For an app that lands
 somewhere else, or to turn it off:

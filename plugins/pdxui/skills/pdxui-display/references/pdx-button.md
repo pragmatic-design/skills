@@ -2,21 +2,42 @@
 
 Clickable action — 9 variants, sizes, loading and icons.
 
+**A button that runs a write: `:action`.** Give it a `mutation()` — or anything with `execute(arg?)`
+and `pending()` — and what it passes:
+
+```html
+<pdx-button :action="save" :action-arg="dto">Save</pdx-button>
+```
+
+A click calls `save.execute(dto)`. While `save.pending()` is true the button is busy (`aria-busy`,
+the spinner) and, under `concurrency` `'queue'` (the default) or `'drop'`, refuses clicks, so a
+double click sends one write — the double-submit guard is the
+button's, not something each form wires. `loading` and `disabled` set explicitly still win. A
+rejected write stays on `save.error()` for the form to show, is announced as `pdx-action-error`
+(`detail: { error }`), and the button is idle again. No `:loading="save.pending()"`, no `:disabled`,
+no `@click` to write.
+
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `variant` | `variant` | 'solid' \| 'primary' \| 'secondary' \| 'outline' \| 'ghost' \| 'link' \| 'danger' \| 'success' \| 'warning' \| 'info' | `'primary'` | Visual variant. |
-| `size` | `size` | 'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl' | `''` | xs, sm, md (the default), lg or xl — the same scale as pdx-input and pdx-select. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `loading` | `loading` | boolean | `false` | Shows a loading / busy state. |
 | `type` | `type` | 'button' \| 'submit' \| 'reset' | `'button'` | Native button type: 'button', 'submit' or 'reset'. |
 | `full` | `full` | boolean | `false` | Stretches to the full width of its container. |
-| `toggle` | `toggle` | boolean | `false` | Toggle mode: button maintains pressed/unpressed state |
-| `pressed` | `pressed` | boolean | `false` | Pressed state for toggle buttons |
 | `label` | `label` | string | `''` | The button's text, rendered inside its `<button>` after any slotted content (an icon). Set this — not `textContent`, which replaces the rendered `<button>` with bare text once the button is connected. |
 | `ariaLabel` | `arialabel` | string | `''` | The accessible name of an icon-only button, forwarded to the inner `<button>`: `aria-label` on the host has no role to name. |
 | `ariaLabelledby` | `arialabelledby` | string | `''` | The id of an element whose text names the button, forwarded to the inner `<button>`. |
+| `action` | — | Record<string, unknown> \| null | `null` | A write the button runs: anything with `execute(arg?)` and `pending()` — a `mutation()`. A click calls `execute(actionArg)`; while `pending()` the button shows loading, and refuses clicks unless the action's `concurrency` is `'coalesce'` or `'parallel'`, so a double click sends one write. |
+| `actionArg` | — | Record<string, unknown> \| null | `null` | The value a click passes to `action.execute`. |
+| `variant` | `variant` | 'primary' \| 'solid' \| 'secondary' \| 'outline' \| 'ghost' \| 'link' \| 'danger' \| 'success' \| 'warning' \| 'info' | `'primary'` | Visual variant. |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl — the same scale as pdx-input and pdx-select. |
 
-**Events:** `pdx-toggle` → `detail: { pressed }` — Fired when toggled open or closed. Does not bubble.
+**Events:** `pdx-action-error` → `detail: { error: unknown }` — When the `action`'s `execute` rejects. The error is the one the action keeps on its `error()`; the button is idle again.
+
+**States:** `:state(loading)` — `loading` is set, or the `action` is pending: the button shows a spinner and is `aria-busy`.
+
+**Parts:** `[data-part="root"]` — The native `<button>`.; `[data-part="label"]` — The text of `label`, after any slotted content.
+
+**Tokens:** `--pdx-button-bg`; `--pdx-button-bg-hover`; `--pdx-button-color`; `--pdx-button-min-height` (default `2.5rem`); `--pdx-button-radius`; `--pdx-button-shadow-hover`; `--pdx-button-transform-hover`. Set one at `:root`, on a subtree, or on the element itself.
 
 
 #### Examples
@@ -55,13 +76,6 @@ are checked against the manifest above._
 <pdx-button variant="primary" size="sm">Small</pdx-button>
 <pdx-button variant="primary">Default</pdx-button>
 <pdx-button variant="primary" size="lg">Large</pdx-button>
-```
-
-**Toggle Button** — Add `toggle` prop for stateful on/off buttons. Uses `aria-pressed`. Emits `pdx-toggle`.
-
-```html
-<pdx-button toggle variant="outline">Bold</pdx-button>
-<pdx-button toggle variant="primary" pressed>Active</pdx-button>
 ```
 
 **Loading State** — Set `loading` prop. Button becomes disabled with spinner overlay. `aria-busy="true"` set automatically. Click to toggle.
@@ -178,8 +192,8 @@ are checked against the manifest above._
 <div class="demo-row">
   <pdx-button variant="outline" size="sm" @click="openDeclarative">Open Dialog</pdx-button>
 </div>
-<pdx-dialog :open="declOpen" title="Declarative Dialog" size="md">
-  <p style="margin:0 0 var(--pdx-space-md)">This dialog is opened via <code>:open</code> binding.</p>
+<pdx-dialog ::open="declOpen" title="Declarative Dialog" size="md">
+  <p style="margin:0 0 var(--pdx-space-md)">This dialog is bound with <code>::open</code>: Escape and the backdrop close it and write <code>declOpen</code> back.</p>
   <p style="margin:0">Click below to open a programmatic confirm on top of this dialog.</p>
   <span slot="footer">
     <pdx-button variant="danger" size="sm" @click="onNestedConfirm">Delete (Programmatic)</pdx-button>

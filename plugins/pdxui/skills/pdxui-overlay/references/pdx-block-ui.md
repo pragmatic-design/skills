@@ -11,9 +11,13 @@ Block a region while it’s busy.
 | `delay` | `delay` | number | `300` | Ms before the overlay is drawn. The input is blocked from the start either way. |
 | `minDuration` | `minduration` | number | `200` | Ms the overlay stays drawn once it is, however soon the block ends. |
 
-**Events:** `pdx-block` — Fired on `pdx-block`.; `pdx-unblock` — Fired on `pdx-unblock`.
+**Events:** `pdx-block` — The overlay is drawn: past its delay, the moment a person sees it.; `pdx-unblock` — The overlay is taken away and the input given back.
 
 **Renders:** roles `status`
+
+**States:** `:state(blocked)` — The input is blocked: from the moment `blocked` turns on until the overlay is taken away.; `:state(shown)` — The overlay is drawn: past its `delay`, and for at least `min-duration`.
+
+**Parts:** `[data-part="overlay"]` — The overlay over the wrapped content.; `[data-part="spinner"]` — The group in the overlay that holds the spinner and the message.; `[data-part="message"]` — The message, the overlay's live region.
 
 
 #### Examples
@@ -49,7 +53,7 @@ are checked against the manifest above._
 
 ```html
 <div class="demo-actions">
-  <button class="pdx-btn pdx-outline pdx-btn-xs" @click="simulateFetch">Load Data</button>
+  <button class="pdx-outline" size="sm" @click="simulateFetch">Load Data</button>
 </div>
 <div class="demo-wrap">
   <pdx-block-ui :blocked="fetchLoading" id="fetch-block">
@@ -64,8 +68,8 @@ are checked against the manifest above._
 
 ```html
 <div class="demo-actions">
-  <button class="pdx-btn pdx-outline pdx-btn-xs" @click="save(120)">Save in 120 ms</button>
-  <button class="pdx-btn pdx-outline pdx-btn-xs" @click="save(350)">Save in 350 ms</button>
+  <button class="pdx-outline" size="sm" @click="save(120)">Save in 120 ms</button>
+  <button class="pdx-outline" size="sm" @click="save(350)">Save in 350 ms</button>
 </div>
 <div class="demo-wrap">
   <pdx-block-ui :blocked="saving" message="Saving…">

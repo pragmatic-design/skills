@@ -16,7 +16,7 @@ import { mount, tick, fireEvent, getByRole, cleanup } from '@pdxui/core/testing'
 afterEach(cleanup);   // unmount and clean up between tests
 
 it('increments on click', async () => {
-  const el = await mount('<pdx-counter start="0"></pdx-counter>');   // markup in, container out
+  const el = await mount('<app-counter start="0"></app-counter>');   // markup in, container out
   fireEvent(getByRole(el, 'button', { name: '+1' }), 'click');       // act
   await tick();                                                       // WAIT for the reactive flush
   expect(el.textContent).toContain('1');                              // assert on the new state
@@ -70,9 +70,9 @@ chart canvas. Reaching for it first is a smell; reaching for it third is fine.
 
 - **`tick()`** — waits for the reactive flush *and* the render. After every action that changes state,
   before asserting.
-- **`fireEvent(el, name, detail?)`** — dispatches a real event, bubbling and composed. With a `detail`
-  it dispatches a `CustomEvent`, which is how you drive a component's own `@event` contract:
-  `fireEvent(input, 'pdx-input', { value: 'hello' })`.
+- **`fireEvent(el, name, detail?)`** — dispatches a real event that bubbles. With a `detail`
+  it dispatches a `CustomEvent`, also composed, which is how you drive a component's own `@event` contract:
+  `fireEvent(row, 'selected', { id: '7' })`.
 - **`waitFor(condition, timeout?)`** — waits for a **condition to return true**, not for an assertion
   to stop throwing: `await waitFor(() => queryByRole(el, 'dialog') !== null)`. Default timeout 3 s.
 - **`cleanup()`** — unmounts every container. Put it in `afterEach`, or one test's DOM is the next
@@ -81,21 +81,22 @@ chart canvas. Reaching for it first is a smell; reaching for it third is fine.
 ## Testing events
 
 ```ts
-it('emits pdx-change on toggle', async () => {
+it('announces checked-change on toggle', async () => {
   const el = await mount('<pdx-switch></pdx-switch>');
   const onChange = vi.fn();
-  el.addEventListener('pdx-change', onChange);
+  el.querySelector('pdx-switch')!.addEventListener('checked-change', onChange);
 
   fireEvent(getByRole(el, 'switch'), 'click');
   await tick();
 
   expect(onChange).toHaveBeenCalledOnce();
+  expect(onChange.mock.calls[0][0].detail).toEqual({ value: true });
 });
 ```
 
-The listener goes on the **container**, not the component: the events a component declares with
-`@event` bubble and are composed, so the container sees them, and a test that listens there is testing
-what a parent would actually receive.
+The listener goes on the **component**, not the container `mount` returns: a component's events do
+not bubble unless it declares them `@event(bubbles)`, and a model's change event never does. A
+listener on the component is what a parent's `@checked-change` on the tag is.
 
 ## Beyond unit tests: contract tests
 

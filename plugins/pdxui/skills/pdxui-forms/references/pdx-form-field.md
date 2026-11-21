@@ -18,13 +18,14 @@ on save), goes with `show-error`:
 <template>
   <pdx-form-field label="PIN" :error="pinError" show-error><pdx-input type="password" /></pdx-form-field>
 </template>
-<script setup>
+<script>
 let pinError = $signal(''); // set when the server refuses the PIN: pinError = 'Wrong PIN'
 </script>
 ```
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
+| `field` | — | Record<string, unknown> \| null | `null` | The form field this field shows (#128): `:field="f.email"`. Its error, warning, touched state and required-ness, with no `name` and no surrounding `<pdx-form>`. |
 | `name` | `name` | string | `''` | Field name — if set and inside <pdx-form>, auto-wires error/touched from form context. |
 | `label` | `label` | string | `''` | Visible label text. |
 | `hint` | `hint` | string | `''` | Helper text shown under the control. |
@@ -32,16 +33,22 @@ let pinError = $signal(''); // set when the server refuses the PIN: pinError = '
 | `error` | `error` | string | `''` | The error message. Shown only when the field is touched, when `show-error` is set, or when its form validates onChange: an error decided by code (a server rejection, a check on save) goes with `show-error`. |
 | `warning` | `warning` | string | `''` | Non-blocking warning message (yellow, below error). |
 | `success` | `success` | string | `''` | Applies the success state styling. |
-| `required` | `required` | boolean | `false` | Marks the field as required. |
+| `required` | `required` | boolean | `false` | Marks the field required: `aria-required` on its control and the required marker on its label. Not needed for a field the form requires — one whose validators include `required()` is marked the same way without it. |
 | `optional` | `optional` | boolean | `false` | Shows an 'optional' marker. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `touched` | `touched` | boolean | `false` | Whether the field has been interacted with (gates validation display). |
 | `showError` | `showerror` | boolean | `false` | Force error display even if not touched |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `horizontal` | `horizontal` | boolean | `false` | Horizontal layout: label left, input right |
 | `a11yLabel` | `a11ylabel` | string | `''` | The control's name when the field shows no `label`: set as its aria-label. A visible label wins, and a control that names itself keeps its own name. |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl. |
 
 **Renders:** roles `alert`
+
+**States:** `:state(required)` — `required`: required by its prop or by its form; the label carries the marker (`--pdx-field-required-marker`).; `:state(optional)` — `optional`: the label says the field is optional.; `:state(disabled)` — `disabled`: the field and its control are disabled.; `:state(invalid)` — `invalid`: its error is shown; the control is aria-invalid and described by it.; `:state(warning)` — `warning`: its warning is shown, and no error.; `:state(success)` — `success`: its success message is shown, and no error or warning.; `:state(horizontal)` — `horizontal`: the label sits beside the control.
+
+**Parts:** `[data-part="root"]` — The field's wrapper.; `[data-part="label"]` — The `<label>`, with `label`.; `[data-part="description"]` — The description under the label, with `description`.; `[data-part="control"]` — The box that holds the slotted control.; `[data-part="error"]` — The error message, while it is shown.; `[data-part="warning"]` — The warning message, while it is shown.; `[data-part="success"]` — The success message, while it is shown.; `[data-part="hint"]` — The hint, while no message takes its place.
+
+**Tokens:** `--pdx-form-field-gap` (default `var(--pdx-space-md)`). Set one at `:root`, on a subtree, or on the element itself.
 
 
 #### Examples
@@ -193,18 +200,18 @@ are checked against the manifest above._
 </div>
 ```
 
-**PIN Input** — Masked code entry — shows dots instead of digits. Same behavior as OTP but for passwords/PINs. _(from the live demo)_
+**PIN Input** — Masked code entry — `mask` shows dots instead of digits. The group is named «PIN» and the browser offers no one-time code. _(from the live demo)_
 
 ```html
 <div class="demo-stack">
   <pdx-form-field label="4-digit PIN">
-    <pdx-pin-input length="4"></pdx-pin-input>
+    <pdx-otp-input mask length="4"></pdx-otp-input>
   </pdx-form-field>
   <pdx-form-field label="6-digit PIN">
-    <pdx-pin-input length="6"></pdx-pin-input>
+    <pdx-otp-input mask length="6"></pdx-otp-input>
   </pdx-form-field>
   <pdx-form-field label="Error" error="Wrong PIN" showError>
-    <pdx-pin-input length="4" error></pdx-pin-input>
+    <pdx-otp-input mask length="4" error></pdx-otp-input>
   </pdx-form-field>
 </div>
 ```
@@ -229,6 +236,16 @@ are checked against the manifest above._
 </div>
 ```
 
+**Masked PIN** — `mask` shows dots instead of digits, for a PIN. The group is named «PIN» unless `label` says otherwise, and the browser offers no one-time code. _(from the live demo)_
+
+```html
+<div class="demo-stack">
+  <pdx-form-field label="4-digit PIN">
+    <pdx-otp-input mask length="4"></pdx-otp-input>
+  </pdx-form-field>
+</div>
+```
+
 **States** _(from the live demo)_
 
 ```html
@@ -238,29 +255,6 @@ are checked against the manifest above._
   </pdx-form-field>
   <pdx-form-field label="Disabled" disabled>
     <pdx-password-input value="hidden" disabled></pdx-password-input>
-  </pdx-form-field>
-</div>
-```
-
-**Basic** _(from the live demo)_
-
-```html
-<div class="demo-stack">
-  <pdx-form-field label="4-digit PIN">
-    <pdx-pin-input length="4"></pdx-pin-input>
-  </pdx-form-field>
-  <pdx-form-field label="6-digit PIN">
-    <pdx-pin-input length="6"></pdx-pin-input>
-  </pdx-form-field>
-</div>
-```
-
-**States** _(from the live demo)_
-
-```html
-<div class="demo-stack">
-  <pdx-form-field label="Error" error="Wrong PIN" showError>
-    <pdx-pin-input length="4" error></pdx-pin-input>
   </pdx-form-field>
 </div>
 ```

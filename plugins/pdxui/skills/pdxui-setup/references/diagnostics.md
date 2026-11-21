@@ -2,11 +2,111 @@
 
 # Diagnostics
 
-Every finding the compiler, `pdx check` and the editor report carries a `PDX_*` code — 61 of them. Each is listed here with what it means and what to write instead, generated from the catalog in `packages/compiler/src/diagnostics/`. From a terminal, `pdx explain <CODE>` prints the same entry; `--json` prints it for an agent. A finding in `pdx check --json` links its entry with `url`.
+> **Formal reference:** [docs/language/diagnostics.md](https://github.com/pragmatic-design/pdxui/blob/main/docs/language/diagnostics.md) indexes the same codes by the construct that raises them.
+
+Every finding the compiler, `pdx check` and the editor report carries a `PDX_*` code — 117 of them. Each is listed here with what it means and what to write instead, generated from the catalog in `packages/compiler/src/diagnostics/`. From a terminal, `pdx explain <CODE>` prints the same entry; `--json` prints it for an agent. A finding in `pdx check --json` links its entry with `url`.
 
 ## Defects
 
 Something is wrong: the output differs from what was written, or nothing is generated for it.
+
+### PDX_ACTION_UNKNOWN_OPTION
+
+*error* — `@action … with { … }` holding an option `mutation()` does not take, or a `concurrency` that is not a policy.
+
+The options are handed to `mutation()`, which ignores a key it does not know: a misspelled `invalidte` would leave the lists stale after every save, and `concurrency: 'later'` would quietly queue.
+
+**Fix.** Use one of the options — invalidate, optimistic, onSuccess, onError, concurrency, agent, consequential — and for `concurrency` one of 'queue', 'drop', 'coalesce', 'parallel'.
+
+Instead of:
+
+```html
+<template>
+  <pdx-button :action="save">Save</pdx-button>
+</template>
+<script>
+@action save() with { retries: 2 } {
+  await fetch('/api/save', { method: 'POST' });
+}
+</script>
+```
+
+write:
+
+```html
+<template>
+  <pdx-button :action="save">Save</pdx-button>
+</template>
+<script>
+@action save() with { concurrency: 'drop' } {
+  await fetch('/api/save', { method: 'POST' });
+}
+</script>
+```
+
+### PDX_AGENT_ACTION_UNBOUND
+
+*error* — An `@action` offered to agents (`with { agent }`) that no control of the template runs.
+
+An agent has no capability a person does not (decision 31): an action an agent may call must be one a person can call from the page too. With no `:action="name"` and no handler that calls `name.execute(…)` or `name(…)`, the agent could do what the user cannot.
+
+**Fix.** Give a person the same control — `<pdx-button :action="save">`, or a handler that calls `save.execute(…)` — or remove `agent`.
+
+Instead of:
+
+```html
+<template>
+  <p>Draft</p>
+</template>
+<script>
+@action save() with { agent: 'Save the draft' } {
+  await fetch('/api/save', { method: 'POST' });
+}
+</script>
+```
+
+write:
+
+```html
+<template>
+  <pdx-button :action="save">Save</pdx-button>
+</template>
+<script>
+@action save() with { agent: 'Save the draft' } {
+  await fetch('/api/save', { method: 'POST' });
+}
+</script>
+```
+
+### PDX_ATTACH_UNKNOWN
+
+*error* — `attach:name` whose name is neither in the script nor one of core's attachments (#143).
+
+An attachment is a function of the element and a getter for its value, called when the element is rendered, with its returned cleanup run when the value changes or the element goes. Its name is read like any template identifier — a function of the script, or an import — or is one of core's built-ins, `autofocus`, `trapFocus` and `clickOutside`, which the compiler imports. Any other name would be undefined, and the element would throw when rendered.
+
+**Fix.** Declare the function, `function tooltip(el, value) { … return () => { … }; }`, or import it.
+
+Instead of:
+
+```html
+<template>
+  <input attach:toltip="'Search'" />
+</template>
+<script>
+import { tooltip } from './tooltip';
+</script>
+```
+
+write:
+
+```html
+<template>
+  <input attach:tooltip="'Search'" />
+</template>
+<script>
+import { tooltip } from './tooltip';
+</script>
+```
 
 ### PDX_AWAIT_NO_LOADING
 
@@ -16,6 +116,66 @@ The user sees nothing while the promise is pending.
 
 **Fix.** Add `@loading { … }` with a placeholder.
 
+### PDX_AWAIT_TIMING
+
+*error* — `@await`'s `maxMs` is not greater than its `minMs` (#145).
+
+`minMs` is a delay — nothing shows until it has passed, then `@loading` — and `maxMs` a timeout: no result by then renders `@error` with an `AwaitTimeoutError`. A timeout no later than the delay gives up before the spinner could ever show.
+
+**Fix.** Make `maxMs` greater than `minMs`, or drop one of them.
+
+Instead of:
+
+```html
+<template>
+  @await (users) { minMs: 500, maxMs: 300 } { <p>ok</p> } @loading { <p>…</p> }
+</template>
+<script>
+@fetch users: 'GET /api/users' as string[];
+</script>
+```
+
+write:
+
+```html
+<template>
+  @await (users) { minMs: 300, maxMs: 5000 } { <p>ok</p> } @loading { <p>…</p> }
+</template>
+<script>
+@fetch users: 'GET /api/users' as string[];
+</script>
+```
+
+### PDX_BINDING_MODIFIER
+
+*error* — A binding modifier outside the closed list (#126).
+
+A two-way binding takes `.lazy`, `.trim`, `.number` and `.debounce(ms)`; a binding `:x` takes `.once`. Any other suffix was ignored, so a misspelt `.lazzy` bound on every input without a word. `:class.x` and `:style.x` are not modifiers: they are removed forms, PDX_REMOVED_FORM (#129).
+
+**Fix.** Use a listed modifier, or the general form `::x="{ get: () => …, set: (v) => … }"` for anything else.
+
+Instead of:
+
+```html
+<template>
+  <input ::value.lazzy="name" />
+</template>
+<script>
+let name = $signal('');
+</script>
+```
+
+write:
+
+```html
+<template>
+  <input ::value.lazy="name" />
+</template>
+<script>
+let name = $signal('');
+</script>
+```
+
 ### PDX_CIRCULAR_DERIVED
 
 *error* — `$derived` values that depend on each other in a cycle.
@@ -23,6 +183,96 @@ The user sees nothing while the promise is pending.
 A cycle has no first value to compute; the runtime breaks it and the values are wrong.
 
 **Fix.** Make one of them a `$signal` that the other writes.
+
+### PDX_COMMAND_TARGET_MISSING
+
+*error* — A `commandfor` whose target id is not in the template.
+
+The browser finds the target of `commandfor="x"` by id when the button is pressed. With no `id="x"`, the button does nothing, and nothing says so.
+
+**Fix.** Give the element it controls the id `commandfor` names.
+
+Instead of:
+
+```html
+<template>
+  <button commandfor="d" command="--show">Open</button><pdx-dialog title="T">x</pdx-dialog>
+</template>
+<script>
+let a = $signal(1);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <button commandfor="d" command="--show">Open</button><pdx-dialog id="d" title="T">x</pdx-dialog>
+</template>
+<script>
+let a = $signal(1);
+</script>
+```
+
+### PDX_COMMAND_UNKNOWN
+
+*error* — A command its target does not answer: a `--name` the component does not expose, or a built-in command for another element type.
+
+A custom command `--name` calls the method `name` the target component exposes; a built-in one (`show-modal`, `toggle-popover`, …) is the platform's, for a `<dialog>` or a popover. Any other pairing does nothing when the button is pressed.
+
+**Fix.** Use a method the component exposes (`command="--show"` on pdx-dialog), or point a built-in command at an element that has it.
+
+Instead of:
+
+```html
+<template>
+  <button commandfor="d" command="show">Open</button><pdx-dialog id="d" title="T">x</pdx-dialog>
+</template>
+<script>
+let a = $signal(1);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <button commandfor="d" command="--show">Open</button><pdx-dialog id="d" title="T">x</pdx-dialog>
+</template>
+<script>
+let a = $signal(1);
+</script>
+```
+
+### PDX_DEFER_UNKNOWN_TRIGGER
+
+*error* — A `@defer` trigger the runtime does not know (`@defer (viewprt)`).
+
+The runtime loads a block whose trigger it does not recognise at once — the opposite of deferring it — and nothing else says so. Triggers combine with `|`, and each part is checked.
+
+**Fix.** Use one of `immediate`, `viewport`, `idle`, `idle(ms)`, `interaction`, `hover`, `timer(ms)`; write `immediate` to load at once.
+
+Instead of:
+
+```html
+<template>
+  @defer (viewprt) { <p>chart</p> }
+</template>
+<script>
+
+</script>
+```
+
+write:
+
+```html
+<template>
+  @defer (viewport) { <p>chart</p> }
+</template>
+<script>
+
+</script>
+```
 
 ### PDX_DERIVED_WRITE
 
@@ -42,9 +292,9 @@ It finds whatever matches in the whole page — another instance included — an
 
 ### PDX_DUP_DECLARATION
 
-*error* — The same name declared twice at the top of the script: runes, `@prop`, functions, classes, plain variables.
+*error* — The same name declared twice at the top of the script: runes, `@prop`, imports, functions, classes, plain variables.
 
-The compiled component keeps one of them, and nothing says which. A signal is renamed in the output, so a `$signal` and a `function` of one name do not even clash as JavaScript would: the template sees whichever the component returns last.
+The compiled component keeps one of them, and nothing says which. A signal is renamed in the output, so a `$signal` and a `function` of one name do not even clash as JavaScript would: the template sees whichever the component returns last. An import and a declaration of its name do clash (#1066): the module does not load, with `Identifier has already been declared` from the browser instead of a line of the `.pdx`.
 
 **Fix.** Rename one, or remove the one you do not mean.
 
@@ -62,7 +312,7 @@ Instead of:
 <template>
   <p>x</p>
 </template>
-<script setup>
+<script>
 @event changed: number;
 @event changed: number;
 </script>
@@ -74,7 +324,7 @@ write:
 <template>
   <p>x</p>
 </template>
-<script setup>
+<script>
 @event changed: number;
 </script>
 ```
@@ -93,7 +343,7 @@ Instead of:
 <template>
   <p>{{ a }}</p>
 </template>
-<script setup>
+<script>
 @prop a: string = 'x';
 @prop a: string = 'y';
 </script>
@@ -105,7 +355,7 @@ write:
 <template>
   <p>{{ a }}</p>
 </template>
-<script setup>
+<script>
 @prop a: string = 'x';
 </script>
 ```
@@ -116,7 +366,7 @@ write:
 
 A `.pdx` has one `<script>`. The parser reads the first; a second would be dropped without a word — its declarations surfacing only as undeclared names in the template, its statements (an `onMount(…)`) never running. So the compile stops at it, naming its line.
 
-**Fix.** Move its code into the first `<script setup>`.
+**Fix.** Move its code into the first `<script>`.
 
 ### PDX_DUPLICATE_TEMPLATE
 
@@ -125,6 +375,37 @@ A `.pdx` has one `<script>`. The parser reads the first; a second would be dropp
 A `.pdx` has one `<template>`; the parser reads the first, and the markup of a second would never render. So the compile stops at it, naming its line.
 
 **Fix.** Move its markup into the first `<template>`.
+
+### PDX_DYNAMIC_CONTENT
+
+*warn* — Content between `<component :is>` and `</component>`.
+
+The dynamic component takes no children: what is written between the tags is not rendered, in dev or in a build. Whitespace alone is not reported.
+
+**Fix.** Move the content beside the tag, or pass what the component needs as a prop: `<component :is="view" :title="t" />`.
+
+Instead of:
+
+```html
+<template>
+  <component :is="view"><p>Welcome</p></component>
+</template>
+<script>
+let view = $signal('pdx-home');
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>Welcome</p>
+  <component :is="view" />
+</template>
+<script>
+let view = $signal('pdx-home');
+</script>
+```
 
 ### PDX_EMPTY_FOR
 
@@ -140,7 +421,7 @@ Instead of:
 <template>
   @for (items as item; track item) {}
 </template>
-<script setup>
+<script>
 let items = $signal([1, 2]);
 </script>
 ```
@@ -151,7 +432,7 @@ write:
 <template>
   @for (items as item; track item) { <p>{{ item }}</p> }
 </template>
-<script setup>
+<script>
 let items = $signal([1, 2]);
 </script>
 ```
@@ -164,6 +445,14 @@ An empty file would compile to a component that registers and renders nothing �
 
 **Fix.** Save the file again; if it really is empty, write its template.
 
+### PDX_EVENT_BUBBLES_UNUSED
+
+*info* — An `@event(bubbles)` no template in the project listens to above the component (#138).
+
+A component's event stays on its host unless declared `@event(bubbles)`. `pdx migrate` marks every alpha `@event` that way, which keeps what it did; most are heard only on the component itself (`<app-card @saved>`), where bubbling adds nothing but the chance of reaching an ancestor's listener of the same name. A listener written in a template on any other element counts; one added with `addEventListener` in a `.ts` is not read, which is why this is an info.
+
+**Fix.** If nothing outside the templates listens either, remove the marker: `@event saved: Item;`.
+
 ### PDX_EVENT_NAME_CASE
 
 *warn* — An `@event` name with an uppercase letter.
@@ -171,6 +460,36 @@ An empty file would compile to a component that registers and renders nothing �
 HTML lowercases attribute names, so a parent's `@savedItem="…"` listens for `saveditem` and never hears it.
 
 **Fix.** Use a lowercase name: `@event saveditem: Item;`. The fix renames it in the script; when the template uses the name, the rename is left to you. `pdx check --fix` and the editor apply it.
+
+### PDX_EVENT_NAME_RESERVED
+
+*error* — An `@event` whose emitter would be a reserved word of JavaScript.
+
+The emitter is a function of the setup named after the event: `@event delete` would write `const delete = …`, a module that does not parse, and `delete({ … })` in the script is the delete operator, not a call. The event is not declared.
+
+**Fix.** Name the event for what happened, in a word that is not reserved: `remove` or `deleted`, `imported`, `created`.
+
+Instead of:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@event delete: { id: string };
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@event remove: { id: string };
+</script>
+```
 
 ### PDX_EXPOSE_UNDECLARED
 
@@ -188,21 +507,29 @@ The resource cannot be generated; dropping it silently would break the component
 
 **Fix.** `@fetch users: 'GET /api/users' as User[];`
 
+### PDX_FETCH_METHOD
+
+*error* — `@fetch` with a method other than GET.
+
+`@fetch` reads. A POST, PUT or DELETE written here used to compile to a GET of the same URL, and nothing said so.
+
+**Fix.** For a read, `'GET /url'`. For a write, a `mutation()`.
+
 ### PDX_FETCH_NO_ERROR_UI
 
 *info* — An `@fetch` whose error state the template never shows.
 
-A failed request leaves the screen as it was, with nothing telling the user.
+A failed request leaves the screen as it was, with nothing telling the user. After a failed refresh the data stays on screen (E4): the error belongs beside it.
 
-**Fix.** Show it: `@if (users.state() === 'error') { … }`.
+**Fix.** Show it: `@if (users.state() === 'error') { <p role="alert">{{ users.error()?.message }}</p> }`.
 
 Instead of:
 
 ```html
 <template>
-  <p>{{ users.value() }}</p>
+  <p>{{ users.data() }}</p>
 </template>
-<script setup>
+<script>
 @fetch users: 'GET /api/users' as string[];
 </script>
 ```
@@ -211,12 +538,28 @@ write:
 
 ```html
 <template>
-  @if (users.state() === 'error') { <p>Could not load</p> } <p>{{ users.value() }}</p>
+  @if (users.state() === 'error') { <p role="alert">{{ users.error()?.message }}</p> } <p>{{ users.data() }}</p>
 </template>
-<script setup>
+<script>
 @fetch users: 'GET /api/users' as string[];
 </script>
 ```
+
+### PDX_FETCH_TYPE_COLON
+
+*error* — `@fetch` with its type written after `:`.
+
+The type is written with `as`. Written with `:` it was dropped, and the options block after it with it.
+
+**Fix.** `@fetch users: 'GET /api/users' as User[];`
+
+### PDX_FETCH_UNKNOWN_OPTION
+
+*error* — `@fetch` with an option `resource()` does not take.
+
+The options block is handed to `resource()`, which ignores a key it does not know: a misspelled `stalTime` does nothing.
+
+**Fix.** Use one of `resource()`'s options: key, staleTime, retry, tags, enabled, transform, onSuccess, onError, cache, stale.
 
 ### PDX_FORM_ARRAY_RULES_IGNORED
 
@@ -225,6 +568,36 @@ write:
 A rule written on a row field is parsed and then dropped: rows are never validated.
 
 **Fix.** `<pdx-field-list :item-fields="[{ name, required: true }]">`, which registers the rule as each row is added.
+
+### PDX_FORM_FIELD_RESERVED
+
+*error* — A `@form` field named like a member of the form (`valid`, `errors`, `reset`, `dirty`, `getValues`, `handleSubmit`, `array`, …).
+
+Each field is a member of its form, `f.email` beside `f.valid()` and `f.reset()`: a field of a member's name would hide the member, so `createForm` refuses it.
+
+**Fix.** Give the field another name. The name is also what the server receives, so the rename is the author's to make; `pdx migrate` flags it and does not rewrite it.
+
+Instead of:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@form f: { reset: boolean };
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@form f: { resetPassword: boolean };
+</script>
+```
 
 ### PDX_FORM_FIELD_UNPARSED
 
@@ -242,13 +615,144 @@ The form validates and holds values, and no `handleSubmit` sends them anywhere.
 
 **Fix.** Wire `form.handleSubmit(async (values) => { … })`, or hand the form to `<pdx-form :form>`.
 
+### PDX_FORM_REQUIRED_IN_MARKUP
+
+*warn* — `required` on a control bound to a form field; it belongs in the schema.
+
+The field marks its control required when its validators include `required()`. A `required` written on the control says it a second time, in a place the validation does not read: the two can disagree, and the form submits an empty value the markup called required.
+
+**Fix.** Remove `required` from the control, and write it in the field's rules: `@form f: { email: string { required } }`, or `required()` among its validators.
+
+Instead of:
+
+```html
+<template>
+  <pdx-input ::value="f.email" required></pdx-input>
+</template>
+<script>
+@form f: { email: string };
+function send() { f.handleSubmit(() => {}); }
+</script>
+```
+
+write:
+
+```html
+<template>
+  <pdx-input ::value="f.email"></pdx-input>
+</template>
+<script>
+@form f: { email: string { required } };
+function send() { f.handleSubmit(() => {}); }
+</script>
+```
+
+### PDX_FORM_UNKNOWN_RULE
+
+*error* — A `@form` rule that is neither a core validator nor a function of the script.
+
+The rule is called by its name, and nothing of that name exists: the form throws when it is created.
+
+**Fix.** Use one of core's rules (`required`, `minLength`, `email`, …), or declare a function that returns a validator: `function shout() { return (v) => (ok ? null : 'message'); }`.
+
+Instead of:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@form f: { name: string { shout } };
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@form f: { name: string { shout } };
+function shout() { return (v) => (v === String(v).toUpperCase() ? null : 'Shout it'); }
+</script>
+```
+
 ### PDX_GLOBAL_SELECTOR
 
 *warn* — `:global()` in a style.
 
-`:global()` is not CSS, and the browser drops the whole rule. A scoped style already reaches the descendants a child component renders.
+`:global()` is not CSS, and the browser drops the whole rule. A scoped style reaches the component's own elements and stops at a child component (#152); a plain `<style>` block is global.
 
-**Fix.** Remove the wrapper: `:global(.x) .y` → `.x .y`.
+**Fix.** Move the rule to a plain `<style>` block; to style a child component, use its `[data-part]`, `:state()` or tokens.
+
+### PDX_HAND_WRITTEN_SIGNAL
+
+*error* — A `signal()` or `computed()` written by hand in `<script>` and read bare by the template (`{{ name }}`, `:title="name"`).
+
+The template reads the names the runes declare as values. A signal created by hand is a function, and the template shows the function itself — its source text in the page, or the function assigned to a property. Calling it in the template (`{{ name() }}`) shows the value, and a hand-written signal the template does not read is not reported.
+
+**Fix.** Declare it with the rune: `let name = $signal('World');` for `signal()`, `const total = $derived(a + b);` for `computed()` — the expression, not a function.
+
+### PDX_HOST_INVALID_ATTRIBUTE
+
+*error* — On `@host`, a form with no meaning on a host: `::x`, `data-part`, a generic argument.
+
+The host is the component's own element. It has no two-way binding — the parent's `::x` is the component's `@model x` — it is not a part of itself, and a generic argument (`T="User"`) is the parent's to give. The message names which of the three it is; the attribute is not compiled.
+
+**Fix.** Remove it from `@host`: declare `@model x` for a two-way value, put `data-part` on an element of the template, declare a type parameter with `@generic`.
+
+Instead of:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@host { role="button" data-part="root" }
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@host { role="button" }
+</script>
+```
+
+### PDX_HYDRATE_UNKNOWN_TRIGGER
+
+*error* — A `@hydrate` trigger the runtime does not know (`@hydrate (visible)`), or a `; prefetch` in one.
+
+On a generated page, the client takes a `@hydrate` part over when its trigger fires. A trigger it does not recognise fires at once: the part is taken over at boot, which is what the block was written to avoid. The triggers are `@defer`'s; a `@hydrate` loads no code, so it has no prefetch phase.
+
+**Fix.** Use `immediate`, `viewport`, `idle`, `idle(ms)`, `interaction`, `timer(ms)` or `when (expression)`, combined with `|`.
+
+Instead of:
+
+```html
+<template>
+  @hydrate (visible) { <p>reviews</p> }
+</template>
+<script>
+
+</script>
+```
+
+write:
+
+```html
+<template>
+  @hydrate (viewport) { <p>reviews</p> }
+</template>
+<script>
+
+</script>
+```
 
 ### PDX_I18N_MISSING_KEY
 
@@ -281,7 +785,7 @@ Instead of:
   <!-- pdx-ignore PDX_RAW_INTERPOLATION -->
   <p>x</p>
 </template>
-<script setup>
+<script>
 let a = $signal(1);
 </script>
 ```
@@ -293,18 +797,42 @@ write:
   <!-- pdx-ignore PDX_RAW_INTERPOLATION: shown as written -->
   <p>x</p>
 </template>
-<script setup>
+<script>
 let a = $signal(1);
 </script>
 ```
+
+### PDX_INLINE_BINDINGS_IGNORED
+
+*warn* — `pdx({ inlineBindings })` is given, and no longer selects a render path.
+
+A `.pdx` compiles with one render path, the inline one, in dev and in a build, so a feature cannot exist in one and be missing from the other. The option changes nothing; the warning says so once per build or dev server.
+
+**Fix.** Remove `inlineBindings` from the `pdx()` options.
 
 ### PDX_INLINE_NODE_UNSUPPORTED
 
 *warn* — A template node the inline render path cannot compile.
 
-The node would be left out of the production render. The warning makes a missing feature visible instead of silent.
+The node would be left out of the render, in dev and in a build — the inline path is the only one a `.pdx` compiles with. The warning makes a missing feature visible instead of silent.
 
-**Fix.** Build with `pdx({ inlineBindings: false })`, and report the node type.
+**Fix.** Open an issue naming the node type.
+
+### PDX_INTERNAL_COMPONENT
+
+*error* — A template outside its folder renders, or a script outside it imports, an `@internal` component (#1102).
+
+`@internal;` says that only the components of the file's own folder render it: a view of a larger component, split out of its file. Its props and events are that component's business and can change with it, and a library leaves it out of its manifest, exports and pages — so another folder's use is one nothing documents and nothing keeps working.
+
+**Fix.** Render the public component that owns it instead, or move the file that uses it into its folder; if it is meant for everyone, drop `@internal` and give it a public name.
+
+### PDX_INTERNAL_NAMED_PUBLIC
+
+*error* — A file named `pdx-…` declares `@internal` (#1102).
+
+In a library a `pdx-` file name is what makes a component public: its manifest, its exports, its site page and its certification list every `pdx-*` file. One file cannot be public by its name and internal by its script.
+
+**Fix.** Rename the file without the `pdx-` prefix, or drop `@internal`.
 
 ### PDX_INVALID_ENUM_VALUE
 
@@ -314,6 +842,36 @@ A component receives a value its type does not admit and falls back to its defau
 
 **Fix.** Use one of the allowed values the hint lists.
 
+### PDX_KEEPALIVE_MAX
+
+*error* — A `<component :is @keepAlive(n)>` whose maximum is not a whole number of at least 1.
+
+`@keepAlive(n)` keeps at most n views, dropping the least recently shown. A value that is not a positive whole number keeps no meaning; the component is compiled with the default of 10.
+
+**Fix.** Write `@keepAlive(3)` for three views, or `@keepAlive` alone for the default of 10.
+
+Instead of:
+
+```html
+<template>
+  <component :is="view" @keepAlive(0)></component>
+</template>
+<script>
+let view = $signal('pdx-a');
+</script>
+```
+
+write:
+
+```html
+<template>
+  <component :is="view" @keepAlive(3)></component>
+</template>
+<script>
+let view = $signal('pdx-a');
+</script>
+```
+
 ### PDX_LABEL_NOT_FOUND
 
 *warn* — A route's label names a function the script does not declare.
@@ -321,14 +879,6 @@ A component receives a value its type does not admit and falls back to its defau
 The route contributes no crumb to the breadcrumb.
 
 **Fix.** Declare it: `function crumb(params) { … }`, or write the crumb as a string.
-
-### PDX_LEGACY_IN_SETUP
-
-*warn* — A legacy marker (`defineProps`, `defineEmits`, a top-level `return`) in `<script setup>`.
-
-With runes beside it, the marker does nothing; without runes, the file compiles in the legacy mode and any rune added later is inert.
-
-**Fix.** Remove the marker — `<script setup>` returns what it declares — or write plain `<script>` for a deliberately legacy file.
 
 ### PDX_LIBRARY_INTERNALS
 
@@ -354,6 +904,76 @@ The route is registered without a loader, so the page renders with no data.
 
 **Fix.** Declare it: `async function loadUser() { … }`.
 
+### PDX_LOADER_READS_SETUP
+
+*error* — A `@loader` or a route's label function reads a name the component's setup declares.
+
+Both are lifted to module scope: the router calls a loader before the component exists, and a breadcrumb builds its label outside any component. A prop, a signal, a constant or a function of the script lives in the setup, so the route throws a ReferenceError the first time it is visited.
+
+**Fix.** Move the value into a module and import it, or take it from the route: a loader reads `ctx.params` and `ctx.query`, a label its `params`.
+
+Instead of:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@page '/t';
+@loader rows: load;
+const base = '/api';
+async function load() { return fetch(base + '/t'); }
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@page '/t';
+@loader rows: load;
+import { base } from './api';
+async function load() { return fetch(base + '/t'); }
+</script>
+```
+
+### PDX_LOADER_UNKNOWN_OPTION
+
+*error* — `@loader … { … }` with an option other than `staleTime`, or a `staleTime` the compiler cannot read as milliseconds.
+
+The router takes one option for a loader, `staleTime`, and it is written into the route table, which is read before any page runs: a misspelled `stale` would keep nothing, and a `staleTime` that names a variable of the script cannot reach the table.
+
+**Fix.** `{ staleTime: 30_000 }` — a number of milliseconds: a literal, or a product of literals such as `5 * 60_000`.
+
+Instead of:
+
+```html
+<template>
+  <p>{{ user.data()?.name }}</p>
+</template>
+<script>
+@page '/users/:id';
+@loader user: loadUser { stale: 30_000 };
+async function loadUser() { return { name: 'Ada' }; }
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ user.data()?.name }}</p>
+</template>
+<script>
+@page '/users/:id';
+@loader user: loadUser { staleTime: 30_000 };
+async function loadUser() { return { name: 'Ada' }; }
+</script>
+```
+
 ### PDX_MALFORMED_EVENT
 
 *error* — `@event` written in a shape the compiler does not recognise.
@@ -368,7 +988,7 @@ Instead of:
 <template>
   <p>x</p>
 </template>
-<script setup>
+<script>
 @event (saved): number;
 </script>
 ```
@@ -379,10 +999,64 @@ write:
 <template>
   <p>x</p>
 </template>
-<script setup>
+<script>
 @event saved: number;
 </script>
 ```
+
+### PDX_MALFORMED_STATE
+
+*error* — `@state` written in a shape the compiler does not recognise.
+
+A state is a name and the condition it is on for. Without both, nothing is declared and nothing sets it.
+
+**Fix.** Write `@state name = condition;`, for example `@state expanded = open;`.
+
+### PDX_MODEL_ATTRIBUTE_AMBIGUOUS
+
+*warn* — A `@model`'s type unites values whose attribute is read differently, and nothing says how to read it.
+
+A model of `string | string[] | null` reads its attribute as JSON: `value="1"` becomes the number 1. The type cannot say whether the attribute is a string, a number, a boolean or JSON when it unites several of them (#753).
+
+**Fix.** Say how the attribute is read: `@model value: string | string[] | null = null { attribute: string };`
+
+Instead of:
+
+```html
+<template>
+  <p>{{ value }}</p>
+</template>
+<script>
+@model value: string | string[] | null = null;
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ value }}</p>
+</template>
+<script>
+@model value: string | string[] | null = null { attribute: string };
+</script>
+```
+
+### PDX_MODEL_ATTRIBUTE_UNKNOWN
+
+*error* — A `@model`'s `{ attribute: … }` names a reading that does not exist.
+
+An attribute is read as `string`, `number`, `boolean` or `json`; any other word leaves the model with no reading to compile (#753).
+
+**Fix.** `{ attribute: string }`, `number`, `boolean` or `json`.
+
+### PDX_NAME_RESERVED
+
+*error* — A `@prop`, `@model` or typed `@slot` named after a member of the element (#542, #545).
+
+Each becomes a property of the element, defined over the member of the same name: `@slot body: ();` replaced the method that renders the component, which then rendered nothing, with nothing said. The names are the element class's own members — `body`, `track`, `emit`, `frame`, `attr`, the lifecycle callbacks and the form-associated API — less `form`, which a form component replaces on purpose; and the `HTMLElement` members whose replacement breaks the element for code outside the component — `style`, `children`, `dataset`, `classList`, `className`, `innerHTML`, `textContent`, `shadowRoot` and the `on*` event handlers. `id`, `title`, `prefix` and `offsetTop` stay allowed.
+
+**Fix.** Rename the declaration.
 
 ### PDX_NON_REACTIVE
 
@@ -391,6 +1065,36 @@ write:
 Only `$signal` and `$derived` are tracked. A plain variable is read once: the template keeps showing its first value.
 
 **Fix.** Declare it with `$signal`: `let count = $signal(0);`. `pdx check --fix` and the editor apply it.
+
+### PDX_ONE_WAY_EDITED_FIELD
+
+*warn* — A one-way `:value` or `:checked` on a native field whose own `@input`/`@change` handler writes the bound signal (#678).
+
+A one-way binding writes when its value changes, not when the field differs from it (#44): a re-run for another reason must not overwrite what is being typed. So a handler that writes the signal and puts it back — the user types `a`, the handler clears it to `''`, the value the binding last wrote — leaves `a` in the field while the signal is empty, without a word. A field whose state must win over what is in it is the two-way form, `::value`.
+
+**Fix.** Bind it two-way, `::value="x"` (or `::checked`, `::value.number`), and keep in the handler only what it does besides writing `x` from the field. When the handler is nothing but `x = $event.target.value`, the fix does it. `pdx check --fix` and the editor apply it.
+
+Instead of:
+
+```html
+<template>
+  <input :value="query" @input="query = $event.target.value" />
+</template>
+<script>
+let query = $signal('');
+</script>
+```
+
+write:
+
+```html
+<template>
+  <input ::value="query" />
+</template>
+<script>
+let query = $signal('');
+</script>
+```
 
 ### PDX_PAGE_EMPTY_CONSTRAINT
 
@@ -422,7 +1126,7 @@ Instead of:
 <template>
   <p>x</p>
 </template>
-<script setup>
+<script>
 @page 'users';
 </script>
 ```
@@ -433,8 +1137,210 @@ write:
 <template>
   <p>x</p>
 </template>
-<script setup>
+<script>
 @page '/users';
+</script>
+```
+
+### PDX_PAGE_UNKNOWN_OPTION
+
+*error* — An `@page` option the router does not have.
+
+It would be ignored: the route is registered without it, and nothing says so at run time.
+
+**Fix.** Use one of `keepAlive`, `preload`, `prefetch`, `label`, `transition`, `meta`; a guard, a loader or a layout is a declaration of its own: `@guard 'name';`.
+
+Instead of:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@page '/users' { guard: 'admin' };
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@page '/users';
+@guard 'admin';
+</script>
+```
+
+### PDX_PART_IN_VIEW
+
+*warn* — The script reads a `@part` that only one of its `@internal` views draws (#1110).
+
+The parts an `@internal` view draws are its owner's: the owner declares them, and its manifest lists them. The elements are in the view, though, and the owner's part signal of that name never receives one: what the script reads there is always empty.
+
+**Fix.** Reach the element in the view, with a `:ref`, and pass what the owner needs as a prop or an event.
+
+### PDX_PART_MISSING
+
+*error* — A declared `@part` that no element of the template carries.
+
+A part is a public name for the elements that carry it: a theme styles `[data-part="x"]` and the script reads `x` as the element, or as the array of them when the template renders more than one. With no element, both reach nothing, and the manifest lists a part that is not there.
+
+**Fix.** Write `data-part="x"` on the element it names, or remove `x` from `@part`.
+
+Instead of:
+
+```html
+<template>
+  <button>Menu</button>
+</template>
+<script>
+@part trigger;
+</script>
+```
+
+write:
+
+```html
+<template>
+  <button data-part="trigger">Menu</button>
+</template>
+<script>
+@part trigger;
+</script>
+```
+
+### PDX_PART_NAME_TAKEN
+
+*info* — A `@part` whose name the script declares as something other than a `$signal` (a prop, a model, a slot, an import, a function, a constant), with no `:ref` on its element.
+
+A part's name is chosen by the styling contract, and the script's name keeps its meaning (#999): `@prop label` stays the label text where a part `label` would have replaced it with the element. The part is still the template's and the theme's — its `data-part`, the manifest — but the script does not read its element by that name, and with no `:ref` it does not reach it at all.
+
+**Fix.** To reach the element, bind it with `:ref` to a `$signal` of another name. A `$signal` of the part's own name receives the element, as a part does. A part only a theme needs can stay as it is: the finding is information.
+
+Instead of:
+
+```html
+<template>
+  <span data-part="label">{{ label }}</span>
+</template>
+<script>
+@prop label: string = '';
+@part label;
+</script>
+```
+
+write:
+
+```html
+<template>
+  <span data-part="label" :ref="labelEl">{{ label }}</span>
+</template>
+<script>
+@prop label: string = '';
+@part label;
+let labelEl = $signal<HTMLElement | null>(null);
+</script>
+```
+
+### PDX_PART_UNDECLARED
+
+*error* — A `data-part` that names no `@part`.
+
+Parts are the component's public styling surface and the manifest lists them from `@part`: an undeclared one is public by accident, and nothing says it exists.
+
+**Fix.** Declare it, `@part x;`, or remove the attribute.
+
+Instead of:
+
+```html
+<template>
+  <div data-part="popup">x</div>
+</template>
+<script>
+let open = $signal(false);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <div data-part="popup">x</div>
+</template>
+<script>
+@part popup;
+</script>
+```
+
+### PDX_PIPE_SINGLE
+
+*info* — A template interpolation with exactly one pipe (#129).
+
+A pipe reads well as a chain: `{{ price | round | money }}`. One pipe is a function call written backwards, `{{ price | money }}` for `{{ money(price) }}`. It stays valid; the call is the one spelling for one function.
+
+**Fix.** Write the call: `{{ money(price) }}`, the value first when the pipe takes arguments. `pdx check --fix` and the editor apply it.
+
+Instead of:
+
+```html
+<template>
+  <p>{{ n | upper }}</p>
+</template>
+<script>
+let n = $signal(1);
+function upper(v) { return String(v).toUpperCase(); }
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ upper(n) }}</p>
+</template>
+<script>
+let n = $signal(1);
+function upper(v) { return String(v).toUpperCase(); }
+</script>
+```
+
+### PDX_PREFETCH_POLICY
+
+*error* — A route's `prefetch` names a policy the router does not have.
+
+The router treats a policy it does not know as `hover`: the route would prefetch on a hover whatever was written, and nothing would say so.
+
+**Fix.** One of `'hover'` (the default), `'eager'`, `'viewport'`, `'never'`.
+
+### PDX_PRIVATE_REF
+
+*error* — The template reads a name of `<script>` that starts with `_`, which the script keeps to itself.
+
+A name that starts with `_` is not returned to the template, so the read is `undefined` at runtime: a binding shows nothing, a call throws `ctx._x is not a function`. Props, events, snippets and imports are not affected (#1016).
+
+**Fix.** Rename it without the underscore, in the script and in the template; keep the underscore only for what the template never reads.
+
+Instead of:
+
+```html
+<template>
+  <p>{{ _count }}</p>
+</template>
+<script>
+let _count = $signal(0);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ count }}</p>
+</template>
+<script>
+let count = $signal(0);
 </script>
 ```
 
@@ -468,7 +1374,7 @@ Instead of:
 <template>
   <p>{{ label }}</p>
 </template>
-<script setup>
+<script>
 @prop label;
 </script>
 ```
@@ -479,10 +1385,18 @@ write:
 <template>
   <p>{{ label }}</p>
 </template>
-<script setup>
+<script>
 @prop label: string = 'Hello';
 </script>
 ```
+
+### PDX_PROP_REQUIRED
+
+*error* — A component used without a prop it requires (#130).
+
+A `@prop name: T;` with no default and no `?` is required, TypeScript's rule: the component cannot render without it. A use that sets it with neither an attribute nor a binding would leave it `undefined` and fail later, far from the cause. Checked for project components and for library components whose manifest marks the prop required (`prop.required<T>()`).
+
+**Fix.** Set it, `:name="…"`, or declare it optional in the child: `@prop name?: T;` or a default.
 
 ### PDX_PROP_TYPE_MISMATCH
 
@@ -498,7 +1412,7 @@ A `number` prop with a string default is coerced at the first attribute write, a
 
 The parent owns the prop: its next value overwrites the component's.
 
-**Fix.** Emit the new value with an `@event`; for a starting value, copy it into a `$signal`.
+**Fix.** Declare it `@model` when the parent binds it both ways (`::name`); for a starting value, copy it into a `$signal`.
 
 ### PDX_RAW_INTERPOLATION
 
@@ -514,7 +1428,7 @@ Instead of:
 <template>
   <p title="${n}">x</p>
 </template>
-<script setup>
+<script>
 let n = $signal(1);
 </script>
 ```
@@ -525,7 +1439,7 @@ write:
 <template>
   <p :title="n">x</p>
 </template>
-<script setup>
+<script>
 let n = $signal(1);
 </script>
 ```
@@ -544,7 +1458,7 @@ Instead of:
 <template>
   <p :title="${n}">x</p>
 </template>
-<script setup>
+<script>
 let n = $signal(1);
 </script>
 ```
@@ -555,10 +1469,18 @@ write:
 <template>
   <p :title="n">x</p>
 </template>
-<script setup>
+<script>
 let n = $signal(1);
 </script>
 ```
+
+### PDX_REMOVED_FORM
+
+*error* — A form the beta removed from the language, with the form that replaces it.
+
+The beta replaces the alpha: there is no language level that keeps an old form compiling. Each removed form is registered once in the compiler (`packages/compiler/src/language/changes.ts`) with how to find it, what replaces it and, when there is one, the mechanical rewrite. The message names the beta form. A form whose meaning changed but which is still valid is not an error: `pdx migrate` reports it.
+
+**Fix.** Run `pdx migrate` (with `--dry` to see first): it rewrites every form it can and lists the places a person has to rewrite. Or write the beta form the message names.
 
 ### PDX_REWRITE_FALLBACK
 
@@ -568,13 +1490,196 @@ The fragment is kept as written, so a signal read inside it is not called and is
 
 **Fix.** Fix the syntax, or move the fragment out of the setup body.
 
+### PDX_ROUTE_FIELD_INVALID
+
+*error* — A `@params` or `@search` field its parser cannot read, such as a type in quotes.
+
+The field is dropped: the param is undefined in the page. `@search` reads string, number and boolean; `@params` a bare type name, or a name alone that the path has a param for, which takes its type from the path.
+
+**Fix.** `@params { id: number }`, `@search { q?: string, page: number = 1 }` — the type without quotes. A `@params` name alone the path does not have: name a param of the path, or write its type. `pdx check --fix` and the editor apply it.
+
+Instead of:
+
+```html
+<template>
+  <p>{{ id }}</p>
+</template>
+<script>
+@page '/users/:id';
+@params { id: 'number' };
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ id }}</p>
+</template>
+<script>
+@page '/users/:id';
+@params { id: number };
+</script>
+```
+
+### PDX_RUNE_POSITION
+
+*error* — A `$` rune where the compiler does not read it: `$signal`, `$derived`, `$store` that are not the whole initialiser of a top-level `let`/`const`, or `$effect`, `$watch` that are not a top-level statement.
+
+A rune is rewritten only in its position. Anywhere else — a function body, a callback, a block — it was left as written, and `$signal` is not defined when that code runs; an `$effect` inside an `if` was lifted out of the block and ran whatever the condition said (#278).
+
+**Fix.** Inside a function, a callback or a block, call the core function the hint names — `signal()`, `computed()`, `store()`, `effect()`, `watch()` — imported from '@pdxui/core'; or move the declaration to the top level of the script.
+
+Instead of:
+
+```html
+<template>
+  <button @click="reset()">Reset</button>
+</template>
+<script>
+function reset() {
+  let draft = $signal('');
+  draft = '';
+}
+</script>
+```
+
+write:
+
+```html
+<template>
+  <button @click="reset()">Reset</button>
+</template>
+<script>
+let draft = $signal('');
+function reset() {
+  draft = '';
+}
+</script>
+```
+
+### PDX_SCRIPT_EXPORT
+
+*error* — An `export` of a value in a component script.
+
+A component's script is the body of its setup, run once per instance; an `export` inside a function is a syntax error, and the module failed to load in the browser with no word from the compiler. There is nothing a component could export, so the declaration is compiled without its `export` and the line is reported. A type export (`export interface`, `export type`) is erased like any type; a `@store` module and a `.pdx.ts` module keep their exports.
+
+**Fix.** Move what you meant to share into a `.ts` module and import it from there; inside the component, drop the `export`.
+
+Instead of:
+
+```html
+<template>
+  <p>{{ total }}</p>
+</template>
+<script>
+export const TAX = 0.22;
+const total = 100 * (1 + TAX);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ total }}</p>
+</template>
+<script>
+import { TAX } from './tax';
+const total = 100 * (1 + TAX);
+</script>
+```
+
 ### PDX_SCRIPT_SYNTAX_ERROR
 
-*error* — The `<script setup>` does not parse.
+*error* — The `<script>` does not parse.
 
 A syntax error in the setup would reach the generated module as broken code. It is reported with its position in the script.
 
 **Fix.** Fix the syntax at the reported line.
+
+### PDX_SETUP_REDUNDANT
+
+*info* — `<script setup>`: `setup` has no meaning (#158).
+
+The script has one grammar: a `<script>` is read for declarations and runes whatever it contains, so `setup` changes nothing. It stays valid, and `pdx migrate` removes it.
+
+**Fix.** Write `<script>`; `pdx migrate` does it in every file.
+
+### PDX_SIGNAL_MUTATED_IN_PLACE
+
+*warn* — A `$signal`'s value changed in place: a mutating method (`push`, `splice`, `set`, `add`…) or a write to a member (`user.name = …`, `items[0] = …`).
+
+A signal notifies when it is set, and `set` compares with `Object.is`. Changing the array or object it already holds calls no `set` at all, so nothing that reads the signal updates: the list on screen does not grow. It is reported in the script and in a template event handler (`@click="items.push(x)"`); a name the template binds itself — a `@for` item, an arrow parameter — is not the signal. A `$store` is a proxy, where in-place mutation is the point, and is not reported.
+
+**Fix.** Assign a new value: `items = [...items, x]` for a push, `user = { ...user, name: v }` for a field. The fix rewrites those two; the other forms get the hint. A value meant to be changed in place is a `$store`. `pdx check --fix` and the editor apply it.
+
+Instead of:
+
+```html
+<template>
+  <p>{{ items.length }}</p>
+</template>
+<script>
+let items = $signal<number[]>([]);
+function add(x: number) {
+  items.push(x);
+}
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ items.length }}</p>
+</template>
+<script>
+let items = $signal<number[]>([]);
+function add(x: number) {
+  items = [...items, x];
+}
+</script>
+```
+
+### PDX_SLOT_REQUIRED
+
+*error* — A component used without a snippet it requires (#489).
+
+A `@slot name: (…);` declared without `?` is a template the parent must provide: the component calls it with `@render name(…)`, and without it that part of the component renders nothing. A use fills it with `@snippet name(…) { … }` written directly inside its tag. Checked for project components.
+
+**Fix.** Write `@snippet name(…) { … }` inside the tag, or declare it optional in the child, `@slot name?: (…);`, and render it with `@render name?.(…)`.
+
+### PDX_STATE_NOT_BOOLEAN
+
+*error* — `@state` given something that is not a boolean.
+
+A state is on or off: CSS matches it with `:state(name)`, and a number, a string or a `$signal(…)` is data, not a condition. `@state` is not Svelte's `$state`, which declares a reactive variable.
+
+**Fix.** Give it the condition it is on for (`@state busy = count > 0;`); for reactive data, use `$signal`.
+
+Instead of:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+@state count = 0;
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>x</p>
+</template>
+<script>
+let count = $signal(0);
+@state busy = count > 0;
+</script>
+```
 
 ### PDX_STORE_EXPORT
 
@@ -590,7 +1695,7 @@ A `@store` module's exports are emitted at module level, outside the store's fac
 
 A custom element can be defined once; the second definition would throw in the browser.
 
-**Fix.** Add `@tag 'pdx-unique-name';` to one of the files.
+**Fix.** Add `@tag 'app-unique-name';` to one of the files.
 
 ### PDX_TAG_COLLISION_RESOLVER
 
@@ -598,7 +1703,39 @@ A custom element can be defined once; the second definition would throw in the b
 
 Only one of the two is registered by auto-import, and which one depends on scan order.
 
-**Fix.** Rename one of the files, or give one an explicit `@tag 'pdx-other-name';`.
+**Fix.** Rename one of the files, or give one an explicit `@tag 'app-other-name';`.
+
+### PDX_TAG_RESERVED
+
+*error* — An application component's tag starts with `pdx-`, the prefix the @pdxui packages own (#136).
+
+An application's components are named with its own prefix, `app-` by default (`pdx({ prefix })`): `button.pdx` is `<app-button>`. A `pdx-` tag would take the library's name — `<pdx-button>` is the library's button — or collide with one it adds later.
+
+**Fix.** Use the app's prefix: `@tag 'app-button';`.
+
+Instead of:
+
+```html
+<template>
+  <p>{{ a }}</p>
+</template>
+<script>
+@tag 'pdx-badge';
+let a = $signal(1);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>{{ a }}</p>
+</template>
+<script>
+@tag 'app-badge';
+let a = $signal(1);
+</script>
+```
 
 ### PDX_TS
 
@@ -616,9 +1753,17 @@ The compiler erases a script's TypeScript, types only, keeping every position. T
 
 **Fix.** Write it as JavaScript: a frozen object for an enum (`const Color = Object.freeze({ Red: 0 })`), a module for a namespace, an assignment in the constructor for a parameter property, an `import` for `import =`.
 
+### PDX_TWO_WAY_NOT_MODEL
+
+*error* — `::x` on a component prop that is not one of its models (#124).
+
+Two-way binding is a contract: the child declares which of its props it writes back, with `@model`, and dispatches `<name>-change` when it does. On any other prop nothing brings the value back, and the binding is silently one-way. Checked for project components and for every library component, from its manifest — one that lists no model, a navigation component, has nothing to bind both ways (#125); native `value`, `checked` and `files` are the platform's models.
+
+**Fix.** Declare `@model x` in the child, or bind it one way with `:x`.
+
 ### PDX_UNDECLARED_REF
 
-*error* — A name the template reads that `<script setup>` does not declare.
+*error* — A name the template reads that `<script>` does not declare.
 
 At runtime the binding reads `undefined`, and a handler named this way does nothing when clicked; usually a misspelt signal, prop or function.
 
@@ -630,7 +1775,7 @@ Instead of:
 <template>
   <p>{{ coutn }}</p>
 </template>
-<script setup>
+<script>
 let count = $signal(0);
 </script>
 ```
@@ -641,18 +1786,48 @@ write:
 <template>
   <p>{{ count }}</p>
 </template>
-<script setup>
+<script>
 let count = $signal(0);
 </script>
 ```
 
 ### PDX_UNKNOWN_DECLARATION
 
-*error* — A known `@` declaration written in a shape the compiler does not recognise.
+*error* — A known `@` declaration, or a `$signal` / `$derived` / `$store` declaration, written in a shape the compiler does not recognise; an `@store` `persist` that is not `'local'` or `'session'`; or a `$inline { … }` block, which is not part of the language.
 
-The line is dropped and nothing is generated for it; left in the body it would make the module unparseable.
+The line is dropped and nothing is generated for it; left in the body it would make the module unparseable, or, for a rune, ship `$signal` in the JavaScript — a ReferenceError at run time. A rune is read as the whole initialiser of a named declarator, whatever its type argument holds. An `@store` `persist` other than the two storages kept the store in sessionStorage whatever was written: gone when the tab closed (#278). A `$inline` block is dropped whole: it used to be copied into the render, where the template could not reach what it declared and its signals were not rewritten (#361).
 
-**Fix.** Write it in the shape the hint shows for that keyword.
+**Fix.** Write it in the shape the hint shows for that keyword; for a rune, `let name = $signal<Type>(initial);`; for a store, `@store cart { persist: 'local' };`. For a `$inline` block, declare what the template reads with `$derived`.
+
+### PDX_UNKNOWN_DIRECTIVE
+
+*warn* — A `@word (…)` or `@word { … }` in the template that is no directive and no plugin's (`@tooltip (msg) { … }` without its plugin).
+
+The parser leaves an unknown `@word` as text, so literal `@`-text keeps working: the characters `@tooltip (msg) {` reach the page. A near typo of a built-in (`@fro` for `@for`) stops the compile instead. Reported once per name in a file, at its first occurrence.
+
+**Fix.** Register the directive with a plugin's `templateDirectives`, or write `@@word` for the text (`@@media (pointer: coarse)`).
+
+Instead of:
+
+```html
+<template>
+  <p>@media (pointer: coarse) is CSS</p>
+</template>
+<script>
+
+</script>
+```
+
+write:
+
+```html
+<template>
+  <p>@@media (pointer: coarse) is CSS</p>
+</template>
+<script>
+
+</script>
+```
 
 ### PDX_UNKNOWN_PROP
 
@@ -678,6 +1853,90 @@ Reactive state no template, effect or function reads costs a subscription and sa
 
 **Fix.** Remove it, or prefix it with `_` if it is kept on purpose.
 
+### PDX_VARIANT_UNKNOWN
+
+*error* — An `@variant` names an axis or a value `@variants` does not declare.
+
+The rule selects a host attribute value the component never takes, so it never applies — a typo in a value is otherwise silent.
+
+**Fix.** Use an axis and a value the script declares in `@variants`, or declare them there.
+
+### PDX_VARIANT_UNSTYLED
+
+*warn* — A declared variant value has no `@variant` rule.
+
+Choosing the value renders the component exactly as the default does. The default itself is styled by the base rules and is never reported.
+
+**Fix.** Add `@variant axis(value) { … }` to the `<style scoped>`, or remove the value from the axis.
+
+### PDX_VARIANTS_MALFORMED
+
+*error* — `@variants` holds something that is not an axis.
+
+Each axis is a name, its values in braces and an optional default: `size: { sm, md, lg } = md;`. An axis without values, declared twice, or with a default that is not one of its values declares nothing, and its prop is not generated.
+
+**Fix.** Write each axis as `name: { a, b } = a;`, with the default among the values.
+
+### PDX_VIRTUAL_SHAPE
+
+*error* — A `@for … @virtual` without the shape it needs: alone in a native element, with one root element per row.
+
+The element written around a virtual `@for` is the scroll container, and the rows stay its own children between two spacers. Another child beside the `@for` would scroll with the rows and break their offsets; a component tag projects its children elsewhere; a row of two elements cannot be measured as one.
+
+**Fix.** Write the `@for` as the only content of a native element, `<ul class="feed">@for (…) @virtual { <li>…</li> }</ul>`, with one root element in the body.
+
+Instead of:
+
+```html
+<template>
+  <ul><li>Header</li>@for (rows as r; track r.id) @virtual { <li>{{ r.name }}</li> }</ul>
+</template>
+<script>
+let rows = $signal([]);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <ul>@for (rows as r; track r.id) @virtual { <li>{{ r.name }}</li> }</ul>
+</template>
+<script>
+let rows = $signal([]);
+</script>
+```
+
+### PDX_VIRTUAL_TRANSITION
+
+*error* — A `@for … @virtual` with `@transition`, `@stagger`, `@mode` or `@move`.
+
+A virtual list adds and removes rows as they scroll in and out of view. A row that scrolls out is not leaving the list, and one that scrolls in is not arriving: an enter or exit animation, a stagger or a move would play on every scroll.
+
+**Fix.** Remove the transition modifiers from the virtual `@for`, or remove `@virtual` to animate the whole list.
+
+Instead of:
+
+```html
+<template>
+  <ul>@for (rows as r; track r.id) @transition('fade') @virtual { <li>{{ r.name }}</li> }</ul>
+</template>
+<script>
+let rows = $signal([]);
+</script>
+```
+
+write:
+
+```html
+<template>
+  <ul>@for (rows as r; track r.id) @virtual { <li>{{ r.name }}</li> }</ul>
+</template>
+<script>
+let rows = $signal([]);
+</script>
+```
+
 ## Design questions
 
 Heuristics for a review, and the rules that read several files at once. They ask; they do not decide.
@@ -697,6 +1956,14 @@ A literal colour is right in one theme and wrong in the other twelve, and in dar
 If the value follows from its sources it is a `$derived`, and the effect is a second copy that can lag behind.
 
 **Fix.** Declare it with `$derived(…)`; keep effects for what leaves the component — storage, the URL, the DOM, a request.
+
+### PDX_OVERLAY_NOT_DEFERRED
+
+*warn* — A `@page` renders a closed overlay outside a `@defer` (CD-D4).
+
+A dialog or a drawer that opens on a click is loaded on the first visit, with every component inside it, before anyone asks for it.
+
+**Fix.** Wrap the run of overlays in `@defer (idle) { … }`: they load once the page is idle, before a click can open them. The quick fix writes it.
 
 ### PDX_REPEATED_LOGIC
 

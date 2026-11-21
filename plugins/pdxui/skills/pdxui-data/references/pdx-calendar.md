@@ -4,7 +4,6 @@ A month calendar surface.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `value` | `value` | string | `''` | Selected date (ISO string) for single mode. |
 | `rangeStart` | `rangestart` | string | `''` | Range start (ISO). |
 | `rangeEnd` | `rangeend` | string | `''` | Range end (ISO). |
 | `mode` | `mode` | string | `'date'` | Selection mode. |
@@ -15,24 +14,36 @@ A month calendar surface.
 | `weekNumbers` | `weeknumbers` | boolean | `false` | Show ISO week numbers. |
 | `min` | `min` | string | `''` | Minimum selectable date (ISO). |
 | `max` | `max` | string | `''` | Maximum selectable date (ISO). |
-| `disabledDates` | — | object | `null` | Function returning true if date should be disabled. |
-| `highlightedDates` | — | object | `null` | Function returning highlight label or false. |
+| `disabledDates` | — | Record<string, unknown> \| null | `null` | Function returning true if date should be disabled. |
+| `highlightedDates` | — | Record<string, unknown> \| null | `null` | Function returning highlight label or false. |
 | `fiscalStartMonth` | `fiscalstartmonth` | number | `1` | Fiscal year start month (1-12). |
 | `compareStart` | `comparestart` | string | `''` | Compare range start (ISO) for analytics overlay. |
 | `compareEnd` | `compareend` | string | `''` | Compare range end (ISO). |
 | `firstDay` | `firstday` | number | `-1` | First day of week override (0=Sun..6=Sat). Auto-detected from locale if -1. |
 | `inline` | `inline` | boolean | `false` | Inline mode (no external popover wrapper). |
 | `disabled` | `disabled` | boolean | `false` | Disabled state. |
+| `name` | `name` | string | `''` | Name for form participation: with one, a form submits the value under it. |
+| `value` | `value` | string \| string[] | `''` | The current value. |
 
 **API (via `:ref`)**
 
 | Call | Notes |
 |---|---|
 | `focusView()` | Focus the active day (or the month / year shown), now or once the view is drawn. |
+| `getRange()` | The range the selection covers, `[start, end]` as ISO dates: the range itself, or the week, month, quarter or year chosen; `['', '']` when the mode covers none. |
+| `getQuarter()` | The quarter last chosen in `quarter` mode, and its fiscal year; null otherwise. |
 
-**Events:** `pdx-change` → `detail: { value } | { rangeStart, rangeEnd } | { values } | { value, rangeStart, rangeEnd } | { value, quarter, fiscalYear, rangeStart, rangeEnd }` — Fired when the value changes.; `pdx-navigate` → `detail: { year, month }` — Fired on navigation.; `pdx-view-change` → `detail: { view }` — Fired when the view changes.
+**Events:** `pdx-navigate` → `detail: { year, month }` — Fired on navigation.; `pdx-view-change` → `detail: { view }` — Fired when the view changes.; `value-change` → `detail: { value: string | string[] }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `columnheader` · `grid` · `gridcell` · `group` · `row`
+
+**States:** `:state(disabled)` — `disabled` is set.
+
+**Parts:** `[data-part="root"]` — The frame, a `role="group"`: the navigation above the grid.; `[data-part="nav"]` — The navigation bar: the two arrows and the title.; `[data-part="prev"]` — The arrow to the previous month, year or twelve years.; `[data-part="title"]` — The month or year shown; in the day view, the button that opens the month view.; `[data-part="next"]` — The arrow to the next month, year or twelve years.; `[data-part="grid"]` — A month's grid of days (`role="grid"`), or the months or years to pick from.; `[data-part="cell"]` — A day, a month or a year to pick.
+
+**Tokens:** `--pdx-calendar-cell-bg-in-range`; `--pdx-calendar-cell-bg-selected`; `--pdx-calendar-cell-color-selected`; `--pdx-calendar-cell-color-today`. Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

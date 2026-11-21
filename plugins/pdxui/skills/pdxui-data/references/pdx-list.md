@@ -6,9 +6,8 @@ Data-driven list with custom rows.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `null` | The data items to render. |
-| `source` | — | object | `null` | The data source to render from. |
-| `renderItem` | — | object | `null` | Render function for each item. |
+| `items` | — | T[] | `null` | The data items to render. |
+| `source` | — | import('@pdxui/core').DataSource<T> \| null | `null` | The data source to render from. |
 | `idField` | `idfield` | string | `'id'` | Item field used as a unique key. |
 | `dividers` | `dividers` | boolean | `false` | Shows dividers between items. |
 | `clickable` | `clickable` | boolean | `false` | Whether items are clickable. |
@@ -16,6 +15,8 @@ Data-driven list with custom rows.
 | `emptyTitle` | `emptytitle` | string | `''` | The empty state's title. Empty: the list.empty component string, «No items». |
 | `emptyDescription` | `emptydescription` | string | `''` | Description shown when the list is empty. |
 | `emptyIcon` | `emptyicon` | string | `'inbox'` | Icon shown in the empty state. |
+| `ariaLabel` | `arialabel` | string | `''` | The list's accessible name, `aria-label` on the host, written on the `role="list"` element (#1053): the host has no role, so a name left on it alone names nothing. |
+| `ariaLabelledby` | `arialabelledby` | string | `''` | The id of the element that names the list, `aria-labelledby` on the host, written the same way. |
 
 **API (via `:ref`)**
 
@@ -27,7 +28,13 @@ Data-driven list with custom rows.
 
 **Renders:** roles `list` · `listitem`
 
-**Slot:** `item` — Scoped — renders one item. Receives `{ item, index, id }` (`id` is the value of `id-field`).; `empty` — Shown when the list has no items. Receives nothing, but write it `<slot name="empty" let:_>`: without a `let:` the compiler reads a `<slot>` as plain HTML and the template is ignored.
+**Injects:** `DataSourceContext` (optional)
+
+**Slot:** `item` — Renders one item: a snippet `item(item, index)`.; `empty` — Shown when the list has no items: a snippet `empty()`.
+
+**States:** `:state(bordered)` — `bordered` is set (the default): the list is framed.; `:state(dividers)` — `dividers` is set: a rule between items.; `:state(loading)` — Its source is pending: the host is `aria-busy` too (A4).; `:state(empty)` — It has no items, and is not loading.
+
+**Parts:** `[data-part="list"]` — The `role="list"` container of the items.; `[data-part="item"]` — An item's row, `role="listitem"`. A page of a larger source gives each its `aria-setsize` and `aria-posinset` (A3).; `[data-part="empty"]` — The empty state.; `[data-part="overlay"]` — The loading overlay, drawn while the source loads.
 
 
 #### Examples
@@ -36,18 +43,14 @@ _From the component's demo, one per section. They illustrate the markup and the 
 code left out, and a script is the part that matters, not a whole file. The props and events they use
 are checked against the manifest above._
 
-**Basic (Static Array)** — Simple list from a static items array with a render function.
+**Basic (Static Array)** — Simple list from a static items array, each item drawn by the `item` snippet.
 
 ```html
-<pdx-list :items="users" :render-item="renderUser" clickable dividers
-  @pdx-click="onUserClick">
+<pdx-list :items="users" clickable dividers @pdx-click="onUserClick">
+  @snippet item(item) {
+    <strong>{{ item.name }}</strong> {{ item.role }}
+  }
 </pdx-list>
-```
-
-```js
-// renderUser = (user) => {
-//   return '<strong>' + user.name + '</strong> — ' + user.role;
-// }
 ```
 
 **With DataSource + Loading** — Simulates a 1.5s fetch. Shows loading overlay, then data.
@@ -59,17 +62,13 @@ const ds = createDataSource({
   },
   autoLoad: true,
 });
-
-function renderUser(user) {
-  return '<pdx-icon name="user"></pdx-icon>'
-    + '<span>' + user.name + '</span>'
-    + '<span class="role">' + user.role + '</span>';
-}
 ```
 
 ```html
-<pdx-list :source="ds" :render-item="renderUser"
-  clickable dividers>
+<pdx-list :source="ds" clickable dividers>
+  @snippet item(item) {
+    <span>{{ item.name }}</span> <span class="role">{{ item.role }}</span>
+  }
 </pdx-list>
 ```
 
@@ -83,21 +82,21 @@ function renderUser(user) {
 </pdx-list>
 ```
 
-**Slot Template (Declarative)** — Scoped slot template — declarative, no render function. The slot receives `item` and `index` from the list.
+**Slot Template (Declarative)** — A snippet — declarative, no render function: `item(item, index)`, called by the list for each row.
 
 ```html
-<!-- Template: slot receives item + index from the list -->
+<!-- Template: the snippet receives item + index from the list -->
 <pdx-list :items="users" clickable dividers>
-  <slot name="item" let:item let:index>
+  @snippet item(item, index) {
     <div class="user-row">
-      <span class="idx">{index + 1}.</span>
+      <span class="idx">{{ index + 1 }}.</span>
       <div class="info">
-        <strong>{item.name}</strong>
-        <span class="muted">{item.email}</span>
+        <strong>{{ item.name }}</strong>
+        <span class="muted">{{ item.email }}</span>
       </div>
-      <span class="badge">{item.dept}</span>
+      <span class="badge">{{ item.dept }}</span>
     </div>
-  </slot>
+  }
 </pdx-list>
 
 <!-- Scoped styles (in <style scoped>) -->
@@ -112,18 +111,17 @@ function renderUser(user) {
             background: var(--pdx-color-inset); }
 ```
 
-**Custom Empty Slot** — Override the empty state with a custom slot template.
+**Custom Empty State** — Override the empty state with the `empty()` snippet.
 
 ```html
-<!-- Empty slot overrides the default empty state -->
-<!-- Note: let:_ is required (compiler needs at least one let:) -->
+<!-- The empty snippet overrides the default empty state -->
 <pdx-list :items="[]">
-  <slot name="empty" let:_>
+  @snippet empty() {
     <div class="custom-empty">
       <pdx-icon name="search" size="32"></pdx-icon>
       <p>Nothing here yet — try adding some items!</p>
     </div>
-  </slot>
+  }
 </pdx-list>
 
 .custom-empty {
@@ -136,20 +134,14 @@ function renderUser(user) {
 
 **Rich Item Template** — Avatar + name + role + badge layout.
 
-```js
-function renderRichItem(user) {
-  const statusColor = user.status === 'Active'
-    ? 'var(--pdx-color-success)' : 'var(--pdx-color-muted)';
-  return '<div class="avatar">' + user.initials + '</div>'
-    + '<div><strong>' + user.name + '</strong>'
-    + '<div class="role">' + user.role + '</div></div>'
-    + '<span class="status">' + user.status + '</span>';
-}
-```
-
 ```html
-<pdx-list :items="richItems"
-  :render-item="renderRichItem" dividers>
+<pdx-list :items="richItems" dividers>
+  @snippet item(item) {
+    <div class="avatar">{{ item.initials }}</div>
+    <div><strong>{{ item.name }}</strong>
+      <div class="role">{{ item.role }}</div></div>
+    <span class="status">{{ item.status }}</span>
+  }
 </pdx-list>
 ```
 
@@ -164,9 +156,11 @@ const ds = createDataSource({
 ```
 
 ```html
-<pdx-list :source="ds" :render-item="renderItem"></pdx-list>
+<pdx-list :source="ds">
+  @snippet item(item) { <strong>{{ item.name }}</strong> }
+</pdx-list>
 <pdx-pagination :total="ds.total()" :pageSize="5"
-  :page="ds.page()" @pdx-change="onPage">
+  :page="ds.page()" @page-change="onPage">
 </pdx-pagination>
 ```
 
@@ -174,7 +168,8 @@ const ds = createDataSource({
 
 ```html
 <pdx-data-source url="/api/users" :page-size="5">
-  <pdx-list :render-item="renderUser" clickable dividers>
+  <pdx-list clickable dividers>
+    @snippet item(item) { {{ item.name }} }
   </pdx-list>
   <pdx-pagination></pdx-pagination>
 </pdx-data-source>
@@ -184,5 +179,27 @@ const ds = createDataSource({
 // Both components auto-inject the DataSource from context.
 // Pagination reads total/page, List reads data/isLoading.
 // Page change → DataSource.setPage() → List auto-reloads.
+```
+
+**A comment thread** — A composition, not a component (#1022): `pdx-list` draws the comments, `pdx-avatar` and `pdx-relative-time` fill each one, and a form with `pdx-textarea` and `pdx-button` adds to it. Replies go one level deep. Ctrl+Enter (⌘+Enter) sends, Escape closes a reply.
+
+```html
+<pdx-list :items="thread.comments" dividers>
+  @snippet item(c) {
+    <article :aria-label="c.author + ', ' + c.text">
+      <pdx-avatar :alt="c.author" size="sm" decorative></pdx-avatar>
+      <strong>{{ c.author }}</strong> <pdx-relative-time :datetime="c.at"></pdx-relative-time>
+      <p>{{ c.text }}</p>
+      <pdx-button variant="ghost" size="sm" @click="openReply(c, $event)">Reply</pdx-button>
+    </article>
+  }
+  @snippet empty() { <p>No comments yet.</p> }
+</pdx-list>
+
+<form @submit.prevent="send()">
+  <pdx-textarea ::value="draft" arialabel="Add a comment" @keydown="onComposerKey($event)"></pdx-textarea>
+  <pdx-button type="submit" size="sm" :disabled="!draft.trim()">Comment</pdx-button>
+</form>
+<p class="pdx-sr-only" role="status">{{ announcement }}</p>
 ```
 

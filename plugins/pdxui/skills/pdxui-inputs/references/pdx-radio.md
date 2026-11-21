@@ -4,17 +4,23 @@ Pick a single option from a set.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `checked` | `checked` | boolean | `false` | Whether it is checked / on. |
 | `disabled` | `disabled` | boolean | `false` | Disables interaction and dims the control. |
 | `label` | `label` | string | `''` | Visible label text. |
 | `description` | `description` | string | `''` | Secondary descriptive text. |
 | `value` | `value` | string | `''` | The current value. |
 | `name` | `name` | string | `''` | Form field name, submitted with the form. |
-| `size` | `size` | string | `''` | Size of the control (e.g. sm, md, lg). |
 | `error` | `error` | boolean | `false` | Marks the control as invalid. |
 | `labelPosition` | `labelposition` | string | `'right'` | Where the label sits relative to the control. |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg: the circle's size. |
+| `checked` | `checked` | boolean | `false` | Whether it is checked / on. |
 
-**Events:** `pdx-change` → `detail: { value }` — Fired when the value changes.
+**Events:** `checked-change` → `detail: { value: boolean }` — Fired when the component writes `checked`. Does not bubble.
+
+**States:** `:state(checked)` — It is the one selected.; `:state(invalid)` — `error` is set; the radio is aria-invalid.; `:state(disabled)` — `disabled` is set.
+
+**Parts:** `[data-part="root"]` — The native radio, the circle drawn; the size variants key by it.; `[data-part="label"]` — The `label` text, when set.; `[data-part="description"]` — The `description` text, when set.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 
 #### Examples

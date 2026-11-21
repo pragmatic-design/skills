@@ -6,10 +6,9 @@ Type @ to mention people.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `value` | `value` | string | `''` | Current text value (clean text, no markup) |
 | `trigger` | `trigger` | string | `'@'` | Trigger character(s) — comma-separated for multiple (default: '@') |
-| `items` | — | array | `[]` | Static suggestions array |
-| `source` | — | object | `null` | DataSource or raw array for remote search |
+| `items` | — | unknown[] | `[]` | Static suggestions array |
+| `source` | — | Record<string, unknown> \| null | `null` | DataSource or raw array for remote search |
 | `labelField` | `labelfield` | string | `'label'` | Field for display label |
 | `valueField` | `valuefield` | string | `'value'` | Field for value/id |
 | `descriptionField` | `descriptionfield` | string | `''` | Field for description (optional) |
@@ -22,12 +21,28 @@ Type @ to mention people.
 | `disabled` | `disabled` | boolean | `false` | Disabled |
 | `readonly` | `readonly` | boolean | `false` | Readonly |
 | `name` | `name` | string | `''` | Form field name |
+| `value` | `value` | string | `''` | The current value. |
 
-**Events:** `pdx-change` → `detail: { value, mentions, markup }` — Fired when the value changes.; `pdx-input` → `detail: { value, mentions, markup }` — Fired on each input as the user types.; `pdx-select` → `detail: { item, trigger, query }` — Fired when an item is selected.
+**API (via `:ref`)**
+
+| Call | Notes |
+|---|---|
+| `focus()` | Moves focus to it. |
+| `blur()` | Removes focus from it. |
+| `getMentionMarkup()` | The text with each mention as `@[Label](id)`: the form to persist. |
+| `getMentions()` | The mentions in the text: `{ value, label, trigger }` each. |
+
+**Events:** `pdx-select` → `detail: { item: MentionItem; trigger: string; query: string }` — A suggestion was picked and inserted, after its `value-change`.; `value-change` → `detail: { value: string }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `listbox` · `option` · `status`
 
-**Slot:** `suggestion` — Scoped — renders one suggestion. Receives `{ item, index, active }`.
+**Slot:** `suggestion` — Renders one suggestion: a snippet `suggestion(item, index, active)`.
+
+**States:** `:state(disabled)` — `disabled` is set; the textarea is disabled.; `:state(readonly)` — `readonly` is set; the textarea is read-only.
+
+**Parts:** `[data-part="root"]` — The frame around the textarea and its highlight layer.; `[data-part="input"]` — The native `<textarea>` the text is typed into.; `[data-part="list"]` — The floating suggestion list, `role="listbox"`.; `[data-part="option"]` — One suggestion, `role="option"`; the active one is `aria-selected="true"`.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 **Shapes:** `MentionItem { value: string; label: string; description?: string }`
 
@@ -109,16 +124,16 @@ are checked against the manifest above._
 </div>
 ```
 
-**Slot Template** — Use the `suggestion` slot to customize suggestion items in the dropdown (e.g., avatars, badges). The slot receives scope data for each suggestion.
+**Slot Template** — Use the `suggestion` snippet to customize suggestion items in the dropdown (e.g., avatars, badges): `suggestion(item, index, active)`, once for each suggestion.
 
 ```html
 <pdx-mention :items="users">
-  <slot name="suggestion" let:item let:index let:active>
+  @snippet suggestion(item) {
     <div class="mention-custom">
-      <span class="avatar">$&lbrace;item.label.charAt(0)&rbrace;</span>
-      <span>$&lbrace;item.label&rbrace;</span>
+      <span class="avatar">{{ item.label.charAt(0) }}</span>
+      <span>{{ item.label }}</span>
     </div>
-  </slot>
+  }
 </pdx-mention>
 
 .mention-custom {

@@ -12,13 +12,17 @@ A big number with label and trend.
 | `trend` | `trend` | string | `''` | Trend direction: 'up' \| 'down' \| 'flat' \| '' |
 | `trendValue` | `trendvalue` | string | `''` | Trend text e.g. '+12.5%' |
 | `trendColor` | `trendcolor` | boolean | `true` | Auto-color trend (green up, red down) |
-| `size` | `size` | string | `'md'` | Size variant: 'sm' \| 'md' \| 'lg' |
 | `loading` | `loading` | boolean | `false` | Show skeleton placeholder |
 | `precision` | `precision` | number | `-1` | Decimal places for formatting (-1 = no format) |
 | `groupSeparator` | `groupseparator` | string | `','` | Thousands separator |
 | `compareValue` | `comparevalue` | string | `''` | Comparison/previous value (shown muted below main value) |
 | `compareLabel` | `comparelabel` | string | `''` | Compare label (e.g. "vs last month") |
 | `description` | `description` | string | `''` | Description text below value |
+| `size` | `size` | 'md' \| 'sm' \| 'lg' | `'md'` | sm, md (the default) or lg. |
+
+**States:** `:state(loading)` — `loading` is set: skeletons in place of the value, and the host `aria-busy`.
+
+**Parts:** `[data-part="icon"]` — The icon beside the title.; `[data-part="title"]` — The label above the value.; `[data-part="value"]` — The number, between its prefix and suffix.; `[data-part="trend"]` — The trend line: its arrow and text.; `[data-part="description"]` — The description below the value.; `[data-part="compare"]` — The comparison with a previous value.
 
 
 #### Examples

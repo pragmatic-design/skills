@@ -2,6 +2,8 @@
 
 # Head & Scroll
 
+> **Formal reference:** [docs/language/routing.md](https://github.com/pragmatic-design/pdxui/blob/main/docs/language/routing.md) defines the grammar of what this page teaches: what each construct accepts, what it generates, which diagnostic it raises.
+
 Two things SPAs often neglect and that make the difference between an app "that works" and a polished
 one: the `<head>` (title and meta that change with the page, for users and for SEO/social) and
 **scroll** (position preserved as you navigate back and forth). PDX makes both declarative.
@@ -12,7 +14,7 @@ When you navigate between pages in an SPA, the tab title should change: it's wha
 bookmarks and history, and what engines and social cards read. `@title` declares it:
 
 ```pdx
-<script setup>
+<script>
 @title 'Dashboard';
 </script>
 ```
@@ -21,7 +23,7 @@ For a title that follows your state, give `@title` an **expression** — a bare 
 literal in backticks:
 
 ```pdx
-<script setup>
+<script>
 @prop userId: string = '';
 let user = $signal({ name: '' });
 
@@ -38,34 +40,24 @@ turns the whole thing into a tracked effect, so the tab re-titles itself when th
 `name: 'content'`, with `property` in front for the OG family:
 
 ```pdx
-<script setup>
+<script>
 @meta description: 'Control panel for your account.';
 @meta property og:title: 'PDX Dashboard';
 @meta property og:image: '/covers/dashboard.png';
 </script>
 ```
 
-> **`@meta` with braces is a different rune.** `@meta { requiresAuth: true }` attaches arbitrary data
-> to the *route* — read back from the router, not written to the document. The `<head>` form is the one
-> with a `key: 'value'` pair and no braces. If a meta tag you declared never appears in the DOM, check
-> which of the two you wrote.
-
-When several tags belong together, `@head` groups them:
-
-```pdx
-<script setup>
-@head {
-  title: 'Products',
-  meta: [{ name: 'description', content: 'Everything we sell' }]
-}
-</script>
-```
+> **Route data is not a meta tag.** Data you attach to the *route* — read back from the router, never
+> written to the document — is `@page`'s `meta` option: `@page '/billing' { meta: { requiresAuth: true } };`.
+> `@meta` writes the `<head>` only.
 
 When the page changes, PDX updates `document.title` and the matching meta. You don't hand-manage the
 `<head>` DOM.
 
-> For *full* SEO (content indexable without JS) you need static/server rendering (SSG), on the
-> framework roadmap. `@title`/`@meta` cover per-route title and meta in the SPA.
+> For content that is indexable without JS, build with `pdx build --ssg`
+> ([static generation](../../pdxui-setup/references/cli.md#static-generation-ssg)): every static route is written as HTML
+> with its `@title` and `@meta`, and the app hydrates it. In the SPA, `@title`/`@meta` cover
+> per-route title and meta.
 
 ## Scroll — useScroll
 
@@ -74,12 +66,12 @@ appears after a while. `useScroll()` exposes the **window's** scroll as signals 
 those four are all there is:
 
 ```pdx
-<script setup>
+<script>
 import { useScroll, scrollTo } from '@pdxui/core';
 
 const { x, y, direction, isScrolling } = useScroll();
 
-const atTop = $derived(y < 8);
+const atTop = $derived(y() < 8);   // useScroll returns signals: read them with a call
 </script>
 ```
 
@@ -97,7 +89,7 @@ the parentheses.
 
 ```pdx
 <template>
-  <header class="bar" :class.hidden="direction === 'down' && !atTop">…</header>
+  <header class="bar" :class="{ hidden: direction === 'down' && !atTop }">…</header>
   @if (y > 600) {
     <button class="to-top" @click="scrollTo(0)">↑</button>
   }
@@ -122,7 +114,7 @@ Two behaviours worth knowing before you build on them:
     <main class="page" :ref="region">…</main>
   </template>
 
-  <script setup>
+  <script>
   import { useScroll } from '@pdxui/core';
 
   let region = $signal(null);
@@ -164,9 +156,9 @@ So: a long list, a detail page, and back — you resume from the same spot, with
 Two pages want something other than the default, and they declare it:
 
 ```pdx
-<script setup>
+<script>
 @page '/checkout';
-@scroll 'top';        <!-- always enter at the top, even on Back -->
+@scroll 'top';        // always enter at the top, even on Back
 </script>
 ```
 

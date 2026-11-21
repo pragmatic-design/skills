@@ -4,8 +4,8 @@ A swipeable slideshow.
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `null` | The data items to render. |
-| `renderSlide` | — | object | `null` | Render function for each slide. |
+| `items` | — | T[] | `null` | The data items to render. |
+| `renderSlide` | — | Record<string, unknown> \| null | `null` | Render function for each slide. |
 | `autoplay` | `autoplay` | boolean | `false` | Advances slides automatically. |
 | `interval` | `interval` | number | `5000` | Autoplay interval in milliseconds. |
 | `loop` | `loop` | boolean | `true` | Wraps around from the last slide to the first. |
@@ -17,6 +17,7 @@ A swipeable slideshow.
 | `pauseOnHover` | `pauseonhover` | boolean | `true` | Pauses autoplay while hovered. |
 | `animation` | `animation` | string | `'slide'` | Transition style between slides. |
 | `label` | `label` | string | `''` | The region's accessible name. Empty: the component string `carousel.label` ("Carousel"). |
+| `index` | `index` | number | `0` | The slide on show, 0-based. |
 
 **API (via `:ref`)**
 
@@ -27,14 +28,16 @@ A swipeable slideshow.
 | `goTo(index)` | Go to a slide by index — wrapped around when `loop` is set, clamped otherwise. Ignored while a transition is running. |
 | `play()` | Start autoplay. Does nothing when `interval` is 0 or less. |
 | `pause()` | Stop autoplay, leaving the slide where it is. |
-| `goto(index)` | `goTo` under its all-lowercase spelling. |
-| `index` _(read-only)_ | Read-only, via a ref: `el.index`. |
 
-**Events:** `pdx-autoplay-start` → `detail: {}` — Fired on `pdx-autoplay-start`.; `pdx-autoplay-stop` → `detail: {}` — Fired on `pdx-autoplay-stop`.; `pdx-change` → `detail: { index, item }` — Fired when the value changes.
+**Events:** `index-change` → `detail: { value: number }` — Fired when the component writes `index`. Does not bubble.; `pdx-autoplay-start` — Autoplay started: on mount with `autoplay`, from `play()`, the rotation control, or the pointer leaving.; `pdx-autoplay-stop` — Autoplay stopped: from `pause()`, the rotation control, keyboard focus moving in, or the pointer over it.
 
 **Renders:** roles `group` · `region` · `tab` · `tablist`
 
-**Slot:** `slide` — Scoped — renders one slide. Receives `{ slide, index, isActive }`.
+**Slot:** `slide` — Renders one slide: a snippet `slide(slide, index, active)`.
+
+**States:** `:state(fade)` — `animation="fade"`: the slides cross-fade in place instead of sliding.
+
+**Parts:** `[data-part="root"]` — The carousel region (`role="region"`), which clips the slides and takes the focus.; `[data-part="track"]` — The strip the slides sit in, moved to bring a slide on show.; `[data-part="slide"]` — A slide; the one on show is `aria-current="true"`.; `[data-part="control"]` — A button over the slides: the previous and next arrows, the rotation stop/start.; `[data-part="dots"]` — The tablist of dots under the slides.; `[data-part="dot"]` — A dot; the one of the slide on show is `aria-selected="true"`.
 
 **Shapes:** `CarouselItem { src?: string; alt?: string; content?: string; caption?: string }`
 
@@ -105,18 +108,18 @@ are checked against the manifest above._
 </div>
 ```
 
-**Slot Template** — Custom slide content via scoped slot. Receives `slide`, `index`, and `isActive`.
+**Slot Template** — Custom slide content via the `slide` snippet: `slide(slide, index, active)`.
 
 ```html
 <!-- Compose PDX components inside carousel slides -->
 <pdx-carousel :items="slides">
-  <slot name="slide" let:slide let:index>
+  @snippet slide(slide, index) {
     <div class="slide">
-      <pdx-badge variant="outline">Step {index + 1}</pdx-badge>
-      <h3>{slide.title}</h3>
-      <p>{slide.desc}</p>
+      <pdx-badge variant="outline">Step {{ index + 1 }}</pdx-badge>
+      <h3>{{ slide.title }}</h3>
+      <p>{{ slide.desc }}</p>
     </div>
-  </slot>
+  }
 </pdx-carousel>
 ```
 

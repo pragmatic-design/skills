@@ -22,15 +22,19 @@ that is a real URL; use the event for a crumb that changes state without a route
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `items` | — | array | `[]` | The data items to render. |
+| `items` | — | T[] | `[]` | The data items to render. |
 | `separator` | `separator` | string | `''` | The separator between items. |
 | `maxItems` | `maxitems` | number | `0` | Collapse to this many items with an ellipsis. |
 
-**Events:** `pdx-select` → `detail: { key, item }` — Fired when an item is selected.
+**Events:** `pdx-select` → `detail: { key: string; item: T }` — A crumb was chosen: its `key` and the item.
 
 **Renders:** roles `list`
 
-**Slot:** `item` — Scoped — renders one crumb. Receives `{ item, index, isFirst, isLast }`.
+**Slot:** `item` — Renders one crumb: a snippet `item(item, index, isLast)`.
+
+**Parts:** `[data-part="nav"]` — The `<nav>` that names the trail (`.pdx-breadcrumb`).; `[data-part="list"]` — The `<ol>` of the crumbs.; `[data-part="item"]` — One crumb, an `<li>`; the last is `aria-current="page"` when a snippet draws it.; `[data-part="link"]` — A crumb that leads somewhere: a link with an `href`, a button without one.; `[data-part="current"]` — The page you are on, the last crumb, `aria-current="page"`.; `[data-part="separator"]` — The glyph between two crumbs, hidden from assistive technology.; `[data-part="ellipsis"]` — The button that stands for the crumbs `max-items` collapsed.
+
+**Tokens:** `--pdx-breadcrumb-separator` (default `'/'`). Set one at `:root`, on a subtree, or on the element itself.
 
 **Shapes:** `BreadcrumbItem { key: string; label: string; href?: string; icon?: string }`
 
@@ -79,15 +83,15 @@ are checked against the manifest above._
 <pdx-breadcrumb :items="longItems" :maxItems="3"></pdx-breadcrumb>
 ```
 
-**Slot Template** — Use the `item` slot to customize how each breadcrumb item is rendered.
+**Slot Template** — Use the `item` snippet, `item(item, index, isLast)`, to customize how each breadcrumb item is rendered.
 
 ```html
 <pdx-breadcrumb :items="items">
-  <slot name="item" let:item let:isLast>
+  @snippet item(item, _index, isLast) {
     <span class="crumb-custom">
-      $&lbrace;isLast ? item.label : item.label + ' &rarr;'&rbrace;
+      {{ isLast ? item.label : item.label + ' →' }}
     </span>
-  </slot>
+  }
 </pdx-breadcrumb>
 
 .crumb-custom {

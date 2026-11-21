@@ -9,9 +9,15 @@ Catch and recover from render errors.
 | `retryDelay` | `retrydelay` | number | `1000` | Delay between auto-retries in ms. Default: 1000. |
 | `fallbackMessage` | `fallbackmessage` | string | `''` | The fallback's message. Empty: the error-boundary.message component string, «Something went wrong.». |
 
-**Events:** `pdx-error` → `detail: { error, retryCount }` — Fired when an error occurs.
+**Events:** `pdx-error` → `detail: { error: Error; retryCount: number }` — A child threw; the error, and how many retries have been made.
 
 **Renders:** roles `alert`
+
+**Provides:** `ErrorContext`
+
+**States:** `:state(error)` — A child threw: the fallback shows. Cleared when Retry brings the children back.
+
+**Parts:** `[data-part="fallback"]` — The fallback shown in place of the children (`role="alert"`).; `[data-part="message"]` — The fallback's message: `fallbackMessage`, or the component string.; `[data-part="detail"]` — The error's own message, under it.; `[data-part="retry"]` — The Retry button, while retries are left; the note that none are, after.
 
 **Shapes:** `ErrorContext { error: Signal<Error | null>; retryCount: Signal<number>; canRetry: ReadonlySignal<boolean>; retry: () => void }`
 
@@ -26,22 +32,22 @@ are checked against the manifest above._
 
 ```html
 @try {
-  <pdx-risky-widget />
+  <app-risky-widget />
 } @catch (err) {
   <div role="alert">
-    <p>{{ err.message }}</p>
+    <p>{{ err instanceof Error ? err.message : String(err) }}</p>
   </div>
 }
 ```
 
-**`<pdx-error-boundary>` — Component Wrapper** — Declarative error boundary with built-in fallback UI, retry button, max retries, and `pdx-error` event for logging. Provides `errorContext` to descendants.
+**`<pdx-error-boundary>` — Component Wrapper** — Declarative error boundary with built-in fallback UI, retry button, max retries, and `pdx-error` event for logging. Provides `ErrorContext` to descendants.
 
 ```html
 <pdx-error-boundary
   fallback-message="Dashboard widget crashed."
   :max-retries="3"
   @pdx-error="onError">
-  <pdx-dashboard-widget />
+  <app-dashboard-widget />
 </pdx-error-boundary>
 ```
 
@@ -49,10 +55,10 @@ are checked against the manifest above._
 
 ```html
 @try {
-  <pdx-user-list />
+  <app-user-list />
 } @catch (err) {
   <div role="alert">
-    {{ err.message }}
+    {{ err instanceof Error ? err.message : String(err) }}
     <button @click="retry">Retry</button>
   </div>
 }
@@ -84,15 +90,15 @@ onGlobalError((error, context) => {
 });
 ```
 
-**Context Protocol — errorContext** — Provides `errorContext` to all descendants via hierarchical provide/inject. Children can `@inject errorContext;` to read error state, retry count, and trigger retries.
+**Context Protocol — ErrorContext** — Provides its state to all descendants under the `ErrorContext` token. Children can `@inject boundary from ErrorContext;` to read error state, retry count, and trigger retries.
 
 ```js
-// In a child component:
-@inject errorContext;
+// In a child component (ErrorContext comes from '@pdxui/ui/error-boundary'):
+@inject boundary from ErrorContext;
 
-// errorContext.error()    → Error | null
-// errorContext.retryCount() → number
-// errorContext.canRetry()  → boolean
-// errorContext.retry()     → trigger retry
+// boundary.error()      → Error | null
+// boundary.retryCount() → number
+// boundary.canRetry()   → boolean
+// boundary.retry()      → trigger retry
 ```
 

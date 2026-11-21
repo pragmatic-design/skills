@@ -5,7 +5,7 @@ description: "PDX (@pdxui/ui) input controls — text, number, masked, password,
 
 # UI · Inputs (form controls)
 
-> Every input and selection control.  (30 components)  ·  catalogue generated from the library's custom-elements manifest.
+> Every input and selection control.  (31 components)  ·  catalogue generated from the library's custom-elements manifest.
 > Cross-cutting playbook, recipes and gotchas: the **`pdxui`** skill.
 > **Names.** Bind a prop by its kebab-case name, `:max-height="620"`, `:empty-title="t"`: the component
 > receives the camelCase prop (`maxHeight`). In a `.pdx` template the camelCase form, `:maxHeight`, compiles
@@ -23,12 +23,12 @@ Each page has the props, events, slots and API, the notes, and the examples of t
 - [`<pdx-date-picker>`](references/pdx-date-picker.md) — Pick a date from a calendar.
 - [`<pdx-file-upload>`](references/pdx-file-upload.md) — Drag-and-drop or browse to upload.
 - [`<pdx-input>`](references/pdx-input.md) — Text field with sizes, states and addons.
+- [`<pdx-localized-input>`](references/pdx-localized-input.md) — One text in several languages, a tab each.
 - [`<pdx-masked-input>`](references/pdx-masked-input.md) — Input that enforces a fixed format.
 - [`<pdx-mention>`](references/pdx-mention.md) — Type @ to mention people.
 - [`<pdx-number-input>`](references/pdx-number-input.md) — Numeric field with steppers and formatting.
-- [`<pdx-otp-input>`](references/pdx-otp-input.md) — One-time-code entry boxes.
+- [`<pdx-otp-input>`](references/pdx-otp-input.md) — One-time-code entry boxes, masked for a PIN.
 - [`<pdx-password-input>`](references/pdx-password-input.md) — Password field with reveal and strength.
-- [`<pdx-pin-input>`](references/pdx-pin-input.md) — Segmented PIN entry.
 - [`<pdx-radio>`](references/pdx-radio.md) — Pick a single option from a set.
 - [`<pdx-radio-group>`](references/pdx-radio-group.md) — A managed set of radios.
 - [`<pdx-rating>`](references/pdx-rating.md) — Star rating with halves and tooltips.
@@ -36,6 +36,7 @@ Each page has the props, events, slots and API, the notes, and the examples of t
 - [`<pdx-search-input>`](references/pdx-search-input.md) — Search box with clear and shortcuts.
 - [`<pdx-segmented>`](references/pdx-segmented.md) — A compact set of exclusive options.
 - [`<pdx-select>`](references/pdx-select.md) — A searchable dropdown select.
+- [`<pdx-signature-pad>`](references/pdx-signature-pad.md) — Draw or type a signature; the form gets a PNG.
 - [`<pdx-slider>`](references/pdx-slider.md) — Pick a number by dragging.
 - [`<pdx-switch>`](references/pdx-switch.md) — Toggle a setting on or off.
 - [`<pdx-tag-input>`](references/pdx-tag-input.md) — Type to add removable tags.

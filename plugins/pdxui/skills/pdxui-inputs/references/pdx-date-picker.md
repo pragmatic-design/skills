@@ -10,20 +10,22 @@ with `editable`, lets it be typed.
 **Pitfalls**
 - Without `editable` the date cannot be typed at all, and `editable` covers the modes `date` and `datetime` only.
 - An editable value commits on Enter or blur — AFTER the native `change` of its text box. Listen to
-  `pdx-change`, not `change`, or a resumed draft comes back without its end date.
+  `value-change`, not `change`, or a resumed draft comes back without its end date.
 - A typed date that does not exist, or falls outside `min`/`max`, marks the field invalid and keeps the last
   good value.
-- `pdx-change.detail` has a different shape per mode: `{ value }`, `{ rangeStart, rangeEnd }`, `{ value, time }`,
-  `{ values }`…
+- The value has a shape per mode: the ISO date; the date and its time, `2026-03-14T09:30`, in `datetime`;
+  `[start, end]` for a range or a week. `getDate()`, `getRange()` and `getTime()` read the parts.
 - `calendar` changes the display only; the value and its math stay Gregorian ISO.
+- The calendar inside has parts of its own, among them a `root`. Select the picker's parts as its
+  children: `pdx-date-picker > [data-part="root"]` is the trigger; a bare `pdx-date-picker
+  [data-part="root"]` also finds the calendar's frame.
 
-**Composes with** `pdx-form` + `pdx-form-field` (wired by `name`) · `pdx-auto-form` / `pdx-form-template` (a
+**Composes with** `pdx-form` + `pdx-form-field` (bound through its model, `::value="f.x"`) · `pdx-auto-form` / `pdx-form-template` (a
 schema `date` field is drawn as an editable picker) · `@form` touched state (it emits `pdx-blur` when focus
 leaves both the field and its panel).
 
 | Prop | Attr | Type | Default | Notes |
 |---|---|---|---|---|
-| `value` | `value` | string | `''` | Selected value (ISO date/time string). |
 | `rangeStart` | `rangestart` | string | `''` | Range start (ISO). |
 | `rangeEnd` | `rangeend` | string | `''` | Range end (ISO). |
 | `mode` | `mode` | string | `'date'` | Picker mode. |
@@ -33,10 +35,10 @@ leaves both the field and its panel).
 | `weekNumbers` | `weeknumbers` | boolean | `false` | Show week numbers. |
 | `min` | `min` | string | `''` | Minimum date (ISO). |
 | `max` | `max` | string | `''` | Maximum date (ISO). |
-| `disabledDates` | — | object | `null` | Function: (iso) => boolean for disabled dates. |
-| `highlightedDates` | — | object | `null` | Function: (iso) => string\|false for highlighted dates. |
+| `disabledDates` | — | Record<string, unknown> \| null | `null` | Function: (iso) => boolean for disabled dates. |
+| `highlightedDates` | — | Record<string, unknown> \| null | `null` | Function: (iso) => string\|false for highlighted dates. |
 | `fiscalStartMonth` | `fiscalstartmonth` | number | `1` | Fiscal year start month (1-12). |
-| `presets` | — | array | `[]` | Preset date options (array of { label, value }). |
+| `presets` | — | unknown[] | `[]` | Preset date options (array of { label, value }). |
 | `showCompare` | `showcompare` | boolean | `false` | Show comparison range toggle. |
 | `compareStart` | `comparestart` | string | `''` | Compare range start (ISO). |
 | `compareEnd` | `compareend` | string | `''` | Compare range end (ISO). |
@@ -49,24 +51,40 @@ leaves both the field and its panel).
 | `readonly` | `readonly` | boolean | `false` | Readonly state. |
 | `placeholder` | `placeholder` | string | `''` | Placeholder text. |
 | `name` | `name` | string | `''` | Name for form participation. |
-| `size` | `size` | string | `''` | Size variant (sm/md/lg). |
 | `inline` | `inline` | boolean | `false` | Inline calendar (no popover, always visible). |
 | `fixedWeeks` | `fixedweeks` | boolean | `true` | Fixed weeks in calendar. |
 | `firstDay` | `firstday` | number | `-1` | First day of week (-1 = auto). |
 | `ariaLabel` | `arialabel` | string | `''` | Aria label. |
 | `editable` | `editable` | boolean | `false` | The date can be typed: the trigger's text is an input (still the combobox), read in the locale's numeric pattern or as ISO, committed on Enter and blur. The calendar icon opens the popup, as does Alt+ArrowDown. Modes `date` and `datetime` (its date part); the others keep the plain trigger. |
+| `size` | `size` | 'md' \| 'xs' \| 'sm' \| 'lg' \| 'xl' | `'md'` | xs, sm, md (the default), lg or xl — the same scale as pdx-input. |
+| `value` | `value` | string \| string[] | `''` | The date, or `[start, end]` with `mode="daterange"` or `"datetimerange"`. A form submits it; a range as two entries, one per date (#135). |
 
 **API (via `:ref`)**
 
 | Call | Notes |
 |---|---|
+| `getDate()` | The date chosen, ISO: the range's start in a range or week mode; '' with none. |
+| `getRange()` | The range chosen, or the one a week, month, quarter or year covers: `[start, end]`, ISO dates. |
+| `getTime()` | The time, `HH:mm[:ss]`: the start's in a range. |
+| `getEndTime()` | The end's time in a range with times. |
 | `focus()` | Moves focus to it. |
 | `blur()` | Removes focus from it. |
 | `clear()` | Clears the value. |
+| `show()` | Open the popup; open already, it stays open. |
+| `close()` | Close the popup. |
+| `toggle()` | Open the popup when closed, close it when open. |
 
-**Events:** `pdx-blur` — Fired when it loses focus.; `pdx-change` → `detail: { rangeStart, rangeEnd, value } | { value } | { values } | { value, time } | { rangeStart, rangeEnd, timeStart, timeEnd } | { value, rangeStart, rangeEnd }` — Fired when the value changes.; `pdx-clear` — Fired when the value is cleared.; `pdx-close` — Fired when it closes. Does not bubble.; `pdx-open` — Fired when it opens. Does not bubble.
+**Events:** `open-change` → `detail: { value: boolean }` — The popup opened (`true`) or closed (`false`): its open state, read-only, as an overlay's (#287).; `pdx-blur` — Fired when the focus leaves the component: the trigger, the panel and what they hold.; `pdx-clear` — Fired when the clear button or `clear()` empties the value, after its `value-change`.; `value-change` → `detail: { value: string | string[] }` — Fired when the component writes `value`. Does not bubble.
 
 **Renders:** roles `combobox` · `dialog`
+
+**States:** `:state(open)` — The popup is open.; `:state(disabled)` — `disabled` is set.; `:state(readonly)` — `readonly` is set.
+
+**Parts:** `[data-part="root"]` — The trigger, the combobox unless `editable`: the frame, its border and background.; `[data-part="input"]` — The text field inside the trigger, while `editable`: the combobox then.; `[data-part="clear"]` — The clear button, while `clearable`, something is chosen and not `disabled`.; `[data-part="popup"]` — The floating panel, a `role="dialog"`, that holds the calendar, the time and the presets.; `[data-part="preset"]` — A preset button in the panel's sidebar.; `[data-part="calendar"]` — The `pdx-calendar` the picker draws, in the panel or `inline`.
+
+**Tokens:** `--pdx-input-border-color` — The trigger is the text input's frame, `.pdx-input-wrap`, and reads pdx-input's tokens (#761): its border at rest (the outlined input style).; `--pdx-input-border-color-focus` — The frame's border while focused (the outlined input style).; `--pdx-input-border-width` — The frame's bottom border, in the filled input style.; `--pdx-input-focus-ring` — The ring around the frame while focused.; `--pdx-input-min-height` — The frame's height, at the md size.. Set one at `:root`, on a subtree, or on the element itself.
+
+**Form:** form-associated — inside a `<form>` it submits its value under its `name`, `form.reset()` restores the value it mounted with, and `required` / `error` set its validity.
 
 **Shapes:** `DatePreset { label: string; value: string | [string, string] }`
 
